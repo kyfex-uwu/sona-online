@@ -9,5 +9,7 @@ console.log("App hosted at http://localhost:4000");
 
 //--
 
+website.get("/", (req, res) =>
+    res.sendFile(__dirname + "/assets/index.html"));
 website.use("/src", express.static(__dirname + "/dist"));
-website.use("/", express.static(__dirname + "/public"));
+website.use("/assets", express.static(__dirname + "/assets"));
