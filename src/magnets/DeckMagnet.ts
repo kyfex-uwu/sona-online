@@ -5,7 +5,7 @@ import Game from "../Game.js";
 import {updateOrder} from "../consts.js";
 
 
-export default class RunawayMagnet extends CardMagnet{
+export default class DeckMagnet extends CardMagnet{
     private cards:Array<Card> = [];
 
     constructor(position: Vector3, props:{rotation?:Euler}={}) {
@@ -25,19 +25,17 @@ export default class RunawayMagnet extends CardMagnet{
 
     addCard(game:Game){
         game.selectedCard!.position.copy(this.position);
-        game.selectedCard!.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
-        game.selectedCard!.rotation.copy(new Euler(
-            game.selectedCard!.rotation.x,
-            game.selectedCard!.rotation.y+Math.random()*0.3-0.15,
-            game.selectedCard!.rotation.z))
+        game.selectedCard!.flipFacedown();
         this.cards.push(game.selectedCard!);
         game.selectedCard = undefined;
         this.position.add(CardMagnet.offs);
     }
     removeCard(game:Game){
         game.selectedCard = this.cards.pop();
-        if(game.selectedCard !== undefined)
+        if(game.selectedCard !== undefined) {
+            game.selectedCard.flipFaceup();
             this.position.sub(CardMagnet.offs);
+        }
     }
 }
-updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;
+updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;

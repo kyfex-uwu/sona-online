@@ -75,7 +75,11 @@ export default class Card implements GameElement{
     }
     visualTick(parent: Game) {
         this.realPosition.lerp(this.position,0.2);
-        this.realRotation.slerp(new Quaternion().setFromEuler(this.rotation), 0.1);
+        const rotation = new Quaternion().setFromEuler(this.rotation);
+        // if(parent.selectedCard === this){
+        //     rotation.rotateTowards(new Quaternion().setFromEuler(camera.rotation).invert(), Math.PI*0.9);
+        // }
+        this.realRotation.slerp(rotation, 0.1);
         if(this._model !== undefined){
             this._model.position.copy(this.realPosition);
             this._model.quaternion.copy(this.realRotation);

@@ -2,16 +2,17 @@ import {
     Scene,
     Color,
     WebGLRenderer,
-    Vector3
+    Vector3, Euler
 } from "three";
 import Game from "./Game.js";
 import {camera} from "./consts.js";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
+import DeckMagnet from "./magnets/DeckMagnet.js";
 
 // Init scene.
 const scene = new Scene();
-scene.background = new Color("#ff0000");
+scene.background = new Color("#111111");
 
 // Init renderer.
 const renderer = new WebGLRenderer({
@@ -32,10 +33,27 @@ window.addEventListener("resize", () => {
 //--
 
 const game = new Game(scene);
-game.addElement(new FieldMagnet(new Vector3(100,0,200)));
-game.addElement(new FieldMagnet(new Vector3(0,0,200)));
-game.addElement(new FieldMagnet(new Vector3(-100,0,200)));
+game.addElement(new FieldMagnet(new Vector3(100,0,70)));
+game.addElement(new FieldMagnet(new Vector3(0,0,70)));
+game.addElement(new FieldMagnet(new Vector3(-100,0,70)));
 game.addElement(new RunawayMagnet(new Vector3(-200,0,200)));
+game.addElement(new DeckMagnet(new Vector3(200,0,200)));
+
+game.addElement(new FieldMagnet(new Vector3(100,0,-70), {
+    rotation: new Euler(0,Math.PI,0),
+}));
+game.addElement(new FieldMagnet(new Vector3(0,0,-70), {
+    rotation: new Euler(0,Math.PI,0),
+}));
+game.addElement(new FieldMagnet(new Vector3(-100,0,-70), {
+    rotation: new Euler(0,Math.PI,0),
+}));
+game.addElement(new RunawayMagnet(new Vector3(200,0,-200), {
+    rotation: new Euler(0,Math.PI,0),
+}));
+game.addElement(new DeckMagnet(new Vector3(-200,0,-200), {
+    rotation: new Euler(0,Math.PI,0),
+}));
 
 renderer.setAnimationLoop(() => {
     game.tick();

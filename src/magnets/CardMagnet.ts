@@ -1,4 +1,4 @@
-import {type Scene, Vector3} from "three";
+import {Euler, type Scene, Vector3} from "three";
 import type {GameElement} from "../GameElement.js";
 import Game from "../Game.js";
 import {updateOrder} from "../consts.js";
@@ -13,7 +13,7 @@ export default abstract class CardMagnet implements GameElement{
     public static readonly offs = new Vector3(0,2,0);
 
     public readonly position: Vector3;
-    public readonly rotation: Vector3;
+    public readonly rotation: Euler;
     public readonly radius: number;
     public readonly hardRadius: number;
     private readonly onClick: (v:Game) => boolean|undefined;
@@ -22,13 +22,13 @@ export default abstract class CardMagnet implements GameElement{
         radius?:number,
         hardRadius?:number,
         onClick?: (v:Game) => boolean|undefined,
-        rotation?: Vector3,
+        rotation?: Euler,
     }={}) {
         props = Object.assign({
             radius:70,
             hardRadius:40,
             onClick:()=>false,
-            rotation: new Vector3(),
+            rotation: new Euler(),
         }, props);
         this.position = position;
         this.rotation = props.rotation!;
@@ -43,6 +43,7 @@ export default abstract class CardMagnet implements GameElement{
             if (parent.selectedCard !== undefined) {
                 if (dist < this.hardRadius) {
                     parent.selectedCard!.position.copy(this.position);
+                    parent.selectedCard!.rotation.copy(this.rotation);
                 } else {
                     parent.selectedCard!.position.lerp(this.position, (this.radius - dist) / this.radius);
                 }
@@ -53,6 +54,10 @@ export default abstract class CardMagnet implements GameElement{
         }
     }
 
+    addCard(parent:Game){
+    }
+    removeCard(parent:Game){
+    }
 
     addToScene(scene: Scene, parent:Game) {
     }
