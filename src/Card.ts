@@ -1,13 +1,12 @@
-import {modelLoader, textureLoader} from "./consts.js";
+import {modelLoader, textureLoader, updateOrder} from "./consts.js";
 import {
     Group,
     LinearFilter,
-    LinearMipmapLinearFilter,
-    LinearMipmapNearestFilter,
-    Material,
     Mesh,
-    MeshBasicMaterial, Vector3
+    MeshBasicMaterial, Quaternion, type Scene, Vector3
 } from "three";
+import type {GameElement} from "./GameElement.js";
+import  Game from "./Game.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -20,7 +19,7 @@ const cardModel = (() => {
         other.rotateX(Math.PI);
         toReturn.add(other);
         resolve(toReturn);
-    }, undefined, err => {
+    }, undefined, () => {
         resolve(undefined);
     });
 
@@ -33,21 +32,23 @@ const cardBackMat = new MeshBasicMaterial({
     transparent:true,
 });
 
-export default class Card{
+export default class Card implements GameElement{
     public readonly imagePath: string;
     public position: Vector3;
     private realPosition: Vector3;
-    public rotation: Vector3;
+    public rotation: Quaternion;
+    private realRotation: Quaternion;
     private _model?: Mesh;
     get model(): Mesh|undefined {
         return this._model;
     }
 
-    constructor(imagePath: string, position: Vector3, rotation: Vector3 = new Vector3()) {
+    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion()) {
         this.imagePath=imagePath;
         this.position = position;
         this.realPosition = position;
         this.rotation = rotation;
+        this.realRotation = rotation;
     }
 
     async createModel(){
@@ -65,10 +66,25 @@ export default class Card{
         this._model = obj;
     }
 
-    updateModel(){
-        this.realPosition.lerp(this.position,0.2);
-        if(this._model !== undefined){
-            this._model.position.copy(this.realPosition);
+    tick(parent: Game) {
+        if(parent.selectedCard === this) {
+            this.position = parent.cursorPos;
+            this.rotation = new Quaternion();
         }
     }
+    visualTick(parent: Game) {
+        this.realPosition.lerp(this.position,0.2);
+        this.realRotation.slerp(this.rotation, 0.2);
+        if(this._model !== undefined){
+            this._model.position.copy(this.realPosition);
+            this._model.quaternion.copy(this.realRotation);
+        }
+    }
+
+    addToScene(scene: Scene, game:Game) {
+        this.createModel().then(()=>{
+            scene.add(this.model!);
+        });
+    }
 }
+updateOrder[Card.name] = 0;
