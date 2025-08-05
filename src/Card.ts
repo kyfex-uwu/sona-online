@@ -1,5 +1,6 @@
 import {modelLoader, textureLoader, updateOrder} from "./consts.js";
 import {
+    Euler,
     Group,
     LinearFilter,
     Mesh,
@@ -36,19 +37,19 @@ export default class Card implements GameElement{
     public readonly imagePath: string;
     public position: Vector3;
     private realPosition: Vector3;
-    public rotation: Quaternion;
+    public rotation: Euler;
     private realRotation: Quaternion;
     private _model?: Mesh;
     get model(): Mesh|undefined {
         return this._model;
     }
 
-    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion()) {
+    constructor(imagePath: string, position: Vector3, rotation: Euler = new Euler()) {
         this.imagePath=imagePath;
         this.position = position;
         this.realPosition = position;
         this.rotation = rotation;
-        this.realRotation = rotation;
+        this.realRotation = new Quaternion().setFromEuler(this.rotation);
     }
 
     async createModel(){
@@ -69,12 +70,12 @@ export default class Card implements GameElement{
     tick(parent: Game) {
         if(parent.selectedCard === this) {
             this.position = parent.cursorPos;
-            this.rotation = new Quaternion();
+            this.rotation = new Euler();
         }
     }
     visualTick(parent: Game) {
         this.realPosition.lerp(this.position,0.2);
-        this.realRotation.slerp(this.rotation, 0.2);
+        this.realRotation.slerp(new Quaternion().setFromEuler(this.rotation), 0.1);
         if(this._model !== undefined){
             this._model.position.copy(this.realPosition);
             this._model.quaternion.copy(this.realRotation);
@@ -85,6 +86,13 @@ export default class Card implements GameElement{
         this.createModel().then(()=>{
             scene.add(this.model!);
         });
+    }
+
+    flipFacedown(){
+        this.rotation = new Euler(0,0,Math.PI);
+    }
+    flipFaceup(){
+        this.rotation = new Euler(0,0,0);
     }
 }
 updateOrder[Card.name] = 0;

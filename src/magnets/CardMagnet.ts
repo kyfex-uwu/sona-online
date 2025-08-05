@@ -9,10 +9,11 @@ window.addEventListener("mouseup", ()=>{
 })
 
 export default abstract class CardMagnet implements GameElement{
+    public static readonly updateOrder = 1;
+    public static readonly offs = new Vector3(0,2,0);
+
     public readonly position: Vector3;
-    public readonly positionRange: Vector3;
     public readonly rotation: Vector3;
-    public readonly rotationRange: Vector3;
     public readonly radius: number;
     public readonly hardRadius: number;
     private readonly onClick: (v:Game) => boolean|undefined;
@@ -21,22 +22,16 @@ export default abstract class CardMagnet implements GameElement{
         radius?:number,
         hardRadius?:number,
         onClick?: (v:Game) => boolean|undefined,
-        positionRange?: Vector3,
         rotation?: Vector3,
-        rotationRange?: Vector3,
     }={}) {
         props = Object.assign({
             radius:70,
             hardRadius:40,
             onClick:()=>false,
-            positionRange: new Vector3(),
             rotation: new Vector3(),
-            rotationRange: new Vector3(),
         }, props);
         this.position = position;
-        this.positionRange = props.positionRange!;
         this.rotation = props.rotation!;
-        this.rotationRange = props.rotationRange!;
         this.radius = props.radius!;
         this.hardRadius = props.hardRadius!;
         this.onClick = props.onClick!;

@@ -4,8 +4,6 @@ import {type Scene, Vector3} from "three";
 import {updateOrder} from "../consts.js";
 import  Game from "../Game.js";
 
-const offs = new Vector3(0,2,0);
-
 export default class FieldMagnet extends CardMagnet{
     private card:Card|undefined;
 
@@ -17,14 +15,14 @@ export default class FieldMagnet extends CardMagnet{
                         this.card = game.selectedCard;
                         game.selectedCard = undefined;
                         this.card.position.copy(this.position);
-                        this.position.add(offs);
+                        this.position.add(CardMagnet.offs);
                         return true;
                     }
                 }else{
                     if(this.card !== undefined) {
                         game.selectedCard = this.card;
                         this.card = undefined;
-                        this.position.sub(offs);
+                        this.position.sub(CardMagnet.offs);
                         return true;
                     }
                 }
@@ -38,7 +36,7 @@ export default class FieldMagnet extends CardMagnet{
         //debug
         this.card = new Card("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_", new Vector3());
         this.card.position.copy(this.position);
-        this.position.add(offs);
+        this.position.add(CardMagnet.offs);
         game.addElement(this.card);
     }
 
@@ -47,4 +45,4 @@ export default class FieldMagnet extends CardMagnet{
 
     }
 }
-updateOrder[FieldMagnet.name] = 1;
+updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;

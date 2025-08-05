@@ -7,6 +7,7 @@ import {
 import Game from "./Game.js";
 import {camera} from "./consts.js";
 import FieldMagnet from "./magnets/FieldMagnet.js";
+import RunawayMagnet from "./magnets/RunawayMagnet.js";
 
 // Init scene.
 const scene = new Scene();
@@ -31,9 +32,10 @@ window.addEventListener("resize", () => {
 //--
 
 const game = new Game(scene);
-game.addElement(new FieldMagnet(new Vector3(100,0,0)));
-game.addElement(new FieldMagnet(new Vector3(0,0,0)));
-game.addElement(new FieldMagnet(new Vector3(-100,0,0)));
+game.addElement(new FieldMagnet(new Vector3(100,0,200)));
+game.addElement(new FieldMagnet(new Vector3(0,0,200)));
+game.addElement(new FieldMagnet(new Vector3(-100,0,200)));
+game.addElement(new RunawayMagnet(new Vector3(-200,0,200)));
 
 renderer.setAnimationLoop(() => {
     game.tick();
