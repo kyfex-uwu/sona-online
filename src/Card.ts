@@ -1,13 +1,7 @@
 import {modelLoader, textureLoader, updateOrder} from "./consts.js";
-import {
-    Euler,
-    Group,
-    LinearFilter,
-    Mesh,
-    MeshBasicMaterial, Quaternion, type Scene, Vector3
-} from "three";
+import {Group, LinearFilter, Mesh, MeshBasicMaterial, Object3D, Quaternion, type Scene, Vector3} from "three";
 import type {GameElement} from "./GameElement.js";
-import  Game from "./Game.js";
+import Game from "./Game.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -15,8 +9,8 @@ const cardModel = (() => {
 
     modelLoader.load("/assets/card.glb", model => {
         const toReturn = new Group();
-        toReturn.add((model.scene.children[0] as Mesh).clone());
-        const other = (model.scene.children[0] as Mesh).clone();
+        toReturn.add((model.scene.children[0] as Object3D).clone());
+        const other = (model.scene.children[0] as Object3D).clone();
         other.rotateX(Math.PI);
         toReturn.add(other);
         resolve(toReturn);
@@ -28,28 +22,35 @@ const cardModel = (() => {
 })();
 const cardShape = textureLoader.load("/assets/card-images/card_shape.png");
 const cardBackMat = new MeshBasicMaterial({
-    map: textureLoader.load( "/assets/card-images/card-back.jpg"),
+    map: textureLoader.load( "/assets/card-images/card_back.jpg"),
     alphaMap: cardShape,
     transparent:true,
 });
+
+export type CardTemplate = (position:Vector3, rotation?:Quaternion)=>Card;
 
 export default class Card implements GameElement{
     public readonly imagePath: string;
     public position: Vector3;
     private realPosition: Vector3;
-    public rotation: Euler;
+    public rotation: Quaternion;
     private realRotation: Quaternion;
-    private _model?: Mesh;
-    get model(): Mesh|undefined {
+    private _model?: Group;
+    get model(): Group|undefined {
         return this._model;
     }
 
-    constructor(imagePath: string, position: Vector3, rotation: Euler = new Euler()) {
+    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion()) {
         this.imagePath=imagePath;
-        this.position = position;
-        this.realPosition = position;
-        this.rotation = rotation;
-        this.realRotation = new Quaternion().setFromEuler(this.rotation);
+        this.position = position.clone();
+        this.realPosition = position.clone();
+        this.rotation = rotation.clone();
+        this.realRotation = rotation.clone();
+    }
+    public static template(imagePath:string):CardTemplate{
+        return (position:Vector3, rotation?: Quaternion) => {
+            return new Card(imagePath, position, rotation || new Quaternion());
+        }
     }
 
     async createModel(){
@@ -64,25 +65,28 @@ export default class Card implements GameElement{
             transparent:true,
         });
         (obj.children[1] as Mesh).material = cardBackMat;
-        this._model = obj;
+
+        const model = new Group();
+        model.add(obj);
+        this._model = model;
     }
 
     tick(parent: Game) {
         if(parent.selectedCard === this) {
-            this.position = parent.cursorPos;
-            this.rotation = new Euler();
+            this.position = parent.cursorPos.clone();
+            //this.rotation = new Euler();
         }
     }
     visualTick(parent: Game) {
         this.realPosition.lerp(this.position,0.2);
-        const rotation = new Quaternion().setFromEuler(this.rotation);
         // if(parent.selectedCard === this){
         //     rotation.rotateTowards(new Quaternion().setFromEuler(camera.rotation).invert(), Math.PI*0.9);
         // }
-        this.realRotation.slerp(rotation, 0.1);
+        this.realRotation.slerp(this.rotation, 0.1);
         if(this._model !== undefined){
             this._model.position.copy(this.realPosition);
             this._model.quaternion.copy(this.realRotation);
+            (this._model.children[0] as Object3D).quaternion.slerp(this.flipRotation,0.1);
         }
     }
 
@@ -92,11 +96,12 @@ export default class Card implements GameElement{
         });
     }
 
+    private flipRotation:Quaternion = new Quaternion();
     flipFacedown(){
-        this.rotation = new Euler(0,0,Math.PI);
+        this.flipRotation = new Quaternion(0,0,1,0);
     }
     flipFaceup(){
-        this.rotation = new Euler(0,0,0);
+        this.flipRotation = new Quaternion(0,0,0,1);
     }
 }
 updateOrder[Card.name] = 0;

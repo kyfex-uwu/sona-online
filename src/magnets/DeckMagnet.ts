@@ -1,6 +1,6 @@
 import CardMagnet from "./CardMagnet.js";
 import Card from "../Card.js";
-import {Euler, Quaternion, type Scene, Vector3} from "three";
+import {Euler, Quaternion, Vector3} from "three";
 import Game from "../Game.js";
 import {updateOrder} from "../consts.js";
 
@@ -8,14 +8,18 @@ import {updateOrder} from "../consts.js";
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<Card> = [];
 
-    constructor(position: Vector3, props:{rotation?:Euler}={}) {
+    constructor(position: Vector3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(position, {
             onClick:game=>{
-                if(game.selectedCard !== undefined){
-                    this.addCard(game);
+                if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
+                    game.selectedCard = undefined;
                     return true;
                 }else{
-                    this.removeCard(game);
+                    let tempCard = this.cards[this.cards.length-1];
+                    if(this.removeCard(game)) {
+                        game.selectedCard = tempCard;
+                    }
+
                     return true;
                 }
             },
@@ -23,19 +27,29 @@ export default class DeckMagnet extends CardMagnet{
         });
     }
 
-    addCard(game:Game){
-        game.selectedCard!.position.copy(this.position);
-        game.selectedCard!.flipFacedown();
-        this.cards.push(game.selectedCard!);
-        game.selectedCard = undefined;
+    addCard(game:Game, card:Card){
+
+        card.position.copy(this.position);
+        card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
+        const newRot = new Euler().setFromQuaternion(this.rotation);
+        newRot.y+=Math.random()*0.04-0.02;
+        card.rotation.copy(new Quaternion().setFromEuler(newRot));
+        card.flipFacedown();
+        this.cards.push(card);
         this.position.add(CardMagnet.offs);
+
+        return true;
     }
     removeCard(game:Game){
-        game.selectedCard = this.cards.pop();
-        if(game.selectedCard !== undefined) {
-            game.selectedCard.flipFaceup();
-            this.position.sub(CardMagnet.offs);
-        }
+        if(this.cards.length===0) return false;
+        this.cards.pop();
+        this.position.sub(CardMagnet.offs);
+
+        return true;
+    }
+
+    tick(parent: Game) {
+        super.tick(parent);
     }
 }
 updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;
