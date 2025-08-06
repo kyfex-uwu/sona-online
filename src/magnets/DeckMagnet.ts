@@ -3,24 +3,29 @@ import Card from "../Card.js";
 import {Euler, Quaternion, Vector3} from "three";
 import Game from "../Game.js";
 import {updateOrder} from "../consts.js";
+import {Side} from "../GameElement.js";
 
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<Card> = [];
 
-    constructor(position: Vector3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(position, {
+    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+        super(position, side, {
             onClick:game=>{
                 if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
                     game.selectedCard = undefined;
                     return true;
                 }else{
-                    let tempCard = this.cards[this.cards.length-1];
-                    if(this.removeCard(game)) {
-                        game.selectedCard = tempCard;
+                    const hand = (this.getSide() == Side.YOU ? game.yourHand : game.theirHand);
+                    if(hand.cards.length<5) {
+                        let tempCard = this.cards[this.cards.length - 1] as Card;
+                        if (this.removeCard(game)) {
+                            tempCard.flipFaceup();
+                            hand.addCard(tempCard, 0);
+                        }
+                        return true;
                     }
-
-                    return true;
+                    return false;
                 }
             },
             ...props,

@@ -1,13 +1,8 @@
 import {Quaternion, type Scene, Vector3} from "three";
-import type {GameElement} from "../GameElement.js";
+import {type GameElement, Side} from "../GameElement.js";
 import Game from "../Game.js";
-import {updateOrder} from "../consts.js";
+import {clickListener, updateOrder} from "../consts.js";
 import type Card from "../Card.js";
-
-let clicked=false;
-window.addEventListener("mouseup", ()=>{
-    clicked=true;
-})
 
 export default abstract class CardMagnet implements GameElement{
     public static readonly updateOrder = 1;
@@ -20,14 +15,16 @@ export default abstract class CardMagnet implements GameElement{
     private readonly onClick: (v:Game) => boolean;
     protected enabled: boolean;
     public getEnabled(){ return this.enabled; }
+    private readonly side:Side;
 
-    protected constructor(position: Vector3, props:{
+    protected constructor(position: Vector3, side:Side, props:{
         radius?:number,
         hardRadius?:number,
         onClick?: (v:Game) => boolean,
         rotation?: Quaternion,
         enabled?:boolean,
     }={}) {
+        this.side = side;
         props = Object.assign({
             radius:70,
             hardRadius:40,
@@ -56,9 +53,6 @@ export default abstract class CardMagnet implements GameElement{
                     parent.selectedCard!.position.lerp(this.position, (this.radius - dist) / this.radius);
                 }
             }
-            if (clicked) {
-                clicked=!(this.onClick(parent)||false);
-            }
         }
     }
 
@@ -66,9 +60,18 @@ export default abstract class CardMagnet implements GameElement{
     abstract removeCard(parent:Game):boolean;
 
     addToScene(scene: Scene, parent:Game) {
+        clickListener(()=> {
+            if(!this.getEnabled()) return false;
+
+            const dist = parent.cursorPos.distanceTo(this.position);
+            if (dist <= this.radius) {
+                return this.onClick(parent);
+            }
+            return false;
+        });
     }
     visualTick(parent: Game) {
-        clicked=false;
     }
+    getSide() { return this.side; }
 }
 updateOrder[CardMagnet.name] = 1;

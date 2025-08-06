@@ -23,3 +23,11 @@ export function shuffled<T>(array:Array<T>):Array<T>{
 
     return array;
 }
+
+let clickedListeners:Array<()=>boolean>=[];
+window.addEventListener("mouseup", ()=>{
+    for(const listener of clickedListeners) if(listener()) break;
+});
+export function clickListener(listener:()=>boolean){
+    clickedListeners.push(listener);
+}

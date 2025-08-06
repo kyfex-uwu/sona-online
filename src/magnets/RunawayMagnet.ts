@@ -3,13 +3,14 @@ import Card from "../Card.js";
 import {Euler, Quaternion, Vector3} from "three";
 import Game from "../Game.js";
 import {updateOrder} from "../consts.js";
+import type {Side} from "../GameElement.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
     private cards:Array<Card> = [];
 
-    constructor(position: Vector3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(position, {
+    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+        super(position, side, {
             onClick:game=>{
                 if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
                     game.selectedCard = undefined;

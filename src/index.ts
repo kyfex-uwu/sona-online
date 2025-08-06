@@ -1,7 +1,7 @@
 import {Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
 import Game, {ViewType} from "./Game.js";
 import {camera, modelLoader, textureLoader} from "./consts.js";
-import Card from "./Card.js";
+import cards from "./Cards.js";
 
 // Init scene.
 const scene = new Scene();
@@ -38,30 +38,23 @@ window.addEventListener("resize", windowResize);
 const game = new Game(scene);
 game.changeView(ViewType.WHOLE_BOARD);
 game.startGame([
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
+    ...(()=>{
+        const options = Object.keys(cards);
+        const toReturn=[];
+        for(let i=0;i<20;i++){
+            toReturn.push(cards[options.splice(Math.floor(Math.random()*options.length),1)[0]!]!)
+        }
+        return toReturn;
+    })()
 ],[
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
-    Card.template("1754325492309-b5bbee0a-1bc2-4bb3-b1fe-f79be3d07b3c_"),
+    ...(()=>{
+        const options = Object.keys(cards);
+        const toReturn=[];
+        for(let i=0;i<20;i++){
+            toReturn.push(cards[options.splice(Math.floor(Math.random()*options.length),1)[0]!]!)
+        }
+        return toReturn;
+    })()
 ]);
 
 renderer.setAnimationLoop(() => {

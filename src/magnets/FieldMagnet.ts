@@ -3,12 +3,13 @@ import Card from "../Card.js";
 import {Quaternion, Vector3} from "three";
 import {updateOrder} from "../consts.js";
 import Game from "../Game.js";
+import type {Side} from "../GameElement.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:Card|undefined;
 
-    constructor(position: Vector3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(position, {
+    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+        super(position, side, {
             onClick:game=>{
                 if(game.selectedCard !== undefined){
                     if(this.addCard(game, game.selectedCard)) {

@@ -1,12 +1,13 @@
 import Card, {type CardTemplate} from "./Card.js";
-import type {GameElement} from "./GameElement.js";
+import {type GameElement, Side} from "./GameElement.js";
 import {Euler, Mesh, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
 import {camera, shuffled, updateOrder} from "./consts.js";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
+import CardFan from "./fans/CardFan.js";
+import HandFan from "./fans/HandFan.js";
 
-const raycaster = new Raycaster();
 const pointer = new Vector2();
 
 window.addEventListener("pointermove", ( event: { clientX: number; clientY: number; } )=> {
@@ -23,47 +24,54 @@ export enum ViewType{
 export default class Game{
 
     public selectedCard:Card|undefined;
-    private readonly elements:GameElement[] = [];
+    public readonly elements:GameElement[] = [];
     private readonly scene:Scene;
-    public cursorPos:Vector3 = new Vector3();
+    public cursorPos = new Vector3();
+    public readonly raycaster = new Raycaster();
 
-    private readonly yourFields:[FieldMagnet,FieldMagnet,FieldMagnet] =
+    public readonly yourFields:[FieldMagnet,FieldMagnet,FieldMagnet] =
         [{} as FieldMagnet,{} as FieldMagnet,{} as FieldMagnet];
-    private readonly yourRunaway:RunawayMagnet;
-    private readonly yourDeck:DeckMagnet;
-    private readonly theirFields:[FieldMagnet,FieldMagnet,FieldMagnet] =
+    public readonly yourRunaway:RunawayMagnet;
+    public readonly yourDeck:DeckMagnet;
+    public readonly yourHand:CardFan;
+    public readonly theirFields:[FieldMagnet,FieldMagnet,FieldMagnet] =
         [{} as FieldMagnet,{} as FieldMagnet,{} as FieldMagnet];
-    private readonly theirRunaway:RunawayMagnet;
-    private readonly theirDeck:DeckMagnet;
+    public readonly theirRunaway:RunawayMagnet;
+    public readonly theirDeck:DeckMagnet;
+    public readonly theirHand:CardFan;
 
     public constructor(scene:Scene) {
         this.scene=scene;
 
-        this.yourFields[0] = this.addElement(new FieldMagnet(new Vector3(100,0,70)));
-        this.yourFields[1] = this.addElement(new FieldMagnet(new Vector3(0,0,70)));
-        this.yourFields[2] = this.addElement(new FieldMagnet(new Vector3(-100,0,70)));
-        this.yourRunaway = this.addElement(new RunawayMagnet(new Vector3(-200,0,200)));
-        this.yourDeck = this.addElement(new DeckMagnet(new Vector3(200,0,200)));
+        this.yourFields[0] = this.addElement(new FieldMagnet(new Vector3(100,0,70), Side.YOU));
+        this.yourFields[1] = this.addElement(new FieldMagnet(new Vector3(0,0,70), Side.YOU));
+        this.yourFields[2] = this.addElement(new FieldMagnet(new Vector3(-100,0,70), Side.YOU));
+        this.yourRunaway = this.addElement(new RunawayMagnet(new Vector3(-200,0,200), Side.YOU));
+        this.yourDeck = this.addElement(new DeckMagnet(new Vector3(200,0,200), Side.YOU));
+        this.yourHand = this.addElement(new HandFan(new Vector3(0,0,200), Side.YOU));
 
-        this.theirFields[0] = this.addElement(new FieldMagnet(new Vector3(100,0,-70), {
+        this.theirFields[0] = this.addElement(new FieldMagnet(new Vector3(100,0,-70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
             enabled:false,
         }));
-        this.theirFields[1] = this.addElement(new FieldMagnet(new Vector3(0,0,-70), {
+        this.theirFields[1] = this.addElement(new FieldMagnet(new Vector3(0,0,-70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
             enabled:false,
         }));
-        this.theirFields[2] = this.addElement(new FieldMagnet(new Vector3(-100,0,-70), {
+        this.theirFields[2] = this.addElement(new FieldMagnet(new Vector3(-100,0,-70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
             enabled:false,
         }));
-        this.theirRunaway = this.addElement(new RunawayMagnet(new Vector3(200,0,-200), {
+        this.theirRunaway = this.addElement(new RunawayMagnet(new Vector3(200,0,-200), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
             enabled:false,
         }));
-        this.theirDeck = this.addElement(new DeckMagnet(new Vector3(-200,0,-200), {
+        this.theirDeck = this.addElement(new DeckMagnet(new Vector3(-200,0,-200), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
             enabled:false,
+        }));
+        this.theirHand = this.addElement(new HandFan(new Vector3(0,0,-200), Side.YOU, {
+            rotation: new Quaternion().setFromEuler(new Euler(0,Math.PI,0)),
         }));
 
         //crisis markers
@@ -81,8 +89,8 @@ export default class Game{
     }
 
     public tick(){
-        raycaster.setFromCamera(pointer, camera);
-        const intersects = raycaster.intersectObjects([geo]);
+        this.raycaster.setFromCamera(pointer, camera);
+        const intersects = this.raycaster.intersectObjects([geo]);
         if (intersects[0] !== undefined) {
             this.cursorPos = intersects[0].point;
         }
@@ -116,10 +124,10 @@ export default class Game{
 
         //shuffle animation?
         for(const template of shuffled(yourDeck)){
-            this.yourDeck.addCard(this, this.addElement(template(this.yourDeck.position.clone(), this.yourDeck.rotation.clone())));
+            this.yourDeck.addCard(this, this.addElement(template(this.yourDeck.position.clone(), Side.YOU, this.yourDeck.rotation.clone())));
         }
         for(const template of shuffled(theirDeck)){
-            this.theirDeck.addCard(this, this.addElement(template(this.theirDeck.position.clone(), this.theirDeck.rotation.clone())));
+            this.theirDeck.addCard(this, this.addElement(template(this.theirDeck.position.clone(), Side.THEM, this.theirDeck.rotation.clone())));
         }
     }
 }

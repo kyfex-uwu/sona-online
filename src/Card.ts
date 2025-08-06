@@ -1,6 +1,6 @@
 import {modelLoader, textureLoader, updateOrder} from "./consts.js";
-import {Group, LinearFilter, Mesh, MeshBasicMaterial, Object3D, Quaternion, type Scene, Vector3} from "three";
-import type {GameElement} from "./GameElement.js";
+import {Group, Mesh, MeshBasicMaterial, Object3D, Quaternion, type Scene, Vector3} from "three";
+import {type GameElement, Side} from "./GameElement.js";
 import Game from "./Game.js";
 
 const cardModel = (() => {
@@ -27,7 +27,7 @@ const cardBackMat = new MeshBasicMaterial({
     transparent:true,
 });
 
-export type CardTemplate = (position:Vector3, rotation?:Quaternion)=>Card;
+export type CardTemplate = (position:Vector3, side:Side, rotation?:Quaternion)=>Card;
 
 export default class Card implements GameElement{
     public readonly imagePath: string;
@@ -39,17 +39,19 @@ export default class Card implements GameElement{
     get model(): Group|undefined {
         return this._model;
     }
+    private readonly side:Side;
 
-    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion()) {
+    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion(), side:Side) {
         this.imagePath=imagePath;
         this.position = position.clone();
         this.realPosition = position.clone();
         this.rotation = rotation.clone();
         this.realRotation = rotation.clone();
+        this.side=side;
     }
     public static template(imagePath:string):CardTemplate{
-        return (position:Vector3, rotation?: Quaternion) => {
-            return new Card(imagePath, position, rotation || new Quaternion());
+        return (position:Vector3, side:Side, rotation?: Quaternion) => {
+            return new Card(imagePath, position, rotation || new Quaternion(), side);
         }
     }
 
@@ -58,9 +60,7 @@ export default class Card implements GameElement{
 
         let obj = (await cardModel).clone();
         (obj.children[0] as Mesh).material = new MeshBasicMaterial({
-            map: textureLoader.load( `/assets/card-images/${this.imagePath}.jpg`, tex => {
-                tex.minFilter = LinearFilter;
-            }),
+            map: textureLoader.load( `/assets/card-images/${this.imagePath}.jpg`),
             alphaMap: cardShape,
             transparent:true,
         });
@@ -68,6 +68,7 @@ export default class Card implements GameElement{
 
         const model = new Group();
         model.add(obj);
+        model.userData.card=this;
         this._model = model;
     }
 
@@ -78,16 +79,37 @@ export default class Card implements GameElement{
         }
     }
     visualTick(parent: Game) {
-        this.realPosition.lerp(this.position,0.2);
-        // if(parent.selectedCard === this){
-        //     rotation.rotateTowards(new Quaternion().setFromEuler(camera.rotation).invert(), Math.PI*0.9);
+        const targetPos = this.position.clone();
+        const targetRot = this.rotation.clone();
+
+        if(parent.selectedCard === this){
+            targetPos.y =
+                Math.max.apply(null,parent.elements
+                    .filter(e=>e instanceof Card)
+                    .filter(card => card.position.distanceTo(this.position)<70)
+                    .map(card => card.position.y))+10;
+        }
+        // if(parent.cursorPos.distanceTo(this.position)<50 && this.faceUp &&
+        //     (parent.selectedCard === this || parent.selectedCard === undefined)){
+        //     targetPos.lerp(camera.position, 0.5);
+        //     // targetRot.slerp(camera.quaternion, 0.5);
         // }
-        this.realRotation.slerp(this.rotation, 0.1);
+
+        this.realPosition.lerp(targetPos,0.2);
+        this.realRotation.slerp(targetRot, 0.1);
         if(this._model !== undefined){
             this._model.position.copy(this.realPosition);
             this._model.quaternion.copy(this.realRotation);
             (this._model.children[0] as Object3D).quaternion.slerp(this.flipRotation,0.1);
+            (this._model.children[0] as Object3D).position.lerp(new Vector3(0,5*this.flipTimer,0),0.1);
+            this.flipTimer=Math.max(0,this.flipTimer-1);
         }
+    }
+    setRealPosition(pos:Vector3){
+        this.realPosition=pos;
+    }
+    setRealRotation(rot:Quaternion){
+        this.realRotation=rot;
     }
 
     addToScene(scene: Scene, game:Game) {
@@ -97,11 +119,19 @@ export default class Card implements GameElement{
     }
 
     private flipRotation:Quaternion = new Quaternion();
+    private flipTimer=0;
+    private faceUp = true;
     flipFacedown(){
         this.flipRotation = new Quaternion(0,0,1,0);
+        this.flipTimer = 20;
+        this.faceUp=false;
     }
     flipFaceup(){
         this.flipRotation = new Quaternion(0,0,0,1);
+        this.flipTimer = 20;
+        this.faceUp=true;
     }
+    getSide(){ return this.side; }
+    getFaceUp(){ return this.faceUp; }
 }
 updateOrder[Card.name] = 0;
