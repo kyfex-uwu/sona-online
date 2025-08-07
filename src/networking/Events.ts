@@ -14,13 +14,24 @@ abstract class Event{
     }
 }
 export abstract class ServerEvent extends Event{
-    abstract apply(game:Game):void;
+    apply(game:Game):void{
+        game.processingAction=false;
+    }
 }//an event the server sends
 type SerializableType = string|number|boolean|undefined|{[k:string]:SerializableType}|Array<SerializableType>;
 export abstract class ClientEvent extends Event{
     private readonly id = eventIdGenerator();
     abstract serialize():SerializableType;
 }//an event the client sends
+export class AcceptedEventEvent extends ServerEvent{
+    public readonly eventId:number
+    public readonly accepted:boolean;
+    constructor(id:number, accepted:boolean) {
+        super("AcceptedEvent");
+        this.eventId=id;
+        this.accepted=accepted;
+    }
+}
 
 type SerializableCard = {id:number, name:string};
 
@@ -43,7 +54,8 @@ export class GameStartEvent extends ServerEvent{
 
     apply(game: Game) {
         game.load(this.yourDeck, this.theirDeck);
-        sendEvent(new StartRequestEvent(Side.YOU));
+        game.sendEvent(new StartRequestEvent(Side.YOU));
+        super.apply(game);
     }
 }
 export class StartRequestEvent extends ClientEvent{
@@ -75,6 +87,7 @@ export class DetermineStarterEvent extends ServerEvent{
             //flip a coin, each side has a player's name on it?
             game.startTurn(this.starter === Side.YOU ? CurrentTurn.YOURS : CurrentTurn.THEIRS);
         }
+        super.apply(game);
     }
 }
 

@@ -4,6 +4,7 @@
     "@types/three": "^0.179.0",
     "express": "^5.1.0",
     "three": "^0.179.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "ws": "^8.18.3"
   }
 }

@@ -4,6 +4,7 @@ import {Euler, Quaternion, Vector3} from "three";
 import Game from "../Game.js";
 import {sidesMatch, updateOrder} from "../consts.js";
 import {Side} from "../GameElement.js";
+import {DrawAction} from "../networking/Events.js";
 
 
 export default class DeckMagnet extends CardMagnet{
@@ -12,18 +13,14 @@ export default class DeckMagnet extends CardMagnet{
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(position, side, {
             onClick:game=>{
-                if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
-                    game.selectedCard = undefined;
-                    return true;
-                }else{
-                    if(sidesMatch(this.getSide(), game.currentTurn)) {
-                        if ((this.getSide() == Side.YOU ? game.yourHand : game.theirHand).cards.length < 5) {
-                            this.drawCard(game);
-                            return true;
-                        }
+                if(!game.processingAction && sidesMatch(this.getSide(), game.currentTurn)) {
+                    if (game.yourHand.cards.length < 5) {
+                        this.drawCard(game);
+                        game.sendEvent(new DrawAction());
+                        return true;
                     }
-                    return false;
                 }
+                return false;
             },
             ...props,
         });

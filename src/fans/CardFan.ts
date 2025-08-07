@@ -1,4 +1,14 @@
-import {Euler, Group, Quaternion, type Scene, Vector3} from "three";
+import {
+    Euler,
+    Group,
+    Mesh,
+    MeshBasicMaterial,
+    type Object3D,
+    PlaneGeometry,
+    Quaternion,
+    type Scene,
+    Vector3
+} from "three";
 import Card from "../Card.js";
 import {type GameElement, Side} from "../GameElement.js";
 import type Game from "../Game.js";
@@ -12,6 +22,7 @@ export default class CardFan implements GameElement{
     protected readonly group: Group = new Group();
     private readonly onSelect:(card:Card, scene:Scene, parent:Game)=>void;
     private readonly side:Side;
+    private readonly fakeCard:Group;
 
     constructor(position: Vector3, side:Side, params?: {
         onSelect: (card: Card, scene: Scene, game: Game) => void;
@@ -26,6 +37,12 @@ export default class CardFan implements GameElement{
         this.position = position;
         this.rotation = params.rotation!;
         this.onSelect=params.onSelect!;
+
+        this.fakeCard = new Group();
+        const mesh = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({visible:false}));
+        mesh.rotateX(-Math.PI/2);
+        this.fakeCard.add(mesh);
+        this.group.add(this.fakeCard);
     }
 
     addToScene(scene: Scene, parent: Game): void {
@@ -33,7 +50,8 @@ export default class CardFan implements GameElement{
 
         clickListener(()=>{
             const intersects = parent.raycaster.intersectObjects(this.cards
-                .map(card => card.model).filter(model => model !== undefined));
+                .map(card => card.model).filter(model => model !== undefined)
+                .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
                 this.onSelect(((intersects[0].object.parent!.parent! as Group).userData.card as Card), scene, parent);
             }

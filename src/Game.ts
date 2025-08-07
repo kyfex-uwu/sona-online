@@ -8,7 +8,7 @@ import DeckMagnet from "./magnets/DeckMagnet.js";
 import CardFan from "./fans/CardFan.js";
 import HandFan from "./fans/HandFan.js";
 import {sendEvent} from "./networking/Server.js";
-import {FindGameEvent} from "./networking/Events.js";
+import {ClientEvent, FindGameEvent} from "./networking/Events.js";
 
 const pointer = new Vector2();
 
@@ -49,6 +49,7 @@ export default class Game{
 
     public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
     public actionsLeft = 0;
+    public processingAction = false;
 
     public constructor(scene:Scene) {
         this.scene=scene;
@@ -135,7 +136,7 @@ export default class Game{
         this.currentTurn=CurrentTurn.NEITHER;
         this.actionsLeft=0;
 
-        sendEvent(new FindGameEvent());
+        this.sendEvent(new FindGameEvent());
     }
     load(yourDeck:CardTemplate[], theirDeck:CardTemplate[]){
         //shuffle animation?
@@ -152,5 +153,10 @@ export default class Game{
         this.actionsLeft=2;//todo: crisis
 
         (this.currentTurn == CurrentTurn.YOURS ? this.yourDeck : this.theirDeck).drawCard(this);
+    }
+
+    sendEvent(event:ClientEvent){
+        this.processingAction = true;
+        sendEvent(event);
     }
 }

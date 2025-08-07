@@ -1,4 +1,5 @@
 import express from 'express';
+import ws from 'ws';
 const website = new express();
 
 import { fileURLToPath } from 'url';
@@ -13,3 +14,10 @@ website.get("/", (req, res) =>
     res.sendFile(__dirname + "/assets/index.html"));
 website.use("/src", express.static(__dirname + "/dist"));
 website.use("/assets", express.static(__dirname + "/assets"));
+
+const wsServer = new ws.Server({ noServer: true })
+server.on('upgrade', (req, socket, head) => {
+    wsServer.handleUpgrade(req, socket, head, (ws) => {
+        wsServer.emit('connection', ws, req)
+    })
+})

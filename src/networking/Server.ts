@@ -19,6 +19,7 @@ export function sendEvent(event:ClientEvent){
         setTimeout(()=> {
             switch (event.type) {
                 case "FindGame":
+                    //assign game to player
                     processEvent(new GameStartEvent((()=>{
                         const options = Object.keys(cards);
                         const toReturn=[];
@@ -33,10 +34,15 @@ export function sendEvent(event:ClientEvent){
                             toReturn.push({id:eventIdGenerator(), name:options.splice(Math.floor(Math.random()*options.length),1)[0]!})
                         }
                         return toReturn;
-                    })()))
+                    })()));
                     break;
                 case "StartRequest"://todo
                     processEvent(new DetermineStarterEvent(Side.YOU,false));
+                    break;
+                case "DrawAction":
+                    game!.actionsLeft--;
+                    //processEvent(new )
+                    //send event to other player
                     break;
             }
         },20+Math.random()*100);
