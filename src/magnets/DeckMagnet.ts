@@ -2,7 +2,7 @@ import CardMagnet from "./CardMagnet.js";
 import Card from "../Card.js";
 import {Euler, Quaternion, Vector3} from "three";
 import Game from "../Game.js";
-import {updateOrder} from "../consts.js";
+import {sidesMatch, updateOrder} from "../consts.js";
 import {Side} from "../GameElement.js";
 
 
@@ -16,14 +16,11 @@ export default class DeckMagnet extends CardMagnet{
                     game.selectedCard = undefined;
                     return true;
                 }else{
-                    const hand = (this.getSide() == Side.YOU ? game.yourHand : game.theirHand);
-                    if(hand.cards.length<5) {
-                        let tempCard = this.cards[this.cards.length - 1] as Card;
-                        if (this.removeCard(game)) {
-                            tempCard.flipFaceup();
-                            hand.addCard(tempCard, 0);
+                    if(sidesMatch(this.getSide(), game.currentTurn)) {
+                        if ((this.getSide() == Side.YOU ? game.yourHand : game.theirHand).cards.length < 5) {
+                            this.drawCard(game);
+                            return true;
                         }
-                        return true;
                     }
                     return false;
                 }
@@ -55,6 +52,15 @@ export default class DeckMagnet extends CardMagnet{
 
     tick(parent: Game) {
         super.tick(parent);
+    }
+
+    drawCard(game:Game){
+        const hand = (this.getSide() == Side.YOU ? game.yourHand : game.theirHand);
+        let tempCard = this.cards[this.cards.length - 1] as Card;
+        if (this.removeCard(game)) {
+            tempCard.flipFaceup();
+            hand.addCard(tempCard, hand.cards.length);
+        }
     }
 }
 updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;

@@ -3,6 +3,12 @@ import {Group, Mesh, MeshBasicMaterial, Object3D, Quaternion, type Scene, Vector
 import {type GameElement, Side} from "./GameElement.js";
 import Game from "./Game.js";
 
+export enum CardColor{
+    RED,
+    YELLOW,
+    BLUE
+}
+
 const cardModel = (() => {
     let resolve : (v:any) => void;
     let promise = new Promise<Mesh>(r=>resolve=r);
@@ -40,18 +46,23 @@ export default class Card implements GameElement{
         return this._model;
     }
     private readonly side:Side;
+    private readonly id:number;
 
-    constructor(imagePath: string, position: Vector3, rotation: Quaternion = new Quaternion(), side:Side) {
+    constructor(imagePath: string, position: Vector3, side:Side, id:number, rotation: Quaternion = new Quaternion()) {
         this.imagePath=imagePath;
         this.position = position.clone();
         this.realPosition = position.clone();
         this.rotation = rotation.clone();
         this.realRotation = rotation.clone();
         this.side=side;
+        this.id=id;
     }
-    public static template(imagePath:string):CardTemplate{
+    public static template(imagePath:string){
+        return (id:number) => Card.specificTemplate(imagePath, id);
+    }
+    public static specificTemplate(imagePath:string, id:number):CardTemplate{
         return (position:Vector3, side:Side, rotation?: Quaternion) => {
-            return new Card(imagePath, position, rotation || new Quaternion(), side);
+            return new Card(imagePath, position, side, id, rotation || new Quaternion());
         }
     }
 

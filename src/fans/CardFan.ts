@@ -58,7 +58,7 @@ export default class CardFan implements GameElement{
     }
     recalculateCardPositions(){
         let pos = -(this.cards.length-1)/2;
-        const posInc = 100-Math.log(this.cards.length)*27;
+        const posInc = 100-Math.log(this.cards.length)*30;
         const radius = this.cards.length;
         for(const card of this.cards){
             card.position = new Vector3(posInc*radius*Math.sin(pos/radius),0,posInc*(-Math.cos(pos/radius)+0.9)*radius*3/5);

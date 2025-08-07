@@ -1,5 +1,7 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PerspectiveCamera, TextureLoader} from "three";
+import {Side} from "./GameElement.js";
+import {CurrentTurn} from "./Game.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -30,4 +32,9 @@ window.addEventListener("mouseup", ()=>{
 });
 export function clickListener(listener:()=>boolean){
     clickedListeners.push(listener);
+}
+
+export function sidesMatch(side1:Side, side2:CurrentTurn){
+    return (side1 === Side.YOU && side2 == CurrentTurn.YOURS) ||
+        (side1 == Side.THEM && side2 == CurrentTurn.THEIRS);
 }

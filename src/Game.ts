@@ -7,6 +7,8 @@ import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
 import CardFan from "./fans/CardFan.js";
 import HandFan from "./fans/HandFan.js";
+import {sendEvent} from "./networking/Server.js";
+import {FindGameEvent} from "./networking/Events.js";
 
 const pointer = new Vector2();
 
@@ -19,6 +21,11 @@ const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 export enum ViewType{
     WHOLE_BOARD,
     FIELDS,
+}
+export enum CurrentTurn{
+    YOURS,
+    THEIRS,
+    NEITHER,
 }
 
 export default class Game{
@@ -39,6 +46,9 @@ export default class Game{
     public readonly theirRunaway:RunawayMagnet;
     public readonly theirDeck:DeckMagnet;
     public readonly theirHand:CardFan;
+
+    public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
+    public actionsLeft = 0;
 
     public constructor(scene:Scene) {
         this.scene=scene;
@@ -114,7 +124,7 @@ export default class Game{
         }
     }
 
-    startGame(yourDeck:CardTemplate[], theirDeck:CardTemplate[]){
+    requestStart(){
         for(const field of this.yourFields) field.removeCard(this);
         for(const field of this.theirFields) field.removeCard(this);
         while(this.yourDeck.removeCard(this)){}
@@ -122,6 +132,12 @@ export default class Game{
         while(this.yourRunaway.removeCard(this)){}
         while(this.theirRunaway.removeCard(this)){}
 
+        this.currentTurn=CurrentTurn.NEITHER;
+        this.actionsLeft=0;
+
+        sendEvent(new FindGameEvent());
+    }
+    load(yourDeck:CardTemplate[], theirDeck:CardTemplate[]){
         //shuffle animation?
         for(const template of shuffled(yourDeck)){
             this.yourDeck.addCard(this, this.addElement(template(this.yourDeck.position.clone(), Side.YOU, this.yourDeck.rotation.clone())));
@@ -129,5 +145,12 @@ export default class Game{
         for(const template of shuffled(theirDeck)){
             this.theirDeck.addCard(this, this.addElement(template(this.theirDeck.position.clone(), Side.THEM, this.theirDeck.rotation.clone())));
         }
+    }
+
+    startTurn(turn:CurrentTurn.YOURS|CurrentTurn.THEIRS){
+        this.currentTurn=turn;
+        this.actionsLeft=2;//todo: crisis
+
+        (this.currentTurn == CurrentTurn.YOURS ? this.yourDeck : this.theirDeck).drawCard(this);
     }
 }

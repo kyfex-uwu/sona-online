@@ -1,7 +1,7 @@
 import {Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
 import Game, {ViewType} from "./Game.js";
 import {camera, modelLoader, textureLoader} from "./consts.js";
-import cards from "./Cards.js";
+import {setGame} from "./networking/Server.js";
 
 // Init scene.
 const scene = new Scene();
@@ -36,26 +36,9 @@ window.addEventListener("resize", windowResize);
 //--
 
 const game = new Game(scene);
+setGame(game);
 game.changeView(ViewType.WHOLE_BOARD);
-game.startGame([
-    ...(()=>{
-        const options = Object.keys(cards);
-        const toReturn=[];
-        for(let i=0;i<20;i++){
-            toReturn.push(cards[options.splice(Math.floor(Math.random()*options.length),1)[0]!]!)
-        }
-        return toReturn;
-    })()
-],[
-    ...(()=>{
-        const options = Object.keys(cards);
-        const toReturn=[];
-        for(let i=0;i<20;i++){
-            toReturn.push(cards[options.splice(Math.floor(Math.random()*options.length),1)[0]!]!)
-        }
-        return toReturn;
-    })()
-]);
+game.requestStart();
 
 renderer.setAnimationLoop(() => {
     game.tick();
