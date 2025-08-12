@@ -7,9 +7,10 @@ import VisualHandFan from "./fans/HandFan.js";
 import Game from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {Event} from "../networking/Events.js";
+import {game} from "../index.js";
 
 const pointer = new Vector2();
 
@@ -76,25 +77,20 @@ export default class VisualGame {
 
         this.theirFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, -70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
-            enabled: false,
         }));
         this.theirFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, -70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
-            enabled: false,
         }));
         this.theirFields[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, -70), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
-            enabled: false,
         }));
         this.theirRunaway = this.addElement(new RunawayMagnet(new Vector3(200, 0, -200), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
-            enabled: false,
         }));
         this.theirDeck = this.addElement(new DeckMagnet(new Vector3(-200, 0, -200), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
-            enabled: false,
         }));
-        this.theirHand = this.addElement(new HandFan(new Vector3(0, 0, -200), Side.YOU, {
+        this.theirHand = this.addElement(new HandFan(new Vector3(0, 0, -200), Side.THEM, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
 
@@ -144,13 +140,19 @@ export default class VisualGame {
     }
 
     getMy(type:ElementType):VisualGameElement{
+        return this.get(this.game.side,type);
+    }
+    getTheir(type:ElementType):VisualGameElement{
+        return this.get(other(this.game.side),type);
+    }
+    get(side:Side, type:ElementType){
         switch(type){
-            case ElementType.DECK: return this.game.side == Side.YOU ? this.yourDeck : this.theirDeck;
-            case ElementType.FIELD_1: return this.game.side == Side.YOU ? this.yourFields[0] : this.theirFields[0];
-            case ElementType.FIELD_2: return this.game.side == Side.YOU ? this.yourFields[1] : this.theirFields[1];
-            case ElementType.FIELD_3: return this.game.side == Side.YOU ? this.yourFields[2] : this.theirFields[2];
-            case ElementType.HAND: return this.game.side == Side.YOU ? this.yourHand : this.theirHand;
-            case ElementType.RUNAWAY: return this.game.side == Side.YOU ? this.yourRunaway : this.theirRunaway;
+            case ElementType.DECK: return side == Side.YOU ? this.yourDeck : this.theirDeck;
+            case ElementType.FIELD_1: return side == Side.YOU ? this.yourFields[0] : this.theirFields[0];
+            case ElementType.FIELD_2: return side == Side.YOU ? this.yourFields[1] : this.theirFields[1];
+            case ElementType.FIELD_3: return side == Side.YOU ? this.yourFields[2] : this.theirFields[2];
+            case ElementType.HAND: return side == Side.YOU ? this.yourHand : this.theirHand;
+            case ElementType.RUNAWAY: return side == Side.YOU ? this.yourRunaway : this.theirRunaway;
         }
     }
 

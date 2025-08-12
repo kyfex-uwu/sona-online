@@ -13,8 +13,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
     public static readonly updateOrder = 1;
     public static readonly offs = new Vector3(0,1.5,0);
 
-    protected enabled: boolean;
-    public getEnabled(){ return this.enabled; }
+    public enabled: boolean;
 
     protected constructor(side:Side, position:Vector3, props:{
         radius?:number,
@@ -38,7 +37,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
     }
 
     tick(parent: VisualGame) {
-        if(!this.getEnabled()) return;
+        if(!this.enabled) return;
         super.tick(parent);
 
         const dist = parent.cursorPos.distanceTo(this.position);
@@ -59,7 +58,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
 
     addToScene(scene: Scene, parent:VisualGame) {
         clickListener(()=> {
-            if(!this.getEnabled()) return false;
+            if(!this.enabled) return false;
 
             const dist = parent.cursorPos.distanceTo(this.position);
             if (dist <= this.radius) {

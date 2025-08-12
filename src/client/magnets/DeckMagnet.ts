@@ -5,7 +5,7 @@ import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
-import {sidesMatch} from "../../consts.js";
+import {sidesMatch, youThemTern} from "../../consts.js";
 
 
 export default class DeckMagnet extends CardMagnet{
@@ -52,7 +52,7 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     drawCard(game:VisualGame){
-        const hand = (this.getSide() == Side.YOU ? game.yourHand : game.theirHand);
+        const hand = youThemTern(this.getSide(), game.yourHand, game.theirHand);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;
         if (this.removeCard(game)) {
             tempCard.flipFaceup();

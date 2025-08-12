@@ -7,4 +7,5 @@ export interface VisualGameElement{
     tick(parent: VisualGame):void;
     visualTick(parent:VisualGame):void;
     addToScene(scene:Scene, parent: VisualGame):void;
+    enabled:boolean;
 }

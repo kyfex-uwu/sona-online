@@ -6,10 +6,11 @@ import Game from "../Game.js";
 import Card from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
-import {Quaternion, Vector3} from "three";
+import {Euler, Quaternion, Vector3} from "three";
 import {ElementType, ViewType} from "../client/VisualGame.js";
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
 import type DeckMagnet from "../client/magnets/DeckMagnet.js";
+import {youThemTern} from "../consts.js";
 
 export function frontendInit(){
     console.log("network initialized :D")
@@ -36,12 +37,39 @@ network.receiveFromServer = (packed) => {
 
     if(event instanceof GameStartEvent){
         game.setGame(new Game(event.data.deck, new Array<string>(20).fill("unknown"), Game.localID, event.data.which));
-        game.changeView(event.data.which == Side.YOU ? ViewType.WHOLE_BOARD_YOU : ViewType.WHOLE_BOARD_THEM);
+        game.changeView(youThemTern(event.data.which, ViewType.WHOLE_BOARD_YOU, ViewType.WHOLE_BOARD_THEM));
         const myDeck = game.getMy(ElementType.DECK) as DeckMagnet;
+        const theirDeck = game.getTheir(ElementType.DECK) as DeckMagnet;
+        const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const card of event.data.deck){
             const visualCard = game.addElement(new VisualCard(new Card(cards[card]!, game.getGame().side, 0),
-                new Vector3(), new Quaternion()));
+                new Vector3(), rotation));
             myDeck.addCard(game, visualCard);
         }
+        for(let i=0;i<20;i++){
+            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, other(game.getGame().side), 0),
+                new Vector3(), rotation));
+            theirDeck.addCard(game, visualCard);
+        }
+        if(game.getGame().side == Side.YOU){
+            game.theirHand.enabled=false;
+            game.theirDeck.enabled=false;
+            game.theirRunaway.enabled=false;
+            for(const field of game.theirFields) field.enabled=false;
+        }else{
+            game.yourHand.enabled=false;
+            game.yourRunaway.enabled=false;
+            game.yourDeck.enabled=false;
+            for(const field of game.yourFields) field.enabled=false;
+        }
+
+        setTimeout(()=>{
+            myDeck.drawCard(game);
+            myDeck.drawCard(game);
+            myDeck.drawCard(game);
+            theirDeck.drawCard(game);
+            theirDeck.drawCard(game);
+            theirDeck.drawCard(game);
+        }, 500);
     }
 }

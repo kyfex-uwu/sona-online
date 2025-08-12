@@ -18,3 +18,7 @@ export function sidesMatch(side1:Side, side2:CurrentTurn){
     return (side1 === Side.YOU && side2 == CurrentTurn.YOURS) ||
         (side1 == Side.THEM && side2 == CurrentTurn.THEIRS);
 }
+
+export function youThemTern<T>(side:Side, youVal:T, themVal:T){
+    return side == Side.YOU ? youVal : themVal;
+}

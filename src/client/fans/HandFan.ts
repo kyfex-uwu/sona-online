@@ -1,7 +1,7 @@
 import VisualCardFan from "./CardFan.js";
 import type {Side} from "../../GameElement.js";
 import {Quaternion, type Scene, Vector3} from "three";
-import type VisualCard from "../VisualCard.js";
+import  VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 
 export default class HandFan extends VisualCardFan{
@@ -15,6 +15,8 @@ export default class HandFan extends VisualCardFan{
     }
 
     onSelectImpl(card:VisualCard, scene:Scene, parent:VisualGame){
+        if(!this.enabled) return false;
+
         if(parent.selectedCard !== undefined){
             if(this.cards.length<5) {
                 this.cards.splice(this.cards.indexOf(card) + 1, 0, parent.selectedCard);
@@ -38,9 +40,8 @@ export default class HandFan extends VisualCardFan{
         }
     }
 
-    addToScene(scene: Scene, parent: VisualGame): void {
-    }
-
-    visualTick(parent: VisualGame): void {
+    addCard(card: VisualCard, index: number = 0) {
+        super.addCard(card, index);
+        console.log("bro")
     }
 }

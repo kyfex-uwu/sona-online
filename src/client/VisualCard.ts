@@ -1,9 +1,21 @@
-import {Group, type Mesh, MeshBasicMaterial, type Object3D, Quaternion, type Scene, Vector3} from "three";
+import {
+    Euler,
+    Group,
+    Material,
+    type Mesh,
+    MeshBasicMaterial,
+    type Object3D,
+    Quaternion,
+    type Scene,
+    Vector3
+} from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card from "../Card.js";
 import type {Side} from "../GameElement.js";
-import type VisualGame from "./VisualGame.js";
+import  VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
+import {game} from "../index.js";
+import {youThemTern} from "../consts.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -48,9 +60,15 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         let obj = (await cardModel).clone();
         (obj.children[0] as Mesh).material = new MeshBasicMaterial({
-            map: textureLoader.load( `/assets/card-images/${this.card.cardData.imagePath}.jpg`),
             alphaMap: cardShape,
             transparent:true,
+        });
+        textureLoader.loadAsync(`/assets/card-images/${this.card.cardData.imagePath}.jpg`).then((texture)=>{
+            (obj.children[0] as Mesh).material = new MeshBasicMaterial({
+                map: texture,
+                alphaMap: cardShape,
+                transparent:true,
+            });
         });
         (obj.children[1] as Mesh).material = cardBackMat;
 
@@ -60,8 +78,16 @@ export default class VisualCard extends PositionedVisualGameElement{
         this._model = model;
     }
 
+    tick(parent: VisualGame) {
+        super.tick(parent);
+        if(parent.selectedCard === this) {
+            this.position = parent.cursorPos;
+            this.rotation = youThemTern(game.getGame().side, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+        }
+    }
+
     visualTick(parent: VisualGame) {
-        const targetPos = this.position.clone();
+        let targetPos = this.position.clone();
         const targetRot = this.rotation.clone();
         if(parent.selectedCard === this){
             targetPos.y =

@@ -46,8 +46,5 @@ export default class FieldMagnet extends CardMagnet{
 
         return true;
     }
-    getEnabled(){
-        return this.card === undefined && this.enabled;
-    }
 }
 updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;

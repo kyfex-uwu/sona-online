@@ -40,17 +40,18 @@ window.addEventListener("resize", windowResize);
 frontendInit();
 
 export const game = new VisualGame(scene);
-//setGame(game);
 game.changeView(ViewType.WHOLE_BOARD_YOU);
-game.sendEvent(new FindGameEvent({
-    deck:(()=>{
-        const toReturn = [];
-        for(let i=0;i<20;i++) {
-            toReturn.push(Object.keys(cards)[Math.floor(Math.random() * Object.keys(cards).length)]!);
-        }
-        return toReturn;
-    })(),
-}, undefined))
+setTimeout(()=>{
+    game.sendEvent(new FindGameEvent({
+        deck:(()=>{
+            const toReturn = [];
+            for(let i=0;i<20;i++) {
+                toReturn.push(Object.keys(cards)[Math.floor(Math.random() * Object.keys(cards).length)]!);
+            }
+            return toReturn;
+        })(),
+    }, undefined))
+},1000)
 
 renderer.setAnimationLoop(() => {
     game.tick();
