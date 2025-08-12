@@ -1,6 +1,6 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
-import {updateOrder} from "../../consts.js";
+import {updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";

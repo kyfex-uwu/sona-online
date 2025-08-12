@@ -1,17 +1,23 @@
 import {CardColor} from "../Card.js";
 import {Side} from "../GameElement.js";
+import type Game from "../Game.js";
 
 const eventIdGenerator = ()=>Math.random();
 export type SerializableType = string|number|boolean|undefined|{[k:string]:SerializableType}|Array<SerializableType>;
 
 export abstract class Event<T extends {[k:string]:SerializableType}>{
     public readonly data:T;
-    constructor(data:T) {
+    public readonly game:Game|undefined;
+    public readonly sender:{send:(v:string)=>void}|undefined;
+    public readonly id;
+    constructor(data:T, game?:Game, sender?:{send:(v:string)=>void}, id?:number) {
         this.data=data;
+        this.game=game;
+        this.sender=sender;
+        this.id=id||eventIdGenerator();
         this.init();
     }
     init(){}
-    public readonly id = eventIdGenerator();
     serialize(): string {
         return JSON.stringify({
             id:this.id,
@@ -23,12 +29,12 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
 
 //--
 
-type SerializableCard = {id:number, name:string};
-
-export class FindGameEvent extends Event<{}>{}
+export class FindGameEvent extends Event<{
+    deck:Array<string>,
+}>{}
 export class GameStartEvent extends Event<{
-    yourDeck:Array<SerializableCard>,
-    theirDeck:Array<SerializableCard>
+    deck:Array<string>,
+    which:Side,
 }>{}
 export class StartRequestEvent extends Event<{
     side?:Side

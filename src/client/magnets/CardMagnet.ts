@@ -1,6 +1,5 @@
 import {Side} from "../../GameElement.js";
-import {clickListener} from "../clientConsts.js";
-import {updateOrder} from "../../consts.js";
+import {clickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, type Scene, Vector3} from "three";
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import type VisualGame from "../VisualGame.js";

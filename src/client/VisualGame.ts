@@ -5,12 +5,11 @@ import DeckMagnet from "./magnets/DeckMagnet.js";
 import HandFan from "./fans/HandFan.js";
 import VisualHandFan from "./fans/HandFan.js";
 import Game from "../Game.js";
-import type VisualCard from "./VisualCard.js";
+import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
-import {updateOrder} from "../consts.js";
-import {camera} from "./clientConsts.js";
-import {Event, FindGameEvent} from "../networking/Events.js";
+import {camera, updateOrder} from "./clientConsts.js";
+import {Event} from "../networking/Events.js";
 
 const pointer = new Vector2();
 
@@ -21,7 +20,8 @@ window.addEventListener("pointermove", ( event: { clientX: number; clientY: numb
 const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 
 export enum ViewType{
-    WHOLE_BOARD,
+    WHOLE_BOARD_YOU,
+    WHOLE_BOARD_THEM,
     FIELDS,
 }
 export enum CurrentTurn{
@@ -29,9 +29,19 @@ export enum CurrentTurn{
     THEIRS,
     NEITHER,
 }
+export enum ElementType{
+    FIELD_1,
+    FIELD_2,
+    FIELD_3,
+    RUNAWAY,
+    DECK,
+    HAND
+}
 
 export default class VisualGame {
-    private readonly game: Game;
+    private game: Game;
+    public getGame():Game{ return this.game; }
+    public setGame(g:Game):void{ this.game = g; }
     public selectedCard: VisualCard | undefined;
     public readonly elements: VisualGameElement[] = [];
     private readonly scene: Scene;
@@ -55,7 +65,7 @@ export default class VisualGame {
 
     public constructor(scene: Scene) {
         this.scene = scene;
-        this.game = new Game();
+        this.game = new Game([],[],Game.localID);
 
         this.yourFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, 70), Side.YOU));
         this.yourFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, 70), Side.YOU));
@@ -118,9 +128,13 @@ export default class VisualGame {
 
     public changeView(type: ViewType) {
         switch (type) {
-            case ViewType.WHOLE_BOARD:
+            case ViewType.WHOLE_BOARD_YOU:
                 camera.position.copy(new Vector3(0, 600, 220));
                 camera.rotation.copy(new Euler(-Math.PI * 0.4, 0, 0));
+                break;
+            case ViewType.WHOLE_BOARD_THEM:
+                camera.position.copy(new Vector3(0, 600, -220));
+                camera.rotation.copy(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
             case ViewType.FIELDS:
                 camera.position.copy(new Vector3(0, 450, 20));
@@ -129,23 +143,32 @@ export default class VisualGame {
         }
     }
 
-    requestStart() {
-        for (const field of this.yourFields) field.removeCard(this);
-        for (const field of this.theirFields) field.removeCard(this);
-        while (this.yourDeck.removeCard(this)) {
+    getMy(type:ElementType):VisualGameElement{
+        switch(type){
+            case ElementType.DECK: return this.game.side == Side.YOU ? this.yourDeck : this.theirDeck;
+            case ElementType.FIELD_1: return this.game.side == Side.YOU ? this.yourFields[0] : this.theirFields[0];
+            case ElementType.FIELD_2: return this.game.side == Side.YOU ? this.yourFields[1] : this.theirFields[1];
+            case ElementType.FIELD_3: return this.game.side == Side.YOU ? this.yourFields[2] : this.theirFields[2];
+            case ElementType.HAND: return this.game.side == Side.YOU ? this.yourHand : this.theirHand;
+            case ElementType.RUNAWAY: return this.game.side == Side.YOU ? this.yourRunaway : this.theirRunaway;
         }
-        while (this.theirDeck.removeCard(this)) {
-        }
-        while (this.yourRunaway.removeCard(this)) {
-        }
-        while (this.theirRunaway.removeCard(this)) {
-        }
-
-        this.currentTurn = CurrentTurn.NEITHER;
-        this.actionsLeft = 0;
-
-        this.sendEvent(new FindGameEvent({}));
     }
+
+    // requestStart() {
+    //     for (const field of this.yourFields) field.removeCard(this);
+    //     for (const field of this.theirFields) field.removeCard(this);
+    //     while (this.yourDeck.removeCard(this)) {}
+    //     while (this.theirDeck.removeCard(this)) {}
+    //     while (this.yourRunaway.removeCard(this)) {}
+    //     while (this.theirRunaway.removeCard(this)) {}
+    //
+    //     this.currentTurn = CurrentTurn.NEITHER;
+    //     this.actionsLeft = 0;
+    //
+    //     this.sendEvent(new StartRequestEvent({
+    //         side:this.game.side,
+    //     }, this.game));
+    // }
     sendEvent(event:Event<any>){
         this.game.requestEvent(event);
     }

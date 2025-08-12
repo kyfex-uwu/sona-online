@@ -1,5 +1,5 @@
 import {Group, type Mesh, MeshBasicMaterial, type Object3D, Quaternion, type Scene, Vector3} from "three";
-import {modelLoader, textureLoader} from "./clientConsts.js";
+import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card from "../Card.js";
 import type {Side} from "../GameElement.js";
 import type VisualGame from "./VisualGame.js";
@@ -38,8 +38,8 @@ export default class VisualCard extends PositionedVisualGameElement{
         return this._model;
     }
 
-    constructor(card: Card, side:Side, position: Vector3, rotation: Quaternion = new Quaternion()) {
-        super(side, position, rotation);
+    constructor(card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
+        super(card.getSide(), position, rotation);
         this.card=card;
     }
 
@@ -104,3 +104,4 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.flipTimer = 20;
     }
 }
+updateOrder[VisualCard.name] = 0;

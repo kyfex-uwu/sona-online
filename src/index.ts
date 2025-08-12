@@ -1,8 +1,9 @@
 import {Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
-import {ViewType} from "./Game.js";
 import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
-import VisualGame from "./client/VisualGame.js";
+import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
+import {FindGameEvent} from "./networking/Events.js";
+import cards from "./Cards.js";
 
 // Init scene.
 const scene = new Scene();
@@ -38,10 +39,18 @@ window.addEventListener("resize", windowResize);
 
 frontendInit();
 
-const game = new VisualGame(scene);
+export const game = new VisualGame(scene);
 //setGame(game);
-game.changeView(ViewType.WHOLE_BOARD);
-game.requestStart();
+game.changeView(ViewType.WHOLE_BOARD_YOU);
+game.sendEvent(new FindGameEvent({
+    deck:(()=>{
+        const toReturn = [];
+        for(let i=0;i<20;i++) {
+            toReturn.push(Object.keys(cards)[Math.floor(Math.random() * Object.keys(cards).length)]!);
+        }
+        return toReturn;
+    })(),
+}, undefined))
 
 renderer.setAnimationLoop(() => {
     game.tick();

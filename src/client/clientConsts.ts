@@ -16,3 +16,5 @@ window.addEventListener("mouseup", ()=>{
 export function clickListener(listener:()=>boolean){
     clickedListeners.push(listener);
 }
+
+export const updateOrder: {[k:string]:number}={};

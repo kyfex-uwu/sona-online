@@ -1,8 +1,6 @@
 import {Side} from "./GameElement.js";
 import {CurrentTurn} from "./Game.js";
 
-export const updateOrder: {[k:string]:number}={};
-
 export function shuffled<T>(array:Array<T>):Array<T>{
     let shuffledMarker = array.length;
 

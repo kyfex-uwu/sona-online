@@ -1,4 +1,3 @@
-import {updateOrder} from "./consts.js";
 import {type GameElement, Side} from "./GameElement.js";
 import Game from "./Game.js";
 import type CardData from "./CardData.js";
@@ -34,4 +33,3 @@ export default class Card implements GameElement{
     getSide(){ return this.side; }
     getFaceUp(){ return this.faceUp; }
 }
-updateOrder[Card.name] = 0;

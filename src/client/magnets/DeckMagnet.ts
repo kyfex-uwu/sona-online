@@ -1,10 +1,11 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {sidesMatch, updateOrder} from "../../consts.js";
+import {updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
+import {sidesMatch} from "../../consts.js";
 
 
 export default class DeckMagnet extends CardMagnet{
@@ -16,7 +17,7 @@ export default class DeckMagnet extends CardMagnet{
                 if(!game.processingAction && sidesMatch(this.getSide(), game.currentTurn)) {
                     if (game.yourHand.cards.length < 5) {
                         this.drawCard(game);
-                        game.sendEvent(new DrawAction({}));
+                        game.sendEvent(new DrawAction({}, game.getGame()));
                         return true;
                     }
                 }
