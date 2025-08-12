@@ -1,7 +1,8 @@
 import {Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
-import Game, {ViewType} from "./Game.js";
-import {camera, modelLoader, textureLoader} from "./consts.js";
-import {setGame} from "./networking/Server.js";
+import {ViewType} from "./Game.js";
+import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
+import VisualGame from "./client/VisualGame.js";
+import {frontendInit} from "./networking/LocalServer.js";
 
 // Init scene.
 const scene = new Scene();
@@ -35,8 +36,10 @@ window.addEventListener("resize", windowResize);
 
 //--
 
-const game = new Game(scene);
-setGame(game);
+frontendInit();
+
+const game = new VisualGame(scene);
+//setGame(game);
 game.changeView(ViewType.WHOLE_BOARD);
 game.requestStart();
 

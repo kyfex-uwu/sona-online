@@ -1,9 +1,9 @@
-import Card, {type CardTemplate} from "./Card.js";
+import CardData from "./CardData.js";
 
-const cards:{[k:string]:(id:number)=>CardTemplate} = {};
+const cards:{[k:string]:CardData} = {};
 
 for(let i=1;i<=44;i++){
-    cards[`og-${i.toString().padStart(3,"0")}`] = Card.template(`og-${i.toString().padStart(3,"0")}`);
+    cards[`og-${i.toString().padStart(3,"0")}`] = new CardData(`og-${i.toString().padStart(3,"0")}`, [0,0,0]);
 }
 
 export default cards;

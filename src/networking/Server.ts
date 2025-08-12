@@ -1,51 +1,30 @@
-import {type ClientEvent, DetermineStarterEvent, GameStartEvent, ServerEvent} from "./Events.js";
-import cards from "../Cards.js";
-import Game from "../Game.js";
-import {Side} from "../GameElement.js";
+import {Event, type SerializableType,} from "./Events.js";
+import type Game from "../Game.js";
 
-let online = false;
-const eventIdGenerator = ()=>Math.random();
+export const network:{
+    sendToServer:(event:Event<any>)=>void,
+    sendToClients:(event:Event<any>)=>void,
+    receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:{send:(v:string)=>any})=>void,
+    receiveFromServer:(event:{id:number,type:string,data:SerializableType})=>void,
 
-let game:Game|undefined = undefined;
-export function setGame(gameP:Game){
-    game=gameP;
+    findEmptyGame:()=>Game|undefined,
+} = {
+    sendToServer:()=>{},
+    sendToClients:()=>{},
+    receiveFromClient:()=>{},
+    receiveFromServer:()=>{},
+    findEmptyGame:()=>undefined,
 }
 
-export function processEvent(event:ServerEvent){
-    event.apply(game!);
-}
-export function sendEvent(event:ClientEvent){
-    if(!online){
-        setTimeout(()=> {
-            switch (event.type) {
-                case "FindGame":
-                    //assign game to player
-                    processEvent(new GameStartEvent((()=>{
-                        const options = Object.keys(cards);
-                        const toReturn=[];
-                        for(let i=0;i<20;i++){
-                            toReturn.push({id:eventIdGenerator(), name:options.splice(Math.floor(Math.random()*options.length),1)[0]!})
-                        }
-                        return toReturn;
-                    })(),(()=>{
-                        const options = Object.keys(cards);
-                        const toReturn=[];
-                        for(let i=0;i<20;i++){
-                            toReturn.push({id:eventIdGenerator(), name:options.splice(Math.floor(Math.random()*options.length),1)[0]!})
-                        }
-                        return toReturn;
-                    })()));
-                    break;
-                case "StartRequest"://todo
-                    processEvent(new DetermineStarterEvent(Side.YOU,false));
-                    break;
-                case "DrawAction":
-                    game!.actionsLeft--;
-                    //processEvent(new )
-                    //send event to other player
-                    break;
-            }
-        },20+Math.random()*100);
-        return;
+//top 10 most useless functions
+export function sendEvent(event:Event<any>, actingAsServer:boolean){
+    if(actingAsServer){
+        network.sendToClients(event);
+    }else{
+        network.sendToServer(event);
     }
+}
+
+export async function processEvent(event:Event<any>, actingAsServer:boolean){
+
 }

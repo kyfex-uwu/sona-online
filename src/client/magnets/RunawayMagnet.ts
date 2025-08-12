@@ -1,16 +1,16 @@
 import CardMagnet from "./CardMagnet.js";
-import Card from "../Card.js";
 import {Euler, Quaternion, Vector3} from "three";
-import Game from "../Game.js";
-import {updateOrder} from "../consts.js";
-import type {Side} from "../GameElement.js";
+import {updateOrder} from "../../consts.js";
+import type {Side} from "../../GameElement.js";
+import type VisualCard from "../VisualCard.js";
+import type VisualGame from "../VisualGame.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
-    private cards:Array<Card> = [];
+    private cards:Array<VisualCard> = [];
 
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(position, side, {
+        super(side, position, {
             onClick:game=>{
                 if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
                     game.selectedCard = undefined;
@@ -27,7 +27,7 @@ export default class RunawayMagnet extends CardMagnet{
         });
     }
 
-    addCard(game:Game, card:Card){
+    addCard(game:VisualGame, card:VisualCard){
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
         const newRot = new Euler().setFromQuaternion(this.rotation);
@@ -38,7 +38,7 @@ export default class RunawayMagnet extends CardMagnet{
 
         return true;
     }
-    removeCard(game:Game){
+    removeCard(game:VisualGame){
         if(this.cards.length===0) return false;
         this.cards.pop();
         this.position.sub(CardMagnet.offs);

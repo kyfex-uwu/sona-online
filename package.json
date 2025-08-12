@@ -2,6 +2,7 @@
   "type": "module",
   "dependencies": {
     "@types/three": "^0.179.0",
+    "@types/ws": "^8.18.1",
     "express": "^5.1.0",
     "three": "^0.179.1",
     "typescript": "^5.9.2",

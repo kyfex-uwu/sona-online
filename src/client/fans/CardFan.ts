@@ -1,41 +1,28 @@
-import {
-    Euler,
-    Group,
-    Mesh,
-    MeshBasicMaterial,
-    type Object3D,
-    PlaneGeometry,
-    Quaternion,
-    type Scene,
-    Vector3
-} from "three";
-import Card from "../Card.js";
-import {type GameElement, Side} from "../GameElement.js";
-import type Game from "../Game.js";
-import {clickListener} from "../consts.js";
+import {Side} from "../../GameElement.js";
+import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type Scene, Vector3} from "three";
+import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
+import type VisualCard from "../VisualCard.js";
+import type VisualGame from "../VisualGame.js";
+import {clickListener} from "../clientConsts.js";
 
+export default class CardFan extends PositionedVisualGameElement{
 
-export default class CardFan implements GameElement{
-    public readonly position:Vector3;
-    public readonly rotation:Quaternion;
-    public readonly cards: Array<Card> = [];
+    public readonly cards: Array<VisualCard> = [];
+
     protected readonly group: Group = new Group();
-    private readonly onSelect:(card:Card, scene:Scene, parent:Game)=>void;
-    private readonly side:Side;
+    private readonly onSelect:(card:VisualCard, scene:Scene, parent:VisualGame)=>void;
     private readonly fakeCard:Group;
 
-    constructor(position: Vector3, side:Side, params?: {
-        onSelect: (card: Card, scene: Scene, game: Game) => void;
+    constructor(side:Side, position: Vector3, params?: {
+        onSelect: (card: VisualCard, scene: Scene, game: VisualGame) => void;
         rotation?: Quaternion
     }) {
-        this.side=side;
         params = Object.assign({
             rotation:new Quaternion(),
             onSelect:()=>{},
         },params);
+        super(side, position, params.rotation!);
 
-        this.position = position;
-        this.rotation = params.rotation!;
         this.onSelect=params.onSelect!;
 
         this.fakeCard = new Group();
@@ -45,7 +32,7 @@ export default class CardFan implements GameElement{
         this.group.add(this.fakeCard);
     }
 
-    addToScene(scene: Scene, parent: Game): void {
+    addToScene(scene: Scene, parent: VisualGame): void {
         scene.add(this.group);
 
         clickListener(()=>{
@@ -53,20 +40,19 @@ export default class CardFan implements GameElement{
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
-                this.onSelect(((intersects[0].object.parent!.parent! as Group).userData.card as Card), scene, parent);
+                this.onSelect(((intersects[0].object.parent!.parent! as Group).userData.card as VisualCard), scene, parent);
             }
             return false;
         });
     }
-    tick(parent: Game): void {
-    }
-    visualTick(parent: Game): void {
+    visualTick(parent: VisualGame): void {
         this.group.position.lerp(this.position, 0.1);
         this.group.quaternion.slerp(this.rotation, 0.1);
     }
 
-    addCard(card:Card, index:number=0){
+    addCard(card:VisualCard, index:number=0){
         this.cards.splice(index,0,card);
+
         card.createModel().then(()=>{
             this.recalculateCardPositions();
             card.setRealPosition(this.group.worldToLocal(card.model?.position!));
@@ -84,5 +70,4 @@ export default class CardFan implements GameElement{
             pos++;
         }
     }
-    getSide(){ return this.side; }
 }

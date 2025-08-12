@@ -1,21 +1,20 @@
-import CardFan from "./CardFan.js";
+import VisualCardFan from "./CardFan.js";
+import type {Side} from "../../GameElement.js";
 import {Quaternion, type Scene, Vector3} from "three";
-import type Card from "../Card.js";
-import type Game from "../Game.js";
-import type {Side} from "../GameElement.js";
+import type VisualCard from "../VisualCard.js";
+import type VisualGame from "../VisualGame.js";
 
-
-export default class HandFan extends CardFan{
+export default class HandFan extends VisualCardFan{
     constructor(position:Vector3, side:Side, params:{
         rotation?:Quaternion
     }={}) {
-        super(position, side, {
-            onSelect:(card:Card, scene:Scene, game:Game)=>this.onSelectImpl(card, scene, game),
+        super(side, position, {
+            onSelect:(card:VisualCard, scene:Scene, game:VisualGame)=>this.onSelectImpl(card, scene, game),
             ...params
         });
     }
 
-    onSelectImpl(card:Card, scene:Scene, parent:Game){
+    onSelectImpl(card:VisualCard, scene:Scene, parent:VisualGame){
         if(parent.selectedCard !== undefined){
             if(this.cards.length<5) {
                 this.cards.splice(this.cards.indexOf(card) + 1, 0, parent.selectedCard);
@@ -37,5 +36,11 @@ export default class HandFan extends CardFan{
 
             scene.add(card.model!);
         }
+    }
+
+    addToScene(scene: Scene, parent: VisualGame): void {
+    }
+
+    visualTick(parent: VisualGame): void {
     }
 }

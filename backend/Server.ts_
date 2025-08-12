@@ -1,0 +1,7 @@
+import * as ws from 'ws';
+
+export function processWebsocket(user:ws.WebSocket){
+    user.addEventListener("message",event=>{
+        console.log(event.data);
+    })
+}
