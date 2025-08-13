@@ -15,10 +15,10 @@ export function shuffled<T>(array:Array<T>):Array<T>{
 }
 
 export function sidesMatch(side1:Side, side2:CurrentTurn){
-    return (side1 === Side.YOU && side2 == CurrentTurn.YOURS) ||
-        (side1 == Side.THEM && side2 == CurrentTurn.THEIRS);
+    return (side1 === Side.A && side2 == CurrentTurn.A) ||
+        (side1 == Side.B && side2 == CurrentTurn.B);
 }
 
-export function youThemTern<T>(side:Side, youVal:T, themVal:T){
-    return side == Side.YOU ? youVal : themVal;
+export function sideTernary<T>(side:Side, youVal:T, themVal:T){
+    return side == Side.A ? youVal : themVal;
 }

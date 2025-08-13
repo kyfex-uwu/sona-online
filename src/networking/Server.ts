@@ -20,7 +20,7 @@ export const network:{
 
 //top 10 most useless functions
 export function sendEvent(event:Event<any>, actingAsServer:boolean){
-    console.log("sending event: "+event.serialize())
+    //console.log("sending event: "+event.serialize())
     if(actingAsServer){
         network.sendToClients(event);
     }else{

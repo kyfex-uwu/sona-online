@@ -1,11 +1,11 @@
 export enum Side{
-    YOU,
-    THEM
+    A,
+    B
 }
 export function other(side:Side):Side{
     switch(side){
-        case Side.YOU: return Side.THEM;
-        case Side.THEM: return Side.YOU;
+        case Side.A: return Side.B;
+        case Side.B: return Side.A;
     }
 }
 

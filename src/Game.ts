@@ -6,8 +6,8 @@ import {sendEvent} from "./networking/Server.js";
 import cards from "./Cards.js";
 
 export enum CurrentTurn{
-    YOURS,
-    THEIRS,
+    A,
+    B,
     NEITHER,
 }
 
@@ -15,51 +15,54 @@ export default class Game{
     public readonly gameID:string;
     public readonly side:Side;
 
-    public readonly yourFields:[Card|undefined,Card|undefined,Card|undefined] =
+    public readonly fieldsA:[Card|undefined,Card|undefined,Card|undefined] =
         [undefined,undefined,undefined];
-    public readonly yourRunaway:Array<Card> = [];
-    public readonly yourDeck:Array<Card> = [];
-    public readonly yourHand:Array<Card> = [];
-    public readonly theirFields:[Card|undefined,Card|undefined,Card|undefined] =
+    public readonly runawayA:Array<Card> = [];
+    public readonly deckA:Array<Card> = [];
+    public readonly handA:Array<Card> = [];
+    public readonly fieldsB:[Card|undefined,Card|undefined,Card|undefined] =
         [undefined,undefined,undefined];
-    public readonly theirRunaway:Array<Card> = [];
-    public readonly theirDeck:Array<Card> = [];
-    public readonly theirHand:Array<Card> = [];
+    public readonly runawayB:Array<Card> = [];
+    public readonly deckB:Array<Card> = [];
+    public readonly handB:Array<Card> = [];
+
+    public readonly cards:Array<Card> = [];
 
     public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
     public actionsLeft = 0;
     public processingAction = false;
 
     public static localID="local";
-    public constructor(yourDeck:Array<string>, theirDeck:Array<string>, gameID:string, side?:Side) {
+    public constructor(yourDeck:Array<{type:string, id:number}>, theirDeck:Array<{type:string,id:number}>, gameID:string, side?:Side) {
         this.gameID = gameID;
-        this.side=side||Side.YOU;
-        let id=0;
-        this.yourDeck.splice(0,0,...shuffled(yourDeck).map(name=> new Card(cards[name]!, Side.YOU, id++)));
-        this.theirDeck.splice(0,0,...shuffled(theirDeck).map(name=> new Card(cards[name]!, Side.THEM, id++)));
+        this.side=side||Side.A;
+        this.deckA.splice(0,0,...shuffled(yourDeck).map(data=> new Card(cards[data.type]!, Side.A, data.id)));
+        this.deckB.splice(0,0,...shuffled(theirDeck).map(data=> new Card(cards[data.type]!, Side.B, data.id)));
+        this.cards.splice(0,0,...this.deckA);
+        this.cards.splice(0,0,...this.deckB);
     }
 
-    requestStart(){
-        for(let i=0;i<this.yourFields.length;i++) this.yourFields[i]=undefined;
-        for(let i=0;i<this.theirFields.length;i++) this.theirFields[i]=undefined;
-        this.yourRunaway.length=0;
-        this.theirRunaway.length=0;
-
-        this.currentTurn=CurrentTurn.NEITHER;
-        this.actionsLeft=0;
-    }
-
-    startTurn(turn:CurrentTurn.YOURS|CurrentTurn.THEIRS){
-        this.currentTurn=turn;
-        this.actionsLeft=2;//todo: crisis
-
-        const hand = (this.currentTurn == CurrentTurn.YOURS ? this.yourHand : this.theirHand);
-        if(hand.length<5) {
-            hand.push(
-                (this.currentTurn == CurrentTurn.YOURS ? this.yourDeck : this.theirDeck).pop()!);
-
-        }
-    }
+    // requestStart(){
+    //     for(let i=0; i<this.fieldsA.length; i++) this.fieldsA[i]=undefined;
+    //     for(let i=0; i<this.fieldsB.length; i++) this.fieldsB[i]=undefined;
+    //     this.runawayA.length=0;
+    //     this.runawayB.length=0;
+    //
+    //     this.currentTurn=CurrentTurn.NEITHER;
+    //     this.actionsLeft=0;
+    // }
+    //
+    // startTurn(turn:CurrentTurn.A|CurrentTurn.B){
+    //     this.currentTurn=turn;
+    //     this.actionsLeft=2;//todo: crisis
+    //
+    //     const hand = (this.currentTurn == CurrentTurn.A ? this.handA : this.handB);
+    //     if(hand.length<5) {
+    //         hand.push(
+    //             (this.currentTurn == CurrentTurn.A ? this.deckA : this.deckB).pop()!);
+    //
+    //     }
+    // }
 
     requestEvent(event:Event<any>){
         this.processingAction = true;

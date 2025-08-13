@@ -12,8 +12,8 @@ export type CardTemplate = (side:Side)=>Card;
 
 export default class Card implements GameElement{
     public readonly cardData: CardData;
-    private readonly side:Side;
-    private readonly id:number;
+    public readonly side:Side;
+    public readonly id:number;
 
     constructor(cardData: CardData, side:Side, id:number) {
         this.cardData=cardData;

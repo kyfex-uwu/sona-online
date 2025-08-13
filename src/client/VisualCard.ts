@@ -1,4 +1,5 @@
 import {
+    Color,
     Euler,
     Group,
     Material,
@@ -12,10 +13,10 @@ import {
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card from "../Card.js";
 import type {Side} from "../GameElement.js";
-import  VisualGame from "./VisualGame.js";
+import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {game} from "../index.js";
-import {youThemTern} from "../consts.js";
+import {sideTernary} from "../consts.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -44,46 +45,82 @@ const cardBackMat = new MeshBasicMaterial({
 export type VisualCardTemplate = (side:Side, position:Vector3, rotation?:Quaternion)=>VisualCard;
 
 export default class VisualCard extends PositionedVisualGameElement{
-    public readonly card:Card;
-    private _model?: Group;
-    get model(): Group|undefined {
-        return this._model;
+    private _card:Card;
+    public get card(){
+        return this._card;
     }
+    public readonly model: Group = new Group();
+    private readonly flipGroup: Group = new Group();
+    private enabledMaterial:Material|undefined;
+    private disabledMaterial:Material|undefined;
 
     constructor(card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
         super(card.getSide(), position, rotation);
-        this.card=card;
+        this.enabled=true;
+
+        this.model.add(this.flipGroup);
+        this._card=card;
+        this.populate(card);
+    }
+    populate(card:Card){
+        this._card=card;
+        for(const child of this.flipGroup.children) this.flipGroup.remove(child);
+        this.model.userData.card=this;
+        this.enabledMaterial?.dispose();
+        this.disabledMaterial?.dispose();
+        this.createModel();
     }
 
+    private loadingModel=false;
     async createModel(){
-        if(this._model !== undefined) return;
+        if(this.flipGroup.children.length>0||this.loadingModel) return;
+        this.loadingModel=true;
+        let actualModel = (await cardModel).clone();
+        this.flipGroup.add(actualModel);
 
-        let obj = (await cardModel).clone();
-        (obj.children[0] as Mesh).material = new MeshBasicMaterial({
+        this.enabledMaterial = new MeshBasicMaterial({
             alphaMap: cardShape,
             transparent:true,
         });
+        this.disabledMaterial = new MeshBasicMaterial({
+            alphaMap: cardShape,
+            transparent:true,
+            color:new Color(0x777777),
+        });
+        (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
+        (actualModel.children[1] as Mesh).material = cardBackMat;
+
         textureLoader.loadAsync(`/assets/card-images/${this.card.cardData.imagePath}.jpg`).then((texture)=>{
-            (obj.children[0] as Mesh).material = new MeshBasicMaterial({
+            if(this.flipGroup.children[0] !== actualModel) return;
+
+            this.enabledMaterial= new MeshBasicMaterial({
                 map: texture,
                 alphaMap: cardShape,
                 transparent:true,
             });
+            this.disabledMaterial = new MeshBasicMaterial({
+                map: texture,
+                alphaMap: cardShape,
+                transparent:true,
+                color:new Color(0x777777),
+            });
+            (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
+            this.loadingModel=false;
         });
-        (obj.children[1] as Mesh).material = cardBackMat;
-
-        const model = new Group();
-        model.add(obj);
-        model.userData.card=this;
-        this._model = model;
     }
 
     tick(parent: VisualGame) {
         super.tick(parent);
         if(parent.selectedCard === this) {
             this.position = parent.cursorPos;
-            this.rotation = youThemTern(game.getGame().side, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+            this.rotation = sideTernary(game.getGame().side, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
         }
+
+        // if(!this.enabled){
+        //     (this.model?.children[0]!.children[0] as Mesh).material = this.disabledMaterial!;
+        // }else{
+        //     (this.model?.children[0]!.children[0] as Mesh).material = this.enabledMaterial!;
+        // }
     }
 
     visualTick(parent: VisualGame) {
@@ -104,19 +141,18 @@ export default class VisualCard extends PositionedVisualGameElement{
         // }
         super.visualTick(parent, targetPos, targetRot);
 
-        if(this._model !== undefined){
-            this._model.position.copy(this.realPosition);
-            this._model.quaternion.copy(this.realRotation);
-            (this._model.children[0] as Object3D).quaternion.slerp(this.flipRotation,0.1);
-            (this._model.children[0] as Object3D).position.lerp(new Vector3(0,5*this.flipTimer,0),0.1);
-            this.flipTimer=Math.max(0,this.flipTimer-1);
-        }
+        this.model.position.copy(this.realPosition);
+        this.model.quaternion.copy(this.realRotation);
+        this.flipGroup.quaternion.slerp(this.flipRotation,0.1);
+        this.flipGroup.position.lerp(new Vector3(0,5*this.flipTimer,0),0.1);
+        this.flipTimer=Math.max(0,this.flipTimer-1);
     }
 
     addToScene(scene: Scene, game:VisualGame) {
-        this.createModel().then(()=>{
-            scene.add(this.model!);
-        });
+        scene.add(this.model);
+    }
+    removeFromScene() {
+        this.model.parent?.remove(this.model);
     }
 
     private flipRotation:Quaternion = new Quaternion();

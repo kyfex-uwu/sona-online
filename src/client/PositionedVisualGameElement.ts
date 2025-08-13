@@ -3,7 +3,7 @@ import type {Quaternion, Scene, Vector3} from "three";
 import type {Side} from "../GameElement.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 
-export class PositionedVisualGameElement implements VisualGameElement{
+export abstract class PositionedVisualGameElement implements VisualGameElement{
     private readonly side:Side;
     public position:Vector3;
     public rotation:Quaternion;
@@ -35,4 +35,6 @@ export class PositionedVisualGameElement implements VisualGameElement{
     setRealRotation(rot:Quaternion){
         this.realRotation=rot;
     }
+
+    abstract removeFromScene(): void;
 }

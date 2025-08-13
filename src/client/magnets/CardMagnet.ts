@@ -1,5 +1,5 @@
 import {Side} from "../../GameElement.js";
-import {clickListener, updateOrder} from "../clientConsts.js";
+import {clickListener, removeClickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, type Scene, Vector3} from "three";
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import type VisualGame from "../VisualGame.js";
@@ -55,9 +55,9 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
 
     abstract addCard(parent:VisualGame, card:VisualCard):boolean;
     abstract removeCard(parent:VisualGame):boolean;
-
+    private listener:number=-1;
     addToScene(scene: Scene, parent:VisualGame) {
-        clickListener(()=> {
+        this.listener = clickListener(()=> {
             if(!this.enabled) return false;
 
             const dist = parent.cursorPos.distanceTo(this.position);
@@ -67,6 +67,10 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
             return false;
         });
     }
+    removeFromScene() {
+        removeClickListener(this.listener);
+    }
+
     visualTick(parent: VisualGame) {}
 }
 updateOrder[CardMagnet.name] = 1;

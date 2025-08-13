@@ -14,7 +14,16 @@ window.addEventListener("mouseup", ()=>{
     for(const listener of clickedListeners) if(listener()) break;
 });
 export function clickListener(listener:()=>boolean){
-    clickedListeners.push(listener);
+    return clickedListeners.push(listener)-1;
+}
+export function removeClickListener(index:number){
+    clickedListeners.splice(index,1);
 }
 
 export const updateOrder: {[k:string]:number}={};
+
+export async function wait(ms:number){
+    let resolve:(v:any)=>void=()=>{};
+    const p = new Promise(r=>resolve=r);
+    setTimeout(resolve, ms);
+}

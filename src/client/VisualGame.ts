@@ -1,4 +1,4 @@
-import {Euler, Mesh, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
+import {Euler, Mesh, type Object3D, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
@@ -10,7 +10,8 @@ import type {VisualGameElement} from "./VisualGameElement.js";
 import {other, Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {Event} from "../networking/Events.js";
-import {game} from "../index.js";
+import {sideTernary} from "../consts.js";
+import cards from "../Cards.js";
 
 const pointer = new Vector2();
 
@@ -38,6 +39,13 @@ export enum ElementType{
     DECK,
     HAND
 }
+export function getField(index:1|2|3){
+    switch(index){
+        case 1: return ElementType.FIELD_1;
+        case 2: return ElementType.FIELD_2;
+        case 3: return ElementType.FIELD_3;
+    }
+}
 
 export default class VisualGame {
     private game: Game;
@@ -64,33 +72,36 @@ export default class VisualGame {
     public actionsLeft = 0;
     public processingAction = false;
 
+    private previewCard:VisualCard|undefined;
+    private previewModels:Array<Object3D>=[];
+
     public constructor(scene: Scene) {
         this.scene = scene;
         this.game = new Game([],[],Game.localID);
 
-        this.yourFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, 70), Side.YOU));
-        this.yourFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, 70), Side.YOU));
-        this.yourFields[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, 70), Side.YOU));
-        this.yourRunaway = this.addElement(new RunawayMagnet(new Vector3(-200, 0, 200), Side.YOU));
-        this.yourDeck = this.addElement(new DeckMagnet(new Vector3(200, 0, 200), Side.YOU));
-        this.yourHand = this.addElement(new HandFan(new Vector3(0, 0, 200), Side.YOU));
+        this.yourFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, 70), Side.A, 1));
+        this.yourFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, 70), Side.A, 2));
+        this.yourFields[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, 70), Side.A, 3));
+        this.yourRunaway = this.addElement(new RunawayMagnet(new Vector3(-200, 0, 200), Side.A));
+        this.yourDeck = this.addElement(new DeckMagnet(new Vector3(200, 0, 200), Side.A));
+        this.yourHand = this.addElement(new HandFan(new Vector3(0, 0, 200), Side.A));
 
-        this.theirFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, -70), Side.THEM, {
+        this.theirFields[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, -70), Side.B, 1, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.theirFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, -70), Side.THEM, {
+        this.theirFields[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, -70), Side.B, 2, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.theirFields[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, -70), Side.THEM, {
+        this.theirFields[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, -70), Side.B, 3, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.theirRunaway = this.addElement(new RunawayMagnet(new Vector3(200, 0, -200), Side.THEM, {
+        this.theirRunaway = this.addElement(new RunawayMagnet(new Vector3(200, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.theirDeck = this.addElement(new DeckMagnet(new Vector3(-200, 0, -200), Side.THEM, {
+        this.theirDeck = this.addElement(new DeckMagnet(new Vector3(-200, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.theirHand = this.addElement(new HandFan(new Vector3(0, 0, -200), Side.THEM, {
+        this.theirHand = this.addElement(new HandFan(new Vector3(0, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
 
@@ -113,6 +124,58 @@ export default class VisualGame {
         const intersects = this.raycaster.intersectObjects([geo]);
         if (intersects[0] !== undefined) {
             this.cursorPos = intersects[0].point;
+        }
+
+        let shouldRemovePreview=true;
+        const cardsIntersects = this.raycaster.intersectObjects([
+            ...this.yourFields.filter(field=>field.enabled).map(field => field.getCard()?.model),
+            ...this.yourHand.cards.filter(field=>field.card.getFaceUp()&&field.card.cardData!==cards.unknown)
+                .map(field => field.model),
+            ...this.theirFields.filter(field=>field.enabled).map(field => field.getCard()?.model),
+            ...this.theirHand.cards.filter(field=>field.card.getFaceUp()&&field.card.cardData!==cards.unknown)
+                .map(field => field.model),
+
+        ].filter(v=>v!==undefined));
+        if(cardsIntersects[0] !== undefined){
+            const visualCardMaybe = cardsIntersects[0].object.parent?.parent?.parent?.userData.card as VisualCard|undefined;
+            if(visualCardMaybe instanceof VisualCard){
+                shouldRemovePreview = false;
+                if(this.previewCard?.card.cardData.id !==
+                    visualCardMaybe.card.cardData.id) {
+                    const wasPreviewCard = this.previewCard !== undefined;
+                    setTimeout(()=>{
+                        this.previewCard = new VisualCard(visualCardMaybe.card,
+                            camera.position.clone().add(camera.getWorldDirection(new Vector3()).multiplyScalar(100)));
+                        const old = this.previewCard;
+                        const modelPromise = this.previewCard.createModel();
+                        setTimeout(async ()=>{
+                            await modelPromise;
+
+                            if(this.previewCard===old){
+                                this.scene.add(old.model!);
+                                this.previewModels.push(old.model!);
+
+                                old.model?.position.copy(camera.position.clone().add(camera.getWorldDirection(new Vector3()).multiplyScalar(220))
+                                    .add(sideTernary(this.game.side, new Vector3(110,0,0), new Vector3(-110,0,0))));
+                                old.model?.rotation.copy(camera.rotation.clone());
+                                old.model?.rotateX(Math.PI/2);
+                            }
+                        },wasPreviewCard?0:500);
+                    },0)
+                    shouldRemovePreview=true;
+                }
+            }
+        }
+        if(shouldRemovePreview){
+            if(this.previewCard !== undefined) {
+                const old = this.previewCard;
+                this.previewCard.createModel().then(()=>{
+                    this.scene.remove(old.model!);
+                });
+                for(const model of this.previewModels) this.scene.remove(model);
+                this.previewModels=[];
+                this.previewCard = undefined;
+            }
         }
 
         for (const element of this.elements) element.tick(this);
@@ -147,12 +210,12 @@ export default class VisualGame {
     }
     get(side:Side, type:ElementType){
         switch(type){
-            case ElementType.DECK: return side == Side.YOU ? this.yourDeck : this.theirDeck;
-            case ElementType.FIELD_1: return side == Side.YOU ? this.yourFields[0] : this.theirFields[0];
-            case ElementType.FIELD_2: return side == Side.YOU ? this.yourFields[1] : this.theirFields[1];
-            case ElementType.FIELD_3: return side == Side.YOU ? this.yourFields[2] : this.theirFields[2];
-            case ElementType.HAND: return side == Side.YOU ? this.yourHand : this.theirHand;
-            case ElementType.RUNAWAY: return side == Side.YOU ? this.yourRunaway : this.theirRunaway;
+            case ElementType.DECK: return side == Side.A ? this.yourDeck : this.theirDeck;
+            case ElementType.FIELD_1: return side == Side.A ? this.yourFields[0] : this.theirFields[0];
+            case ElementType.FIELD_2: return side == Side.A ? this.yourFields[1] : this.theirFields[1];
+            case ElementType.FIELD_3: return side == Side.A ? this.yourFields[2] : this.theirFields[2];
+            case ElementType.HAND: return side == Side.A ? this.yourHand : this.theirHand;
+            case ElementType.RUNAWAY: return side == Side.A ? this.yourRunaway : this.theirRunaway;
         }
     }
 

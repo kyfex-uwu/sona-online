@@ -1,7 +1,7 @@
 import VisualCardFan from "./CardFan.js";
 import type {Side} from "../../GameElement.js";
 import {Quaternion, type Scene, Vector3} from "three";
-import  VisualCard from "../VisualCard.js";
+import VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 
 export default class HandFan extends VisualCardFan{
@@ -24,10 +24,11 @@ export default class HandFan extends VisualCardFan{
                 this.recalculateCardPositions();
 
                 parent.selectedCard.setRealPosition(this.group.worldToLocal(parent.selectedCard.model?.position!));
+                //todo: this doesnt work vv
                 parent.selectedCard.setRealRotation(this.group.quaternion.clone().premultiply(parent.selectedCard.model?.getWorldQuaternion(new Quaternion()).invert()!));
                 parent.selectedCard = undefined;
             }
-        }else {
+        }else if(card.enabled){
             this.cards.splice(this.cards.indexOf(card), 1);
             this.recalculateCardPositions();
 
@@ -42,6 +43,5 @@ export default class HandFan extends VisualCardFan{
 
     addCard(card: VisualCard, index: number = 0) {
         super.addCard(card, index);
-        console.log("bro")
     }
 }

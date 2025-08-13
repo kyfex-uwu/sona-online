@@ -1,18 +1,22 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
-import type {Side} from "../../GameElement.js";
+import {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
+import {PlaceAction} from "../../networking/Events.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
+    public readonly which:1|2|3;
+    public getCard(){ return this.card; }
 
-    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+    constructor(position: Vector3, side:Side, which:1|2|3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
                 if(game.selectedCard !== undefined){
                     if(this.addCard(game, game.selectedCard)) {
+                        game.sendEvent(new PlaceAction({cardId: game.selectedCard.card.id, position: this.which, side:game.getGame().side}));
                         game.selectedCard = undefined;
                         return true;
                     }
@@ -28,6 +32,7 @@ export default class FieldMagnet extends CardMagnet{
             },
             ...props,
         });
+        this.which=which;
     }
 
     addCard(game:VisualGame, card:VisualCard){

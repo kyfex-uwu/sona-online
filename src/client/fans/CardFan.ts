@@ -3,7 +3,7 @@ import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type S
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {clickListener} from "../clientConsts.js";
+import {clickListener, removeClickListener} from "../clientConsts.js";
 
 export default class CardFan extends PositionedVisualGameElement{
 
@@ -32,19 +32,25 @@ export default class CardFan extends PositionedVisualGameElement{
         this.group.add(this.fakeCard);
     }
 
+    private listener:number=-1;
     addToScene(scene: Scene, parent: VisualGame): void {
         scene.add(this.group);
 
-        clickListener(()=>{
+        this.listener=clickListener(()=>{
             const intersects = parent.raycaster.intersectObjects(this.cards
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
-                this.onSelect(((intersects[0].object.parent!.parent! as Group).userData.card as VisualCard), scene, parent);
+                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), scene, parent);
             }
             return false;
         });
     }
+    removeFromScene() {
+        removeClickListener(this.listener);
+        this.group.parent?.remove(this.group);
+    }
+
     visualTick(parent: VisualGame): void {
         this.group.position.lerp(this.position, 0.1);
         this.group.quaternion.slerp(this.rotation, 0.1);
