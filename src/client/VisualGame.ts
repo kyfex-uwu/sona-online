@@ -53,7 +53,7 @@ export default class VisualGame {
     public setGame(g:Game):void{ this.game = g; }
     public selectedCard: VisualCard | undefined;
     public readonly elements: VisualGameElement[] = [];
-    private readonly scene: Scene;
+    public readonly scene: Scene;
     public cursorPos = new Vector3();
     public readonly raycaster = new Raycaster();
 

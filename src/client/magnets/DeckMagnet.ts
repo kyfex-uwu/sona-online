@@ -36,15 +36,25 @@ export default class DeckMagnet extends CardMagnet{
         card.flipFacedown();
         this.cards.push(card);
         this.position.add(CardMagnet.offs);
+        card.setHolder(this);
 
         return true;
     }
     removeCard(game:VisualGame){
         if(this.cards.length===0) return false;
-        this.cards.pop();
-        this.position.sub(CardMagnet.offs);
+        this.unchildCard(game, this.cards[this.cards.length-1]!);
 
         return true;
+    }
+    unchildCard(game:VisualGame, card:VisualCard){
+        let index = this.cards.indexOf(card);
+        if(index===-1) return;
+        this.cards.splice(this.cards.indexOf(card),1);
+        this.position.sub(CardMagnet.offs);
+        while(this.cards[index] !== undefined){
+            this.cards[index]?.position.sub(CardMagnet.offs);
+            index++;
+        }
     }
 
     tick(parent: VisualGame) {

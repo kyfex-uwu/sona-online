@@ -10,11 +10,11 @@ export default class CardFan extends PositionedVisualGameElement{
     public readonly cards: Array<VisualCard> = [];
 
     protected readonly group: Group = new Group();
-    private readonly onSelect:(card:VisualCard, scene:Scene, parent:VisualGame)=>void;
+    private readonly onSelect:(card:VisualCard, parent:VisualGame)=>void;
     private readonly fakeCard:Group;
 
     constructor(side:Side, position: Vector3, params?: {
-        onSelect: (card: VisualCard, scene: Scene, game: VisualGame) => void;
+        onSelect: (card: VisualCard, game: VisualGame) => void;
         rotation?: Quaternion
     }) {
         params = Object.assign({
@@ -41,7 +41,7 @@ export default class CardFan extends PositionedVisualGameElement{
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
-                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), scene, parent);
+                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), parent);
             }
             return false;
         });
@@ -58,6 +58,7 @@ export default class CardFan extends PositionedVisualGameElement{
 
     addCard(card:VisualCard, index:number=0){
         this.cards.splice(index,0,card);
+        card.setHolder(this);
 
         card.createModel().then(()=>{
             this.recalculateCardPositions();
@@ -75,5 +76,16 @@ export default class CardFan extends PositionedVisualGameElement{
             card.rotation.slerp(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)),1)
             pos++;
         }
+    }
+    unchildCard(game:VisualGame, card:VisualCard){
+        let index = this.cards.indexOf(card);
+        if(index===-1) return;
+        this.cards.splice(this.cards.indexOf(card),1);
+        this.recalculateCardPositions();
+
+        card.rotation = new Quaternion();
+        card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
+        card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);
+        game.scene.add(card.model!);
     }
 }

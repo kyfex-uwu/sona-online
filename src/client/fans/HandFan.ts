@@ -9,35 +9,30 @@ export default class HandFan extends VisualCardFan{
         rotation?:Quaternion
     }={}) {
         super(side, position, {
-            onSelect:(card:VisualCard, scene:Scene, game:VisualGame)=>this.onSelectImpl(card, scene, game),
+            onSelect:(card:VisualCard, game:VisualGame)=>this.onSelectImpl(card, game),
             ...params
         });
     }
 
-    onSelectImpl(card:VisualCard, scene:Scene, parent:VisualGame){
+    onSelectImpl(card:VisualCard, game:VisualGame){
         if(!this.enabled) return false;
 
-        if(parent.selectedCard !== undefined){
+        if(game.selectedCard !== undefined){
             if(this.cards.length<5) {
-                this.cards.splice(this.cards.indexOf(card) + 1, 0, parent.selectedCard);
-                this.group.add(parent.selectedCard.model!);
+                this.cards.splice(this.cards.indexOf(card) + 1, 0, game.selectedCard);
+                this.group.add(game.selectedCard.model!);
                 this.recalculateCardPositions();
 
-                parent.selectedCard.setRealPosition(this.group.worldToLocal(parent.selectedCard.model?.position!));
+                game.selectedCard.setRealPosition(this.group.worldToLocal(game.selectedCard.model?.position!));
                 //todo: this doesnt work vv
-                parent.selectedCard.setRealRotation(this.group.quaternion.clone().premultiply(parent.selectedCard.model?.getWorldQuaternion(new Quaternion()).invert()!));
-                parent.selectedCard = undefined;
+                game.selectedCard.setRealRotation(this.group.quaternion.clone().premultiply(game.selectedCard.model?.getWorldQuaternion(new Quaternion()).invert()!));
+                game.selectedCard = undefined;
+                card.setHolder(this);
             }
         }else if(card.enabled){
-            this.cards.splice(this.cards.indexOf(card), 1);
-            this.recalculateCardPositions();
+            this.unchildCard(game, card);
+            game.selectedCard = card;
 
-            card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
-            card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);
-            card.rotation = new Quaternion();
-            parent.selectedCard = card;
-
-            scene.add(card.model!);
         }
     }
 

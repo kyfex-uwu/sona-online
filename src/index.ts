@@ -4,6 +4,7 @@ import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
 import {FindGameEvent} from "./networking/Events.js";
 import cards from "./Cards.js";
+import {shuffled} from "./consts.js";
 
 // Init scene.
 const scene = new Scene();
@@ -46,7 +47,7 @@ setTimeout(()=>{
         deck:(()=>{
             const toReturn = [];
             for(let i=0;i<20;i++) {
-                toReturn.push(Object.keys(cards)[Math.floor(Math.random() * Object.keys(cards).length)]!);
+                toReturn.push(shuffled(Object.entries(cards).filter(e => e[1].level == 1 && e[0] !== "unknown"))[0]![0]);
             }
             return toReturn;
         })(),

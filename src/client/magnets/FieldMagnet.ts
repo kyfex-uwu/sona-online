@@ -41,15 +41,19 @@ export default class FieldMagnet extends CardMagnet{
         this.card!.position.copy(this.position);
         this.card!.rotation.copy(this.rotation);
         this.position.add(CardMagnet.offs);
+        card.setHolder(this);
 
         return true;
     }
     removeCard(game:VisualGame){
         if(this.card === undefined) return false;
-        this.card = undefined;
+        this.unchildCard(game, this.card);
         this.position.sub(CardMagnet.offs);
 
         return true;
+    }
+    unchildCard(game:VisualGame, card:VisualCard){
+        this.card = undefined;
     }
 }
 updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;

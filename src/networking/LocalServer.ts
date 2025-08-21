@@ -1,6 +1,6 @@
 import {network} from "./Server.js";
 import * as Events from "./Events.js";
-import {Event, GameStartEvent, PlaceAction} from "./Events.js";
+import {ClarifyCardEvent, DrawAction, Event, GameStartEvent, PlaceAction} from "./Events.js";
 import {game} from "../index.js";
 import Game from "../Game.js";
 import Card from "../Card.js";
@@ -8,7 +8,7 @@ import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {ElementType, getField, ViewType} from "../client/VisualGame.js";
-import {other, Side} from "../GameElement.js";
+import {Side} from "../GameElement.js";
 import type DeckMagnet from "../client/magnets/DeckMagnet.js";
 import {sideTernary} from "../consts.js";
 import {wait} from "../client/clientConsts.js";
@@ -41,7 +41,7 @@ network.receiveFromServer = async (packed) => {
     console.log("received "+event.serialize())
 
     if(event instanceof GameStartEvent){
-        game.setGame(new Game(event.data.deck, new Array<string>(20).fill("unknown").map(name=>{return{type:name,id:-1}}),
+        game.setGame(new Game(event.data.deck, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}),
             Game.localID, event.data.which));
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_YOU, ViewType.WHOLE_BOARD_THEM));
         const myDeck = game.getMy(ElementType.DECK) as DeckMagnet;
@@ -52,9 +52,8 @@ network.receiveFromServer = async (packed) => {
                 new Vector3(), rotation));
             myDeck.addCard(game, visualCard);
         }
-        for(let i=0;i<20;i++){
-            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, other(game.getGame().side),
-                    sideTernary(event.data.which, 20,0)+i),
+        for(const cardId of event.data.otherDeck){
+            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, game.getGame().side, cardId),
                 new Vector3(), rotation));
             theirDeck.addCard(game, visualCard);
         }
@@ -82,19 +81,20 @@ network.receiveFromServer = async (packed) => {
         for(const card of (game.getMy(ElementType.HAND) as HandFan).cards){
             if(card.card.cardData.level !== 1) card.enabled = false;
         }
+    }else if (event instanceof ClarifyCardEvent){
+        const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.card.id === event.data.id) as VisualCard;
+        if(oldVCard !== undefined){
+            const newCard = new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id);
+            game.getGame().cards.push(newCard);
+            game.getGame().cards.splice(game.getGame().cards.indexOf(oldVCard.card),1);
+            oldVCard.repopulate(newCard);
+        }
     }else if(event instanceof PlaceAction){
-        console.log(game.elements.filter(element =>
-            element instanceof VisualCard).map(c=>c.card.id).sort(), event.data.cardId)
         const card =  game.elements.find(element =>
             element instanceof VisualCard && element.card.id === event.data.cardId) as VisualCard;
-        if(card.card.cardData.name !== event.data.cardDataName) {
-            const oldCard = game.getGame().cards.find(card => card.id === event.data.cardId)!;
-            const newCard = new Card(cards[event.data.cardDataName!]!, oldCard.side, oldCard.id);
-            game.getGame().cards.push(newCard);
-            card.populate(newCard);
-        }
-
         (game.get(event.data.side, getField(event.data.position as 1|2|3)) as FieldMagnet)
             .addCard(game,card);
+    }else if(event instanceof DrawAction){
+        //todo
     }
 }

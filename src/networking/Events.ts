@@ -29,11 +29,17 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
 
 //--
 
+export class ClarifyCardEvent extends Event<{
+    id:number,
+    cardDataName:string,
+}>{}
+
 export class FindGameEvent extends Event<{
     deck:Array<string>,
 }>{}
 export class GameStartEvent extends Event<{
     deck:Array<{type:string, id:number}>,
+    otherDeck:Array<number>,
     which:Side,
 }>{}
 export class StartRequestEvent extends Event<{
@@ -50,7 +56,6 @@ export class PlaceAction extends ActionEvent<{
     cardId:number,
     position:number,
     side:Side,
-    cardDataName?:string,
 }>{}
 export class ScareAction extends ActionEvent<{
     scarerId:number,

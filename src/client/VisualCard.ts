@@ -7,7 +7,7 @@ import {
     MeshBasicMaterial,
     type Object3D,
     Quaternion,
-    type Scene,
+    type Scene, Texture,
     Vector3
 } from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
@@ -69,6 +69,29 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.enabledMaterial?.dispose();
         this.disabledMaterial?.dispose();
         this.createModel();
+    }
+    async repopulate(card:Card){
+        let texture:Texture|undefined;
+
+        await Promise.all([this.createModel(),
+        textureLoader.loadAsync(`/assets/card-images/${card.cardData.imagePath}.jpg`).then(t=>{
+            texture=t;
+        })]);
+
+        //if(this.flipGroup.children[0] !== actualModel) return;
+
+        this.enabledMaterial= new MeshBasicMaterial({
+            map: texture!,
+            alphaMap: cardShape,
+            transparent:true,
+        });
+        this.disabledMaterial = new MeshBasicMaterial({
+            map: texture!,
+            alphaMap: cardShape,
+            transparent:true,
+            color:new Color(0x777777),
+        });
+        (this.flipGroup.children[0]!.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
     }
 
     private loadingModel=false;
@@ -148,8 +171,10 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.flipTimer=Math.max(0,this.flipTimer-1);
     }
 
+    private game:VisualGame|undefined=undefined;
     addToScene(scene: Scene, game:VisualGame) {
         scene.add(this.model);
+        this.game=game;
     }
     removeFromScene() {
         this.model.parent?.remove(this.model);
@@ -164,6 +189,16 @@ export default class VisualCard extends PositionedVisualGameElement{
     flipFaceup(){
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
+    }
+
+    private holder:{unchildCard:(g:VisualGame,c:VisualCard)=>any}|undefined=undefined;
+    setHolder(holder: { unchildCard: (g: VisualGame, c: VisualCard) => any; } | undefined){
+        if(this.holder !== undefined) this.removeFromHolder();
+        this.holder=holder;
+    }
+    removeFromHolder(){
+        this.holder?.unchildCard(this.game!,this);
+        this.holder=undefined;
     }
 }
 updateOrder[VisualCard.name] = 0;

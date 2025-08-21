@@ -1,9 +1,10 @@
 import {network} from "./Server.js";
 import * as Events from "./Events.js"
-import {Event, FindGameEvent, GameStartEvent, PlaceAction} from "./Events.js"
+import {ClarifyCardEvent, Event, FindGameEvent, GameStartEvent, PlaceAction} from "./Events.js"
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {Side} from "../GameElement.js";
+import {shuffled} from "../consts.js";
 
 const usersFromGameIDs:{[k:string]:Array<{send:(v:string)=>void}>}={};
 const gamesFromUser:Map<any, Game> = new Map();
@@ -33,9 +34,9 @@ network.receiveFromClient= (packed, client) => {
             const waiter = new Promise<FindGameEvent>(r=>resolve=r);
             waiter.then((other) => {
                 let id=0;
-                const yourDeck = event.data.deck.map(name=>{return{type:name,id:id++}});
-                const theirDeck = other.data.deck.map(name=>{return{type:name,id:id++}});
-                const game = new Game(yourDeck, theirDeck, uuid());
+                const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
+                const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
+                const game = new Game(deckA, deckB, uuid());
                 usersFromGameIDs[game.gameID] = [
                     event.sender!,
                     other.sender!
@@ -43,13 +44,28 @@ network.receiveFromClient= (packed, client) => {
                 gamesFromUser.set(event.sender!, game);
                 gamesFromUser.set(other.sender!, game);
                 network.replyToClient(event, new GameStartEvent({
-                    deck:yourDeck,
+                    deck:deckA,
+                    otherDeck: deckB.map(card => card.id),
                     which:Side.A,
                 }, game));
                 network.replyToClient(other, new GameStartEvent({
-                    deck:theirDeck,
+                    deck:deckB,
+                    otherDeck:deckA.map(card => card.id),
                     which:Side.B,
                 }, game));
+
+                // for(const card of deckA){
+                //     network.replyToClient(other, new ClarifyCardEvent({
+                //         id:card.id,
+                //         cardDataName:card.type
+                //     }))
+                // }
+                // for(const card of deckB){
+                //     network.replyToClient(event, new ClarifyCardEvent({
+                //         id:card.id,
+                //         cardDataName:card.type
+                //     }))
+                // }
             })
             unfilledGames.push(resolve!);
         }
@@ -57,9 +73,12 @@ network.receiveFromClient= (packed, client) => {
         if(event.game!==undefined){
             const card = event.game.cards.find(card=>card.id === event.data.cardId)!;
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                user.send(new ClarifyCardEvent({
+                    id: event.data.cardId,
+                    cardDataName:card.cardData.name
+                }).serialize());
                 user.send(new PlaceAction({
                     ...event.data,
-                    cardDataName:card.cardData.name
                 }).serialize());
             }
         }

@@ -36,8 +36,8 @@ export default class Game{
     public constructor(yourDeck:Array<{type:string, id:number}>, theirDeck:Array<{type:string,id:number}>, gameID:string, side?:Side) {
         this.gameID = gameID;
         this.side=side||Side.A;
-        this.deckA.splice(0,0,...shuffled(yourDeck).map(data=> new Card(cards[data.type]!, Side.A, data.id)));
-        this.deckB.splice(0,0,...shuffled(theirDeck).map(data=> new Card(cards[data.type]!, Side.B, data.id)));
+        this.deckA.splice(0,0,...yourDeck.map(data=> new Card(cards[data.type]!, Side.A, data.id)));
+        this.deckB.splice(0,0,...theirDeck.map(data=> new Card(cards[data.type]!, Side.B, data.id)));
         this.cards.splice(0,0,...this.deckA);
         this.cards.splice(0,0,...this.deckB);
     }
