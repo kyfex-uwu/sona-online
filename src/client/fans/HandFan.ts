@@ -27,16 +27,11 @@ export default class HandFan extends VisualCardFan{
                 //todo: this doesnt work vv
                 game.selectedCard.setRealRotation(this.group.quaternion.clone().premultiply(game.selectedCard.model?.getWorldQuaternion(new Quaternion()).invert()!));
                 game.selectedCard = undefined;
-                card.setHolder(this);
             }
         }else if(card.enabled){
             this.unchildCard(game, card);
             game.selectedCard = card;
 
         }
-    }
-
-    addCard(card: VisualCard, index: number = 0) {
-        super.addCard(card, index);
     }
 }

@@ -27,7 +27,7 @@ const renderer = new WebGLRenderer({
 function windowResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.fov = 50
-    if(camera.aspect < 4/3) camera.fov = 180-(1-(1-(camera.aspect*3/4))**1.8)*130
+    if(camera.aspect < 4/3) camera.fov = 180-(1-(1-(camera.aspect*3/4))**1.8)*130//todo: not done :c
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }

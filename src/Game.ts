@@ -1,9 +1,9 @@
 import Card from "./Card.js";
 import {Side} from "./GameElement.js";
-import {shuffled} from "./consts.js";
 import {Event} from "./networking/Events.js";
 import {sendEvent} from "./networking/Server.js";
 import cards from "./Cards.js";
+import {BeforeGameState, type GameState} from "./GameStates.js";
 
 export enum CurrentTurn{
     A,
@@ -27,6 +27,8 @@ export default class Game{
     public readonly handB:Array<Card> = [];
 
     public readonly cards:Array<Card> = [];
+
+    private state:GameState = new BeforeGameState();
 
     public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
     public actionsLeft = 0;
@@ -67,5 +69,9 @@ export default class Game{
     requestEvent(event:Event<any>){
         this.processingAction = true;
         sendEvent(event, false);
+    }
+
+    logicTick(){
+        this.state.tick(this);
     }
 }

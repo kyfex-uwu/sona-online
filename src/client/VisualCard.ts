@@ -71,6 +71,8 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.createModel();
     }
     async repopulate(card:Card){
+        this._card=card;
+
         let texture:Texture|undefined;
 
         await Promise.all([this.createModel(),
@@ -183,10 +185,12 @@ export default class VisualCard extends PositionedVisualGameElement{
     private flipRotation:Quaternion = new Quaternion();
     private flipTimer=0;
     flipFacedown(){
+        this.card.flipFacedown();
         this.flipRotation = new Quaternion(0,0,1,0);
         this.flipTimer = 20;
     }
     flipFaceup(){
+        this.card.flipFaceup();
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
     }

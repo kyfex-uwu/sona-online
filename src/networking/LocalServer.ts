@@ -58,22 +58,22 @@ network.receiveFromServer = async (packed) => {
             theirDeck.addCard(game, visualCard);
         }
         if(game.getGame().side == Side.A){
-            game.theirHand.enabled=false;
-            game.theirDeck.enabled=false;
-            game.theirRunaway.enabled=false;
-            for(const field of game.theirFields) field.enabled=false;
+            game.handB.enabled=false;
+            game.deckB.enabled=false;
+            game.runawayB.enabled=false;
+            for(const field of game.fieldsB) field.enabled=false;
         }else{
-            game.yourHand.enabled=false;
-            game.yourRunaway.enabled=false;
-            game.yourDeck.enabled=false;
-            for(const field of game.yourFields) field.enabled=false;
+            game.handA.enabled=false;
+            game.deckA.enabled=false;
+            game.runawayA.enabled=false;
+            for(const field of game.fieldsA) field.enabled=false;
         }
 
         await wait(500);
 
-        myDeck.drawCard(game);
-        myDeck.drawCard(game);
-        myDeck.drawCard(game);
+        myDeck.drawCard(game)?.flipFaceup();
+        myDeck.drawCard(game)?.flipFaceup();
+        myDeck.drawCard(game)?.flipFaceup();
         theirDeck.drawCard(game);
         theirDeck.drawCard(game);
         theirDeck.drawCard(game);
@@ -85,6 +85,7 @@ network.receiveFromServer = async (packed) => {
         const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.card.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
             const newCard = new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id);
+            newCard[oldVCard.card.getFaceUp()?"flipFaceup":"flipFacedown"]();
             game.getGame().cards.push(newCard);
             game.getGame().cards.splice(game.getGame().cards.indexOf(oldVCard.card),1);
             oldVCard.repopulate(newCard);
