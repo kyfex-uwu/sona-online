@@ -57,16 +57,12 @@ network.receiveFromServer = async (packed) => {
                 new Vector3(), rotation));
             theirDeck.addCard(game, visualCard);
         }
-        if(game.getGame().side == Side.A){
-            game.handB.enabled=false;
-            game.deckB.enabled=false;
-            game.runawayB.enabled=false;
-            for(const field of game.fieldsB) field.enabled=false;
+        if(game.getGame().side == Side.B){
+            game.handB.enabled=true;
+            for(const field of game.fieldsB) field.enabled=true;
         }else{
-            game.handA.enabled=false;
-            game.deckA.enabled=false;
-            game.runawayA.enabled=false;
-            for(const field of game.fieldsA) field.enabled=false;
+            game.handA.enabled=true;
+            for(const field of game.fieldsA) field.enabled=true;
         }
 
         await wait(500);

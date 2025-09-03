@@ -5,6 +5,7 @@ import {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {PlaceAction} from "../../networking/Events.js";
+import {sideTernary} from "../../consts.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -38,6 +39,7 @@ export default class FieldMagnet extends CardMagnet{
     addCard(game:VisualGame, card:VisualCard){
         if(this.card !== undefined) return false;
         this.card = card;
+        sideTernary(game.getGame().side, game.getGame().fieldsA, game.getGame().fieldsB)[this.which-1] = card.card;
         this.card!.position.copy(this.position);
         this.card!.rotation.copy(this.rotation);
         this.position.add(CardMagnet.offs);
@@ -47,6 +49,7 @@ export default class FieldMagnet extends CardMagnet{
     }
     removeCard(game:VisualGame){
         if(this.card === undefined) return false;
+        sideTernary(game.getGame().side, game.getGame().fieldsA, game.getGame().fieldsB)[this.which-1] = undefined;
         this.unchildCard(game, this.card);
         this.position.sub(CardMagnet.offs);
 

@@ -28,6 +28,8 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     addCard(game:VisualGame, card:VisualCard){
+        sideTernary(game.getGame().side, game.getGame().deckA, game.getGame().deckB).push(card.card);
+
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
         const newRot = new Euler().setFromQuaternion(this.rotation);
@@ -38,12 +40,15 @@ export default class DeckMagnet extends CardMagnet{
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
+        game.visualTick();
         return true;
     }
     removeCard(game:VisualGame){
         if(this.cards.length===0) return false;
+        sideTernary(game.getGame().side, game.getGame().deckA, game.getGame().deckB).pop();
         this.unchildCard(game, this.cards[this.cards.length-1]!);
 
+        game.visualTick();
         return true;
     }
     unchildCard(game:VisualGame, card:VisualCard){
@@ -57,15 +62,11 @@ export default class DeckMagnet extends CardMagnet{
         }
     }
 
-    tick(parent: VisualGame) {
-        super.tick(parent);
-    }
-
     drawCard(game:VisualGame){
         const hand = sideTernary(this.getSide(), game.handA, game.handB);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;
         if (this.removeCard(game)) {
-            hand.addCard(tempCard, hand.cards.length);
+            hand.addCard(game, tempCard, hand.cards.length);
             return tempCard;
         }
     }

@@ -9,7 +9,7 @@ export abstract class PositionedVisualGameElement implements VisualGameElement{
     public rotation:Quaternion;
     protected realPosition:Vector3;
     protected realRotation:Quaternion;
-    public enabled=true;
+    public enabled=false;
     constructor(side:Side, position:Vector3, rotation:Quaternion) {
         this.side=side;
         this.position = position.clone();

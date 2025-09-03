@@ -27,7 +27,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
             hardRadius:40,
             onClick:()=>false,
             rotation: new Quaternion(),
-            enabled:true,
+            enabled:false,
         }, props);
         super(side, position, props.rotation!);
         this.radius = props.radius!;

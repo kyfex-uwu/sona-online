@@ -48,7 +48,7 @@ export default class CardFan extends PositionedVisualGameElement{
     }
     removeFromScene() {
         removeClickListener(this.listener);
-        this.group.parent?.remove(this.group);
+        this.group.removeFromParent();
     }
 
     visualTick(parent: VisualGame): void {
@@ -56,7 +56,7 @@ export default class CardFan extends PositionedVisualGameElement{
         this.group.quaternion.slerp(this.rotation, 0.1);
     }
 
-    addCard(card:VisualCard, index:number=0){
+    addCard(game:VisualGame, card:VisualCard, index:number=0){
         this.cards.splice(index,0,card);
         card.setHolder(this);
 
@@ -66,6 +66,14 @@ export default class CardFan extends PositionedVisualGameElement{
             card.setRealRotation(this.group.quaternion.clone().premultiply(card.model?.getWorldQuaternion(new Quaternion()).invert()!));
             this.group.add(card.model!);
         })
+
+        game.visualTick();
+    }
+    removeCard(game:VisualGame, index:number=0){
+        const card = this.cards.splice(index,1)[0]!;
+        this.recalculateCardPositions();
+
+        this.unchildCard(game, card);
     }
     recalculateCardPositions(){
         let pos = -(this.cards.length-1)/2;
@@ -78,11 +86,6 @@ export default class CardFan extends PositionedVisualGameElement{
         }
     }
     unchildCard(game:VisualGame, card:VisualCard){
-        let index = this.cards.indexOf(card);
-        if(index===-1) return;
-        this.cards.splice(this.cards.indexOf(card),1);
-        this.recalculateCardPositions();
-
         card.rotation = new Quaternion();
         card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
         card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);

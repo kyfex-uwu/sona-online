@@ -64,7 +64,7 @@ export default class VisualCard extends PositionedVisualGameElement{
     }
     populate(card:Card){
         this._card=card;
-        for(const child of this.flipGroup.children) this.flipGroup.remove(child);
+        this.flipGroup.clear();
         this.model.userData.card=this;
         this.enabledMaterial?.dispose();
         this.disabledMaterial?.dispose();
@@ -179,7 +179,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.game=game;
     }
     removeFromScene() {
-        this.model.parent?.remove(this.model);
+        this.model.removeFromParent();
     }
 
     private flipRotation:Quaternion = new Quaternion();

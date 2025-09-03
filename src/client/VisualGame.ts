@@ -13,6 +13,7 @@ import {Event} from "../networking/Events.js";
 import {registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
+import {BeforeGameState, type GameState} from "../GameStates.js";
 
 const pointer = new Vector2();
 
@@ -77,6 +78,8 @@ export default class VisualGame {
 
     private previewCard:Card|undefined;
 
+    private state:GameState = new BeforeGameState();
+
     public constructor(scene: Scene) {
         this.scene = scene;
         this.game = new Game([],[],Game.localID);
@@ -111,7 +114,7 @@ export default class VisualGame {
 
         //--
 
-        this.drawCallback = registerDrawCallback(0, (p5, scale)=>{
+        this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
             if(this.previewCard === undefined) return;
             if(previewImages[this.previewCard.cardData.imagePath] !== undefined){
                 if(previewImages[this.previewCard.cardData.imagePath] !== true) {
@@ -127,7 +130,7 @@ export default class VisualGame {
             }
         })
     }
-    private readonly drawCallback;
+    private readonly releaseDrawCallback;
 
     public addElement<T extends VisualGameElement>(element: T): T {
         element.addToScene(this.scene, this);
@@ -250,4 +253,13 @@ export default class VisualGame {
     //         this.theirDeck.addCard(this, this.addElement(template(this.theirDeck.position.clone(), Side.THEM, this.theirDeck.rotation.clone())));
     //     }
     // }
+
+    release(){
+        this.releaseDrawCallback();
+        this.scene.removeFromParent();
+    }
+
+    logicTick(){
+        // this.state.visualTick(this);
+    }
 }
