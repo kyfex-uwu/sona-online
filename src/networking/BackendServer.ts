@@ -1,12 +1,21 @@
 import {network} from "./Server.js";
 import * as Events from "./Events.js"
-import {ClarifyCardEvent, Event, FindGameEvent, GameStartEvent, PlaceAction} from "./Events.js"
+import {
+    ClarifyCardEvent,
+    DetermineStarterEvent,
+    Event,
+    FindGameEvent,
+    GameStartEvent,
+    PlaceAction,
+    StartRequestEvent
+} from "./Events.js"
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {Side} from "../GameElement.js";
 import {shuffled} from "../consts.js";
 
-const usersFromGameIDs:{[k:string]:Array<{send:(v:string)=>void}>}={};
+export type Client ={send:(v:Event<any>)=>void};
+const usersFromGameIDs:{[k:string]:Array<Client>}={};
 const gamesFromUser:Map<any, Game> = new Map();
 const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
 
@@ -16,7 +25,7 @@ export function backendInit(){
 
 network.sendToClients = async (event) => {
     for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
-        user.send(event.serialize());
+        user.send(event);
     }
 }
 network.receiveFromClient= (packed, client) => {
@@ -53,6 +62,7 @@ network.receiveFromClient= (packed, client) => {
                     otherDeck:deckA.map(card => card.id),
                     which:Side.B,
                 }, game));
+                game.setPlayers(event.sender!, other.sender!);
 
                 // for(const card of deckA){
                 //     network.replyToClient(other, new ClarifyCardEvent({
@@ -69,6 +79,42 @@ network.receiveFromClient= (packed, client) => {
             })
             unfilledGames.push(resolve!);
         }
+    }else if(event instanceof StartRequestEvent){
+        if(event.game!==undefined){
+            event.game.miscData[(event.sender === event.game.player(Side.A))?
+                "playerAStartRequest" :
+                "playerBStartRequest"] = event.data.which;
+
+            if(event.game.miscData.playerAStartRequest !== undefined &&
+                event.game.miscData.playerBStartRequest !== undefined){
+                let startingSide: Side;
+                let flippedCoin: boolean;
+
+                if(event.game.miscData.playerAStartRequest ===
+                    event.game.miscData.playerBStartRequest){
+                    flippedCoin=true;
+                    startingSide = Math.random()<0.5 ? Side.A : Side.B;
+                }else{
+                    flippedCoin=false;
+                    if(event.game.miscData.playerAStartRequest === "nopref"){
+                        startingSide = event.game.miscData.playerBStartRequest === "first" ? Side.B : Side.A;
+                    }else if(event.game.miscData.playerBStartRequest === "nopref"){
+                        startingSide = event.game.miscData.playerAStartRequest === "first" ? Side.A : Side.B;
+                    }else{
+                        //first and second
+                        startingSide = event.game.miscData.playerBStartRequest === "first" ? Side.B : Side.A;
+                    }
+                }
+
+                const toSend = new DetermineStarterEvent({
+                    starter:startingSide,
+                    flippedCoin:flippedCoin,
+                });
+                for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                    user.send(toSend);
+                }
+            }
+        }
     }else if(event instanceof PlaceAction){
         if(event.game!==undefined){
             const card = event.game.cards.find(card=>card.id === event.data.cardId)!;
@@ -76,14 +122,16 @@ network.receiveFromClient= (packed, client) => {
                 user.send(new ClarifyCardEvent({
                     id: event.data.cardId,
                     cardDataName:card.cardData.name
-                }).serialize());
+                }));
                 user.send(new PlaceAction({
                     ...event.data,
-                }).serialize());
+                }));
             }
+
+            event.game.stateTick();
         }
     }
 }
 network.replyToClient = (replyTo, replyWith) => {
-    replyTo.sender?.send(replyWith.serialize());
+    replyTo.sender?.send(replyWith);
 }

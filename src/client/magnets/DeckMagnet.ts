@@ -40,7 +40,7 @@ export default class DeckMagnet extends CardMagnet{
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
-        game.visualTick();
+        super.addCard(game, card);
         return true;
     }
     removeCard(game:VisualGame){
@@ -48,7 +48,6 @@ export default class DeckMagnet extends CardMagnet{
         sideTernary(game.getGame().side, game.getGame().deckA, game.getGame().deckB).pop();
         this.unchildCard(game, this.cards[this.cards.length-1]!);
 
-        game.visualTick();
         return true;
     }
     unchildCard(game:VisualGame, card:VisualCard){

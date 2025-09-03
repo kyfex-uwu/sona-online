@@ -45,6 +45,7 @@ export default class FieldMagnet extends CardMagnet{
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
+        super.addCard(game, card);
         return true;
     }
     removeCard(game:VisualGame){

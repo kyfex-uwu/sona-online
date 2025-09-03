@@ -13,7 +13,7 @@ import {Event} from "../networking/Events.js";
 import {registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
-import {BeforeGameState, type GameState} from "../GameStates.js";
+import {VBeforeGameState, type VisualGameState} from "./VisualGameStates.js";
 
 const pointer = new Vector2();
 
@@ -78,7 +78,13 @@ export default class VisualGame {
 
     private previewCard:Card|undefined;
 
-    private state:GameState = new BeforeGameState();
+    private _state:VisualGameState = new VBeforeGameState();
+    public get state(){ return this._state; }
+    public set state(newState){
+        const oldState = this.state;
+        this._state = newState;
+        oldState.swapAway(this);
+    }
 
     public constructor(scene: Scene) {
         this.scene = scene;
@@ -189,6 +195,9 @@ export default class VisualGame {
 
     public visualTick() {
         for (const element of this.elements) element.visualTick(this);
+    }
+    public processState(){
+        this.state.visualTick(this);
     }
 
     public changeView(type: ViewType) {

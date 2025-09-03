@@ -4,12 +4,18 @@ import {Event} from "./networking/Events.js";
 import {sendEvent} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, type GameState} from "./GameStates.js";
+import type {Client} from "./networking/BackendServer.js";
+import {sideTernary} from "./consts.js";
 
 export enum CurrentTurn{
     A,
     B,
     NEITHER,
 }
+export type MiscData = {
+    playerAStartRequest?:"first"|"second"|"nopref",
+    playerBStartRequest?:"first"|"second"|"nopref",
+};
 
 export default class Game{
     public readonly gameID:string;
@@ -28,11 +34,22 @@ export default class Game{
 
     public readonly cards:Array<Card> = [];
 
-    private state:GameState = new BeforeGameState();
+    public state:GameState = new BeforeGameState();
 
     public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
-    public actionsLeft = 0;
     public processingAction = false;
+
+    public miscData:MiscData={};
+
+    private playerA:Client|undefined=undefined;
+    private playerB:Client|undefined=undefined;
+    public setPlayers(playerA:Client, playerB:Client){
+        this.playerA=playerA;
+        this.playerB=playerB;
+    }
+    public player(which:Side){
+        return sideTernary(which, this.playerA, this.playerB);
+    }
 
     public static localID="local";
     public constructor(yourDeck:Array<{type:string, id:number}>, theirDeck:Array<{type:string,id:number}>, gameID:string, side?:Side) {
@@ -71,7 +88,7 @@ export default class Game{
         sendEvent(event, false);
     }
 
-    logicTick(){
+    stateTick(){
         this.state.tick(this);
     }
 }

@@ -67,7 +67,7 @@ export default class CardFan extends PositionedVisualGameElement{
             this.group.add(card.model!);
         })
 
-        game.visualTick();
+        game.processState();
     }
     removeCard(game:VisualGame, index:number=0){
         const card = this.cards.splice(index,1)[0]!;

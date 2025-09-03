@@ -1,6 +1,6 @@
 import {network} from "./Server.js";
 import * as Events from "./Events.js";
-import {ClarifyCardEvent, DrawAction, Event, GameStartEvent, PlaceAction} from "./Events.js";
+import {ClarifyCardEvent, DetermineStarterEvent, DrawAction, Event, GameStartEvent, PlaceAction} from "./Events.js";
 import {game} from "../index.js";
 import Game from "../Game.js";
 import Card from "../Card.js";
@@ -14,6 +14,7 @@ import {sideTernary} from "../consts.js";
 import {wait} from "../client/clientConsts.js";
 import type HandFan from "../client/fans/HandFan.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
+import {VChoosingStartState} from "../client/VisualGameStates.js";
 
 export function frontendInit(){
     console.log("network initialized :D")
@@ -85,6 +86,13 @@ network.receiveFromServer = async (packed) => {
             game.getGame().cards.push(newCard);
             game.getGame().cards.splice(game.getGame().cards.indexOf(oldVCard.card),1);
             oldVCard.repopulate(newCard);
+        }
+    }else if(event instanceof DetermineStarterEvent){
+        if(game.state instanceof VChoosingStartState){
+            if(event.data.flippedCoin)
+                game.state.flipCoin();
+            // else
+            //     game.state = new
         }
     }else if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>

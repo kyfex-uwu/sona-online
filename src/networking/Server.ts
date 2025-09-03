@@ -1,11 +1,12 @@
 import {Event, type SerializableType,} from "./Events.js";
 import type Game from "../Game.js";
+import type {Client} from "./BackendServer.js";
 
 export const network:{
     sendToServer:(event:Event<any>)=>void,
     sendToClients:(event:Event<any>)=>void,
     replyToClient:(replyTo:Event<any>, replyWith:Event<any>)=>void,
-    receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:{send:(v:string)=>any})=>void,
+    receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:Client)=>void,
     receiveFromServer:(event:{id:number,type:string,data:SerializableType})=>void,
 
     findEmptyGame:()=>Game|undefined,
