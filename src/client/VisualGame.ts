@@ -131,9 +131,13 @@ export default class VisualGame {
                     previewImages[path]=image;//.mask(the card mask)
                 })
             }
-        })
+        });
+        this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
+
+        });
     }
     private readonly releaseDrawCallback;
+    private readonly releaseDebugDraw;
 
     public addElement<T extends VisualGameElement>(element: T): T {
         element.addToScene(this.scene, this);
@@ -264,6 +268,7 @@ export default class VisualGame {
 
     release(){
         this.releaseDrawCallback();
+        this.releaseDebugDraw();
         this.scene.removeFromParent();
     }
 

@@ -83,17 +83,18 @@ network.receiveFromServer = async (packed) => {
             const newCard = event.data.cardDataName !== undefined ?
                 new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id) :
                 oldVCard.card;
-            if(event.data.faceUp === undefined)
-                oldVCard[oldVCard.card.getFaceUp()?"flipFaceup":"flipFacedown"]();
-            else
-                oldVCard[event.data.faceUp?"flipFaceup":"flipFacedown"]();
-            game.getGame().cards.add(newCard);
+            const oldCard = oldVCard.card;
+            if(!oldCard.getFaceUp()) newCard._flipFacedown();
+
             if(event.data.cardDataName !== undefined){
-                oldVCard.repopulate(newCard);
                 game.getGame().cards.delete(oldVCard.card);
+                oldVCard.repopulate(newCard);
             }
 
-            console.log(newCard)
+            if(event.data.faceUp !== undefined && event.data.faceUp !== oldCard.getFaceUp())
+                oldVCard[event.data.faceUp ? "flipFaceup" : "flipFacedown"]();
+
+            game.getGame().cards.add(newCard);
         }
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){

@@ -139,7 +139,7 @@ network.receiveFromClient= (packed, client) => {
                         id: event.data.cardId,
                         cardDataName: card.cardData.name,
                     }));
-                }else{
+                }else if(user !== event.sender){
                     user.send(new ClarifyCardEvent({
                         id: event.data.cardId,
                         faceUp: false,
