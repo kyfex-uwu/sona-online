@@ -5,7 +5,7 @@ import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
-import {sidesMatch, sideTernary} from "../../consts.js";
+import {cSideTernary} from "../clientConsts.js";
 
 
 export default class DeckMagnet extends CardMagnet{
@@ -14,12 +14,10 @@ export default class DeckMagnet extends CardMagnet{
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
-                if(!game.processingAction && sidesMatch(this.getSide(), game.getGame().currentTurn)) {
-                    if (game.handA.cards.length < 5) {
-                        this.drawCard(game);
-                        game.sendEvent(new DrawAction({}, game.getGame()));
-                        return true;
-                    }
+                if (game.handA.cards.length < 5) {
+                    this.drawCard(game);
+                    game.sendEvent(new DrawAction({}, game.getGame()));
+                    return true;
                 }
                 return false;
             },
@@ -28,7 +26,7 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     addCard(game:VisualGame, card:VisualCard){
-        sideTernary(game.getGame().side, game.getGame().deckA, game.getGame().deckB).push(card.card);
+        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).push(card.card);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
@@ -45,7 +43,7 @@ export default class DeckMagnet extends CardMagnet{
     }
     removeCard(game:VisualGame){
         if(this.cards.length===0) return false;
-        sideTernary(game.getGame().side, game.getGame().deckA, game.getGame().deckB).pop();
+        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).pop();
         this.unchildCard(game, this.cards[this.cards.length-1]!);
 
         return true;
@@ -62,9 +60,10 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     drawCard(game:VisualGame){
-        const hand = sideTernary(this.getSide(), game.handA, game.handB);
+        const hand = cSideTernary(this.getSide(), game.handA, game.handB);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;
         if (this.removeCard(game)) {
+            tempCard.flipFaceup();
             hand.addCard(game, tempCard, hand.cards.length);
             return tempCard;
         }

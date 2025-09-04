@@ -32,7 +32,8 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
 
 export class ClarifyCardEvent extends Event<{
     id:number,
-    cardDataName:string,
+    cardDataName?:string,
+    faceUp?:boolean
 }>{}
 
 export class FindGameEvent extends Event<{
@@ -55,7 +56,7 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 export class DrawAction extends ActionEvent<{}>{}
 export class PlaceAction extends ActionEvent<{
     cardId:number,
-    position:number,
+    position:1|2|3,
     side:Side,
 }>{}
 export class ScareAction extends ActionEvent<{

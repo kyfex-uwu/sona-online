@@ -12,7 +12,8 @@ import {
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {Side} from "../GameElement.js";
-import {shuffled} from "../consts.js";
+import {shuffled, sideTernary} from "../consts.js";
+import {BeforeGameState} from "../GameStates.js";
 
 export type Client ={send:(v:Event<any>)=>void};
 const usersFromGameIDs:{[k:string]:Array<Client>}={};
@@ -106,23 +107,44 @@ network.receiveFromClient= (packed, client) => {
                     }
                 }
 
-                const toSend = new DetermineStarterEvent({
-                    starter:startingSide,
-                    flippedCoin:flippedCoin,
-                });
                 for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                    user.send(toSend);
+                    user.send(new DetermineStarterEvent({
+                        starter:startingSide,
+                        flippedCoin:flippedCoin,
+                    }));
+                    for(const card of event.game.fieldsA)
+                        if(card !== undefined)
+                            user.send(new ClarifyCardEvent({
+                                id: card.id,
+                                cardDataName:card.cardData.name,
+                            }));
+                    for(const card of event.game.fieldsB)
+                        if(card !== undefined)
+                            user.send(new ClarifyCardEvent({
+                                id: card.id,
+                                cardDataName:card.cardData.name,
+                            }));
                 }
             }
         }
     }else if(event instanceof PlaceAction){
         if(event.game!==undefined){
-            const card = event.game.cards.find(card=>card.id === event.data.cardId)!;
+            const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
+            sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
+                event.game.cards.values().find(card => card.id === event.data.cardId);
+
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                user.send(new ClarifyCardEvent({
-                    id: event.data.cardId,
-                    cardDataName:card.cardData.name
-                }));
+                if(!(event.game.state instanceof BeforeGameState)) {
+                    user.send(new ClarifyCardEvent({
+                        id: event.data.cardId,
+                        cardDataName: card.cardData.name,
+                    }));
+                }else{
+                    user.send(new ClarifyCardEvent({
+                        id: event.data.cardId,
+                        faceUp: false,
+                    }));
+                }
                 user.send(new PlaceAction({
                     ...event.data,
                 }));

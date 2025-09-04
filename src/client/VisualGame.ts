@@ -1,4 +1,4 @@
-import {Euler, Mesh, type Object3D, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
+import {Euler, Mesh, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
@@ -7,7 +7,7 @@ import VisualHandFan from "./fans/HandFan.js";
 import Game from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
-import {other, Side} from "../GameElement.js";
+import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {Event} from "../networking/Events.js";
 import {registerDrawCallback} from "./ui.js";
@@ -72,11 +72,8 @@ export default class VisualGame {
     public readonly deckB: DeckMagnet;
     public readonly handB: VisualHandFan;
 
-    public currentTurn: CurrentTurn = CurrentTurn.NEITHER;
-    public actionsLeft = 0;
-    public processingAction = false;
-
     private previewCard:Card|undefined;
+    private drawPreviewCard=false;
 
     private _state:VisualGameState = new VBeforeGameState();
     public get state(){ return this._state; }
@@ -121,7 +118,7 @@ export default class VisualGame {
         //--
 
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
-            if(this.previewCard === undefined) return;
+            if(this.previewCard === undefined || !this.drawPreviewCard) return;
             if(previewImages[this.previewCard.cardData.imagePath] !== undefined){
                 if(previewImages[this.previewCard.cardData.imagePath] !== true) {
                     p5.image(previewImages[this.previewCard.cardData.imagePath],
@@ -149,7 +146,13 @@ export default class VisualGame {
         return element;
     }
 
+    public cursorActive = true;
     public tick() {
+        if(!this.cursorActive) {
+            this.raycaster.set(new Vector3(0, 0, 0), new Vector3(0, 0, 0));
+            return;
+        }
+
         this.raycaster.setFromCamera(pointer, camera);
         const intersects = this.raycaster.intersectObjects([geo]);
         if (intersects[0] !== undefined) {
@@ -172,21 +175,22 @@ export default class VisualGame {
                 shouldRemovePreview = false;
                 if(this.previewCard?.cardData.id !==
                     visualCardMaybe.card.cardData.id) {
-                    const wasPreviewCard = this.previewCard !== undefined;
+                    const wasPreviewCard = this.previewCard !== undefined && this.drawPreviewCard;
                     setTimeout(()=>{
                         this.previewCard = visualCardMaybe.card;
                         const old = this.previewCard;
                         setTimeout(async ()=>{
                             if(this.previewCard===old){
-                                //todo: display only in here
+                                this.drawPreviewCard=true;
                             }
-                        },wasPreviewCard?0:500);
+                        },wasPreviewCard?0:400);
                     },0)
                     shouldRemovePreview = false;
                 }
             }
         }
         if(shouldRemovePreview){
+            this.drawPreviewCard=false;
             this.previewCard = undefined;
         }
 
@@ -217,12 +221,6 @@ export default class VisualGame {
         }
     }
 
-    getMy(type:ElementType):VisualGameElement{
-        return this.get(this.game.side,type);
-    }
-    getTheir(type:ElementType):VisualGameElement{
-        return this.get(other(this.game.side),type);
-    }
     get(side:Side, type:ElementType){
         switch(type){
             case ElementType.DECK: return side == Side.A ? this.deckA : this.deckB;
@@ -233,6 +231,7 @@ export default class VisualGame {
             case ElementType.RUNAWAY: return side == Side.A ? this.runawayA : this.runawayB;
         }
     }
+    getMySide(){ return this.game.mySide; }
 
     // requestStart() {
     //     for (const field of this.yourFields) field.removeCard(this);

@@ -19,7 +19,7 @@ export type MiscData = {
 
 export default class Game{
     public readonly gameID:string;
-    public readonly side:Side;
+    public readonly mySide:Side;
 
     public readonly fieldsA:[Card|undefined,Card|undefined,Card|undefined] =
         [undefined,undefined,undefined];
@@ -32,12 +32,9 @@ export default class Game{
     public readonly deckB:Array<Card> = [];
     public readonly handB:Array<Card> = [];
 
-    public readonly cards:Array<Card> = [];
+    public readonly cards:Set<Card> = new Set<Card>();
 
     public state:GameState = new BeforeGameState();
-
-    public currentTurn:CurrentTurn = CurrentTurn.NEITHER;
-    public processingAction = false;
 
     public miscData:MiscData={};
 
@@ -54,11 +51,11 @@ export default class Game{
     public static localID="local";
     public constructor(yourDeck:Array<{type:string, id:number}>, theirDeck:Array<{type:string,id:number}>, gameID:string, side?:Side) {
         this.gameID = gameID;
-        this.side=side||Side.A;
+        this.mySide=side||Side.A;
         this.deckA.splice(0,0,...yourDeck.map(data=> new Card(cards[data.type]!, Side.A, data.id)));
         this.deckB.splice(0,0,...theirDeck.map(data=> new Card(cards[data.type]!, Side.B, data.id)));
-        this.cards.splice(0,0,...this.deckA);
-        this.cards.splice(0,0,...this.deckB);
+        for(const card of this.deckA) this.cards.add(card);
+        for(const card of this.deckB) this.cards.add(card);
     }
 
     // requestStart(){
@@ -84,7 +81,6 @@ export default class Game{
     // }
 
     requestEvent(event:Event<any>){
-        this.processingAction = true;
         sendEvent(event, false);
     }
 

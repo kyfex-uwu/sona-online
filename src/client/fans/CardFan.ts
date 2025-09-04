@@ -4,8 +4,9 @@ import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {clickListener, removeClickListener} from "../clientConsts.js";
+import type {CardHoldable} from "../CardHoldable.js";
 
-export default class CardFan extends PositionedVisualGameElement{
+export default class CardFan extends PositionedVisualGameElement implements CardHoldable{
 
     public readonly cards: Array<VisualCard> = [];
 
@@ -69,8 +70,8 @@ export default class CardFan extends PositionedVisualGameElement{
 
         game.processState();
     }
-    removeCard(game:VisualGame, index:number=0){
-        const card = this.cards.splice(index,1)[0]!;
+    removeCard(game:VisualGame, card:VisualCard){
+        if(this.cards.indexOf(card)>=0) this.cards.splice(this.cards.indexOf(card),1);
         this.recalculateCardPositions();
 
         this.unchildCard(game, card);

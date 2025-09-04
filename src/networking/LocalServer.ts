@@ -7,14 +7,13 @@ import Card from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {ElementType, getField, ViewType} from "../client/VisualGame.js";
+import {getField, ViewType} from "../client/VisualGame.js";
 import {Side} from "../GameElement.js";
-import type DeckMagnet from "../client/magnets/DeckMagnet.js";
-import {sideTernary} from "../consts.js";
+import {cSideTernary} from "../client/clientConsts.js";
 import {wait} from "../client/clientConsts.js";
-import type HandFan from "../client/fans/HandFan.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
-import {VChoosingStartState} from "../client/VisualGameStates.js";
+import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
+import {registerDrawCallback} from "../client/ui.js";
 
 export function frontendInit(){
     console.log("network initialized :D")
@@ -39,26 +38,26 @@ network.receiveFromServer = async (packed) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
-    console.log("received "+event.serialize())
+    console.log("<- "+packed.type+"\n"+event.serialize())
 
     if(event instanceof GameStartEvent){
         game.setGame(new Game(event.data.deck, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}),
             Game.localID, event.data.which));
-        game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_YOU, ViewType.WHOLE_BOARD_THEM));
-        const myDeck = game.getMy(ElementType.DECK) as DeckMagnet;
-        const theirDeck = game.getTheir(ElementType.DECK) as DeckMagnet;
+        game.changeView(cSideTernary(event.data.which, ViewType.WHOLE_BOARD_YOU, ViewType.WHOLE_BOARD_THEM));
+        const myDeck = cSideTernary(game, game.deckA, game.deckB);
+        const theirDeck = cSideTernary(game, game.deckB, game.deckA);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const card of event.data.deck){
-            const visualCard = game.addElement(new VisualCard(new Card(cards[card.type]!, game.getGame().side, card.id),
+            const visualCard = game.addElement(new VisualCard(new Card(cards[card.type]!, game.getMySide(), card.id),
                 new Vector3(), rotation));
             myDeck.addCard(game, visualCard);
         }
         for(const cardId of event.data.otherDeck){
-            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, game.getGame().side, cardId),
+            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, game.getMySide(), cardId),
                 new Vector3(), rotation));
             theirDeck.addCard(game, visualCard);
         }
-        if(game.getGame().side == Side.B){
+        if(game.getMySide() == Side.B){
             game.handB.enabled=true;
             for(const field of game.fieldsB) field.enabled=true;
         }else{
@@ -68,35 +67,67 @@ network.receiveFromServer = async (packed) => {
 
         await wait(500);
 
-        myDeck.drawCard(game)?.flipFaceup();
-        myDeck.drawCard(game)?.flipFaceup();
-        myDeck.drawCard(game)?.flipFaceup();
+        myDeck.drawCard(game);
+        myDeck.drawCard(game);
+        myDeck.drawCard(game);
         theirDeck.drawCard(game);
         theirDeck.drawCard(game);
         theirDeck.drawCard(game);
 
-        for(const card of (game.getMy(ElementType.HAND) as HandFan).cards){
+        for(const card of cSideTernary(game, game.handA, game.handB).cards){
             if(card.card.cardData.level !== 1) card.enabled = false;
         }
     }else if (event instanceof ClarifyCardEvent){
         const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.card.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
-            const newCard = new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id);
-            newCard[oldVCard.card.getFaceUp()?"flipFaceup":"flipFacedown"]();
-            game.getGame().cards.push(newCard);
-            game.getGame().cards.splice(game.getGame().cards.indexOf(oldVCard.card),1);
-            oldVCard.repopulate(newCard);
+            const newCard = event.data.cardDataName !== undefined ?
+                new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id) :
+                oldVCard.card;
+            if(event.data.faceUp === undefined)
+                oldVCard[oldVCard.card.getFaceUp()?"flipFaceup":"flipFacedown"]();
+            else
+                oldVCard[event.data.faceUp?"flipFaceup":"flipFacedown"]();
+            game.getGame().cards.add(newCard);
+            if(event.data.cardDataName !== undefined){
+                oldVCard.repopulate(newCard);
+                game.getGame().cards.delete(oldVCard.card);
+            }
+
+            console.log(newCard)
         }
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
-            if(event.data.flippedCoin)
-                game.state.flipCoin();
-            // else
-            //     game.state = new
+            const finish = ()=>{
+                game.cursorActive=true;
+                game.state = new VTurnState(event.data.starter, game);
+                // game.getGame().state =
+
+                for(const field of game.fieldsA)
+                    field.getCard()?.flipFaceup();
+                for(const field of game.fieldsB)
+                    field.getCard()?.flipFaceup();
+            }
+            if(event.data.flippedCoin){
+                let timer=0;
+                let removeCallback = registerDrawCallback(0,(p5, _scale) =>{
+                    p5.background(30,30,30,150);
+
+                    if(timer>60*3) {
+                        removeCallback();
+                        finish();
+                    }
+
+                    timer++;
+                })
+            }else{
+                finish();
+            }
         }
     }else if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
             element instanceof VisualCard && element.card.id === event.data.cardId) as VisualCard;
+        card.getHolder()?.removeCard(game, card);
+        card.removeFromHolder();
         (game.get(event.data.side, getField(event.data.position as 1|2|3)) as FieldMagnet)
             .addCard(game,card);
     }else if(event instanceof DrawAction){

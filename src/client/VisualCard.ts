@@ -7,7 +7,8 @@ import {
     MeshBasicMaterial,
     type Object3D,
     Quaternion,
-    type Scene, Texture,
+    type Scene,
+    Texture,
     Vector3
 } from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
@@ -16,7 +17,8 @@ import type {Side} from "../GameElement.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {game} from "../index.js";
-import {sideTernary} from "../consts.js";
+import {cSideTernary} from "./clientConsts.js";
+import type {CardHoldable} from "./CardHoldable.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -129,6 +131,7 @@ export default class VisualCard extends PositionedVisualGameElement{
                 transparent:true,
                 color:new Color(0x777777),
             });
+            console.log("b");//???
             (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
             this.loadingModel=false;
         });
@@ -138,7 +141,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         super.tick(parent);
         if(parent.selectedCard === this) {
             this.position = parent.cursorPos;
-            this.rotation = sideTernary(game.getGame().side, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+            this.rotation = cSideTernary(game, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
         }
 
         // if(!this.enabled){
@@ -185,18 +188,21 @@ export default class VisualCard extends PositionedVisualGameElement{
     private flipRotation:Quaternion = new Quaternion();
     private flipTimer=0;
     flipFacedown(){
-        this.card.flipFacedown();
+        if(!this.card.getFaceUp()) return;
+        this.card._flipFacedown();
         this.flipRotation = new Quaternion(0,0,1,0);
         this.flipTimer = 20;
     }
     flipFaceup(){
-        this.card.flipFaceup();
+        if(this.card.getFaceUp()) return;
+        this.card._flipFaceup();
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
     }
 
-    private holder:{unchildCard:(g:VisualGame,c:VisualCard)=>any}|undefined=undefined;
-    setHolder(holder: { unchildCard: (g: VisualGame, c: VisualCard) => any; } | undefined){
+    private holder:CardHoldable|undefined=undefined;
+    public getHolder(){ return this.holder; }
+    setHolder(holder: CardHoldable | undefined){
         if(this.holder !== undefined) this.removeFromHolder();
         this.holder=holder;
     }

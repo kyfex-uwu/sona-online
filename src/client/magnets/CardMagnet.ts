@@ -2,10 +2,11 @@ import {Side} from "../../GameElement.js";
 import {clickListener, removeClickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, type Scene, Vector3} from "three";
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
-import type VisualGame from "../VisualGame.js";
-import type VisualCard from "../VisualCard.js";
+import VisualGame from "../VisualGame.js";
+import VisualCard from "../VisualCard.js";
+import type {CardHoldable} from "../CardHoldable.js";
 
-export default abstract class CardMagnet extends PositionedVisualGameElement{
+export default abstract class CardMagnet extends PositionedVisualGameElement implements CardHoldable{
     private readonly radius:number;
     private readonly hardRadius:number;
     private readonly onClick:(v:VisualGame)=>boolean;
@@ -75,5 +76,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement{
     }
 
     visualTick(parent: VisualGame) {}
+
+    abstract unchildCard(game: VisualGame, card: VisualCard):void;
 }
 updateOrder[CardMagnet.name] = 1;

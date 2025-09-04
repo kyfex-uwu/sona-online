@@ -1,9 +1,9 @@
 import VisualCardFan from "./CardFan.js";
 import type {Side} from "../../GameElement.js";
-import {Quaternion, type Scene, Vector3} from "three";
+import {Quaternion, Vector3} from "three";
 import VisualCard from "../VisualCard.js";
-import  VisualGame from "../VisualGame.js";
-import {sideTernary} from "../../consts.js";
+import VisualGame from "../VisualGame.js";
+import {cSideTernary} from "../clientConsts.js";
 
 export default class HandFan extends VisualCardFan{
     constructor(position:Vector3, side:Side, params:{
@@ -24,7 +24,7 @@ export default class HandFan extends VisualCardFan{
                 game.selectedCard = undefined;
             }
         }else if(card.enabled){
-            this.removeCard(game, this.cards.indexOf(card));
+            this.removeCard(game, card);
             game.selectedCard = card;
 
         }
@@ -32,6 +32,6 @@ export default class HandFan extends VisualCardFan{
 
     addCard(game: VisualGame, card: VisualCard, index: number = 0) {
         super.addCard(game, card, index);
-        sideTernary(game.getGame().side, game.getGame().handA, game.getGame().handB).splice(index,0,card.card);
+        cSideTernary(game, game.getGame().handA, game.getGame().handB).splice(index,0,card.card);
     }
 }

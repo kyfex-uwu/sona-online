@@ -4,7 +4,7 @@ import {updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {sideTernary} from "../../consts.js";
+import {cSideTernary} from "../clientConsts.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
@@ -29,7 +29,7 @@ export default class RunawayMagnet extends CardMagnet{
     }
 
     addCard(game:VisualGame, card:VisualCard){
-        sideTernary(game.getGame().side, game.getGame().runawayA, game.getGame().runawayB).push(card.card);
+        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).push(card.card);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
@@ -45,7 +45,7 @@ export default class RunawayMagnet extends CardMagnet{
     }
     removeCard(game:VisualGame){
         if(this.cards.length===0) return false;
-        sideTernary(game.getGame().side, game.getGame().runawayA, game.getGame().runawayB).pop();
+        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).pop();
         this.unchildCard(game, this.cards[this.cards.length-1]!);
 
         return true;

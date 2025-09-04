@@ -21,13 +21,11 @@ export default class Card implements GameElement{
         this.id=id;
     }
 
-    tick(parent: Game) {
-    }
     private faceUp = true;
-    flipFacedown(){
+    _flipFacedown(){
         this.faceUp=false;
     }
-    flipFaceup(){
+    _flipFaceup(){
         this.faceUp=true;
     }
     getSide(){ return this.side; }
