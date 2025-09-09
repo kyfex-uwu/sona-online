@@ -36,6 +36,9 @@ new p5(p => {
         p.loadImage(`/assets/button_pressed.png`, (image:p5.Image) => {
             assets["button_pressed"] = image;
         });
+        p.loadImage(`/assets/button_disabled.png`, (image:p5.Image) => {
+            assets["button_disabled"] = image;
+        });
     };
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
@@ -57,15 +60,15 @@ new p5(p => {
 let _buttonId=0;
 export function buttonId(){ return _buttonId++; }
 const buttonData:{[k:number]:boolean}={};
-export function button(p5:any, x:number,y:number,w:number,h:number,text:string,onClick:()=>void, scale:number, buttonId:number){
-    if(assets.button === undefined || assets.button_pressed === undefined) return;
+export function button(p5:any, x:number,y:number,w:number,h:number,text:string,onClick:()=>void, scale:number, buttonId:number, disabled:boolean=false){
+    if(assets.button === undefined || assets.button_pressed === undefined || assets.button_disabled === undefined) return;
     if(buttonData[buttonId] === undefined)
         buttonData[buttonId]=false;
 
     scale=scale/128/3;
     const isIn=p5.mouseX>=x&&p5.mouseX<=x+w&&p5.mouseY>=y&&p5.mouseY<=y+h;
-    const buttonImage = isIn ?
-        assets.button_pressed : assets.button;
+    const buttonImage = disabled ? assets.button_disabled : (isIn ?
+        assets.button_pressed : assets.button);
 
     //center
     p5.image(buttonImage, x+24*scale-1, y+24*scale-1, w-48*scale+2, h-48*scale+2, 24,24,80,80);
@@ -87,7 +90,7 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
     p5.textAlign(p5.CENTER,p5.CENTER);
     p5.text(text,x+w/2,y+h/2);
 
-    if(isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){
+    if(!disabled && isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){
         onClick();
         buttonData[buttonId]=false;
     }

@@ -6,6 +6,7 @@ import type VisualCard from "../VisualCard.js";
 import  VisualGame from "../VisualGame.js";
 import {PlaceAction} from "../../networking/Events.js";
 import {cSideTernary} from "../clientConsts.js";
+import {VTurnState} from "../VisualGameStates.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -15,13 +16,30 @@ export default class FieldMagnet extends CardMagnet{
     constructor(position: Vector3, side:Side, which:1|2|3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
+                const state = game.state;
+
                 if(game.selectedCard !== undefined){
+                    if(state instanceof VTurnState && state.getActionsLeft()<=0) return false;
+
                     if(this.addCard(game, game.selectedCard)) {
-                        game.sendEvent(new PlaceAction({cardId: game.selectedCard.card.id, position: this.which, side:game.getMySide()}));
+                        game.sendEvent(new PlaceAction({
+                            cardId: game.selectedCard.card.id,
+                            position: this.which,
+                            side:game.getMySide(),
+                            faceUp: (state instanceof VTurnState)
+                        }));
                         game.selectedCard = undefined;
+
+                        // if(state instanceof VTurnState)
+                        //     state.decrementTurn();
                         return true;
                     }
                 }else{
+                    if(game.state instanceof VTurnState){
+                        if(this.card === undefined) return false;
+                        return true;
+                    }
+
                     let tempCard = this.card;
                     if(this.removeCard(game)) {
                         game.selectedCard = tempCard;

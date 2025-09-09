@@ -32,6 +32,11 @@ export default class HandFan extends VisualCardFan{
 
     addCard(game: VisualGame, card: VisualCard, index: number = 0) {
         super.addCard(game, card, index);
-        cSideTernary(game, game.getGame().handA, game.getGame().handB).splice(index,0,card.card);
+        cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB).splice(index,0,card.card);
+    }
+    removeCard(game: VisualGame, card: VisualCard) {
+        super.removeCard(game, card);
+        const hand = cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB);
+        hand.splice(hand.indexOf(card.card),1);
     }
 }

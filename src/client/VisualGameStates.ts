@@ -2,13 +2,22 @@ import VisualGame from "./VisualGame.js";
 import {cSideTernary} from "./clientConsts.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {StartRequestEvent} from "../networking/Events.js";
-import type {Side} from "../GameElement.js";
+import {other, type Side} from "../GameElement.js";
+import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {game} from "../index.js";
 
-export abstract class VisualGameState{
+export abstract class VisualGameState<T extends GameState>{
+    protected readonly game;
+    constructor(game:VisualGame) {
+        this.game=game;
+    }
     abstract visualTick(game: VisualGame):void;
     swapAway(game:VisualGame){}
+    getNonVisState(){
+        return this.game.getGame().state as unknown as T;
+    }
 }
-export class VBeforeGameState extends VisualGameState{
+export class VBeforeGameState extends VisualGameState<BeforeGameState>{
     visualTick(game: VisualGame) {
         if(cSideTernary(game, game.fieldsA, game.fieldsB).some(v=>v.getCard()!==undefined)){
             for(const field of cSideTernary(game, game.fieldsA, game.fieldsB))
@@ -19,15 +28,13 @@ export class VBeforeGameState extends VisualGameState{
         }
     }
 }
-export class VChoosingStartState extends VisualGameState{
+export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     private readonly removeDraw;
-    private readonly game;
     private picked=false;
     private timer=0;
     private readonly buttonIds:[number,number,number]=[buttonId(), buttonId(), buttonId()];
     constructor(game:VisualGame) {
-        super();
-        this.game=game;
+        super(game);
         game.cursorActive=false;
         this.removeDraw = registerDrawCallback(0, (p5, scale) => {
             p5.background(30,30,30,150);
@@ -69,10 +76,14 @@ export class VChoosingStartState extends VisualGameState{
     }
 }
 
-export class VTurnState extends VisualGameState{
+export class VTurnState extends VisualGameState<TurnState>{
+    private readonly currTurn;
     constructor(currTurn:Side, game:VisualGame) {
-        super();
+        super(game);
+        game.getGame().state = new TurnState(currTurn);
+        this.currTurn=currTurn;
 
+        cSideTernary(currTurn, game.deckA, game.deckB).drawCard(game);
         if(currTurn === game.getMySide()){
             // for(const field of sideTernary(currTurn, game.fieldsA, game.fieldsB))
             cSideTernary(currTurn, game.handA, game.handB).enabled=true;
@@ -83,5 +94,28 @@ export class VTurnState extends VisualGameState{
     }
     visualTick(game: VisualGame): void {
 
+    }
+    decrementTurn(){
+        const state = this.game.getGame().state;
+        if(state instanceof TurnState) {
+            state.actionsLeft--;
+            if(state.actionsLeft<=0){
+                game.state = new VTurnState(other(state.turn), this.game);
+            }
+        }
+    }
+    getActionsLeft(){
+        const state = this.game.getGame().state;
+        return state instanceof TurnState ? state.actionsLeft : 0;
+    }
+    swapAway(game: VisualGame) {
+        super.swapAway(game);
+        if(this.currTurn === game.getMySide()){
+            // for(const field of sideTernary(currTurn, game.fieldsA, game.fieldsB))
+            cSideTernary(this.currTurn, game.handA, game.handB).enabled=false;
+            cSideTernary(this.currTurn, game.deckA, game.deckB).enabled=false;
+            for(const field of cSideTernary(this.currTurn, game.fieldsA, game.fieldsB))
+                field.enabled=false;
+        }
     }
 }

@@ -1,6 +1,14 @@
 import {network} from "./Server.js";
 import * as Events from "./Events.js";
-import {ClarifyCardEvent, DetermineStarterEvent, DrawAction, Event, GameStartEvent, PlaceAction} from "./Events.js";
+import {
+    ClarifyCardEvent,
+    DetermineStarterEvent,
+    DrawAction,
+    Event,
+    GameStartEvent, PassAction,
+    PlaceAction,
+    RequestSyncEvent
+} from "./Events.js";
 import {game} from "../index.js";
 import Game from "../Game.js";
 import Card from "../Card.js";
@@ -67,13 +75,6 @@ network.receiveFromServer = async (packed) => {
 
         await wait(500);
 
-        myDeck.drawCard(game);
-        myDeck.drawCard(game);
-        myDeck.drawCard(game);
-        theirDeck.drawCard(game);
-        theirDeck.drawCard(game);
-        theirDeck.drawCard(game);
-
         for(const card of cSideTernary(game, game.handA, game.handB).cards){
             if(card.card.cardData.level !== 1) card.enabled = false;
         }
@@ -101,7 +102,6 @@ network.receiveFromServer = async (packed) => {
             const finish = ()=>{
                 game.cursorActive=true;
                 game.state = new VTurnState(event.data.starter, game);
-                // game.getGame().state =
 
                 for(const field of game.fieldsA)
                     field.getCard()?.flipFaceup();
@@ -131,7 +131,23 @@ network.receiveFromServer = async (packed) => {
         card.removeFromHolder();
         (game.get(event.data.side, getField(event.data.position as 1|2|3)) as FieldMagnet)
             .addCard(game,card);
+        card[event.data.faceUp?"flipFaceup":"flipFacedown"]();
+        if(game.state instanceof VTurnState){
+            game.state.decrementTurn();
+        }
     }else if(event instanceof DrawAction){
-        //todo
+        console.log(cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB))
+        cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard(game);
+
+        if(game.state instanceof VTurnState){
+            game.state.decrementTurn();
+        }
+    }else if(event instanceof PassAction){
+        if(game.state instanceof VTurnState){
+            game.state.decrementTurn();
+        }
     }
 }
+
+//@ts-ignore
+window.requestSync = ()=> game.sendEvent(new RequestSyncEvent({}));

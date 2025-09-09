@@ -8,12 +8,12 @@ import Game from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
-import {camera, updateOrder} from "./clientConsts.js";
-import {Event} from "../networking/Events.js";
-import {registerDrawCallback} from "./ui.js";
+import {camera, cSideTernary, updateOrder} from "./clientConsts.js";
+import {Event, PassAction} from "../networking/Events.js";
+import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
-import {VBeforeGameState, type VisualGameState} from "./VisualGameStates.js";
+import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 
 const pointer = new Vector2();
 
@@ -75,7 +75,9 @@ export default class VisualGame {
     private previewCard:Card|undefined;
     private drawPreviewCard=false;
 
-    private _state:VisualGameState = new VBeforeGameState();
+    private readonly passButtonId;
+
+    private _state:VisualGameState<any> = new VBeforeGameState(this);
     public get state(){ return this._state; }
     public set state(newState){
         const oldState = this.state;
@@ -117,23 +119,41 @@ export default class VisualGame {
 
         //--
 
+        this.passButtonId = buttonId();
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
-            if(this.previewCard === undefined || !this.drawPreviewCard) return;
-            if(previewImages[this.previewCard.cardData.imagePath] !== undefined){
-                if(previewImages[this.previewCard.cardData.imagePath] !== true) {
-                    p5.image(previewImages[this.previewCard.cardData.imagePath],
-                        p5.width - 50 * scale / 45, (p5.height - 70 * scale / 45) / 2, 50 * scale / 45, 70 * scale / 45);
+            if(this.previewCard !== undefined && this.drawPreviewCard) {
+                if (previewImages[this.previewCard.cardData.imagePath] !== undefined) {
+                    if (previewImages[this.previewCard.cardData.imagePath] !== true) {
+                        p5.image(previewImages[this.previewCard.cardData.imagePath],
+                            p5.width - 50 * scale / 45, (p5.height - 70 * scale / 45) / 2, 50 * scale / 45, 70 * scale / 45);
+                    }
+                } else {
+                    previewImages[this.previewCard.cardData.imagePath] = true;
+                    const path = this.previewCard.cardData.imagePath
+                    p5.loadImage(`/assets/card-images/${path}.jpg`, (image: p5.Image) => {
+                        previewImages[path] = image;//.mask(the card mask)
+                    })
                 }
-            }else{
-                previewImages[this.previewCard.cardData.imagePath]=true;
-                const path = this.previewCard.cardData.imagePath
-                p5.loadImage(`/assets/card-images/${path}.jpg`, (image:p5.Image) => {
-                    previewImages[path]=image;//.mask(the card mask)
-                })
+            }
+
+            if(this.state instanceof VTurnState && this.state.getNonVisState().turn === this.getMySide()){
+                let width=scale*1.3;
+                let height=scale*0.4;
+                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
+                    this.sendEvent(new PassAction({}));
+                    (this.state as VTurnState).decrementTurn();
+                }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
-
+            if(this.state instanceof VTurnState){
+                p5.fill(255,0,0);
+                p5.textSize(scale*0.2);
+                p5.textAlign(p5.LEFT,p5.TOP);
+                p5.text(`side ${this.getMySide()}
+${this.state.getNonVisState().turn?"A":"B"}
+${this.state.getActionsLeft()}`, 0,0);
+            }
         });
     }
     private readonly releaseDrawCallback;

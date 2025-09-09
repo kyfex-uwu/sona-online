@@ -7,7 +7,6 @@ import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
 import {cSideTernary} from "../clientConsts.js";
 
-
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
 
@@ -16,7 +15,7 @@ export default class DeckMagnet extends CardMagnet{
             onClick:game=>{
                 if (game.handA.cards.length < 5) {
                     this.drawCard(game);
-                    game.sendEvent(new DrawAction({}, game.getGame()));
+                    game.sendEvent(new DrawAction({}));
                     return true;
                 }
                 return false;
