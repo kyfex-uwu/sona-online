@@ -19,10 +19,8 @@ export default class HandFan extends VisualCardFan{
         if(!this.enabled) return false;
 
         if(game.selectedCard !== undefined){
-            if(this.cards.length<5) {
-                this.addCard(game, game.selectedCard, this.cards.indexOf(card) + 1);
-                game.selectedCard = undefined;
-            }
+            this.addCard(game, game.selectedCard, this.cards.indexOf(card) + 1);
+            game.selectedCard = undefined;
         }else if(card.enabled){
             this.removeCard(game, card);
             game.selectedCard = card;

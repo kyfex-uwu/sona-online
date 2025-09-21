@@ -1,12 +1,12 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {cSideTernary, updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
-import type VisualCard from "../VisualCard.js";
-import  VisualGame from "../VisualGame.js";
-import {PlaceAction} from "../../networking/Events.js";
-import {cSideTernary} from "../clientConsts.js";
-import {VTurnState} from "../VisualGameStates.js";
+import VisualCard, {Stat} from "../VisualCard.js";
+import VisualGame from "../VisualGame.js";
+import {PlaceAction, ScareAction} from "../../networking/Events.js";
+import {VAttackingState, VTurnState} from "../VisualGameStates.js";
+import {CardColor} from "../../Card.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -35,8 +35,53 @@ export default class FieldMagnet extends CardMagnet{
                         return true;
                     }
                 }else{
-                    if(game.state instanceof VTurnState){
+                    if(state instanceof VTurnState){
                         if(this.card === undefined) return false;
+                        game.setState(new VAttackingState(this.card, game), state.getNonVisState());
+                        return true;
+                    }
+                    if(state instanceof VAttackingState &&
+                            this.card !== undefined) {
+                        if(this.getSide() === game.getMySide()) {
+                            const intersects = game.raycaster.intersectObjects([
+                                this.card.getStatModel(Stat.RED),
+                                this.card.getStatModel(Stat.YELLOW),
+                                this.card.getStatModel(Stat.BLUE),
+                                this.card.model
+                            ].filter(mesh => mesh !== undefined));
+
+                            if (intersects[0] !== undefined) {
+                                if (intersects[0].object === this.card.getStatModel(Stat.RED)) {
+                                    state.attackData.type = "red";
+                                } else if (intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
+                                    state.attackData.type = "yellow";
+                                } else if (intersects[0].object === this.card.getStatModel(Stat.BLUE)) {
+                                    state.attackData.type = "blue";
+                                } else {
+                                    state.attackData.type = "card";
+                                }
+                            }
+                        }else{
+                            if(state.attackData.type !== undefined) {
+                                const intersects = game.raycaster.intersectObjects([
+                                    this.card.model
+                                ].filter(mesh => mesh !== undefined));
+                                if (intersects[0] !== undefined) {
+                                    if (state.attackData.type !== "card") {
+                                        game.sendEvent(new ScareAction({
+                                            scaredId: this.card.card.id,
+                                            scarerId: state.card.card.id,
+                                            attackingWith: {
+                                                red: CardColor.RED,
+                                                yellow: CardColor.YELLOW,
+                                                blue: CardColor.BLUE,
+                                            }[state.attackData.type]
+                                        }));
+                                    }
+                                    state.returnToParent();
+                                }
+                            }
+                        }
                         return true;
                     }
 

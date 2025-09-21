@@ -6,6 +6,7 @@ import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
 import {cSideTernary} from "../clientConsts.js";
+import {VTurnState} from "../VisualGameStates.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
@@ -16,6 +17,8 @@ export default class DeckMagnet extends CardMagnet{
                 if (game.handA.cards.length < 5) {
                     this.drawCard(game);
                     game.sendEvent(new DrawAction({}));
+                    if(game.state instanceof VTurnState)
+                        game.state.decrementTurn();
                     return true;
                 }
                 return false;

@@ -65,7 +65,7 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
     if(buttonData[buttonId] === undefined)
         buttonData[buttonId]=false;
 
-    scale=scale/128/3;
+    scale=scale/128/2.5;
     const isIn=p5.mouseX>=x&&p5.mouseX<=x+w&&p5.mouseY>=y&&p5.mouseY<=y+h;
     const buttonImage = disabled ? assets.button_disabled : (isIn ?
         assets.button_pressed : assets.button);
@@ -85,9 +85,12 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
     p5.image(buttonImage, x,y+h-24*scale,24*scale,24*scale,0,104,24,24);
     p5.image(buttonImage, x+w-24*scale,y+h-24*scale,24*scale,24*scale,104,104,24,24);
 
-    p5.fill(255);
+    p5.fill(!disabled?255:200);
     p5.textSize(scale*50);
     p5.textAlign(p5.CENTER,p5.CENTER);
+    const textWidth = p5.textWidth(text);
+    if(textWidth>w-52*scale)
+        p5.textSize(scale*50*(w-52*scale)/textWidth);
     p5.text(text,x+w/2,y+h/2);
 
     if(!disabled && isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){

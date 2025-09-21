@@ -1,9 +1,9 @@
 import {
-    Color,
+    Color, CylinderGeometry,
     Euler,
     Group,
     Material,
-    type Mesh,
+    Mesh,
     MeshBasicMaterial,
     type Object3D,
     Quaternion,
@@ -13,7 +13,6 @@ import {
 } from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card from "../Card.js";
-import type {Side} from "../GameElement.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {game} from "../index.js";
@@ -44,7 +43,11 @@ const cardBackMat = new MeshBasicMaterial({
     transparent:true,
 });
 
-export type VisualCardTemplate = (side:Side, position:Vector3, rotation?:Quaternion)=>VisualCard;
+export enum Stat{
+    RED,
+    YELLOW,
+    BLUE
+}
 
 export default class VisualCard extends PositionedVisualGameElement{
     private _card:Card;
@@ -117,6 +120,22 @@ export default class VisualCard extends PositionedVisualGameElement{
         (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
         (actualModel.children[1] as Mesh).material = cardBackMat;
 
+        this.model.userData.redStat = new Mesh(new CylinderGeometry(7.777,7.777), new MeshBasicMaterial({
+            visible:false
+        }));
+        this.model.userData.blueStat = new Mesh(new CylinderGeometry(7.777,7.777), new MeshBasicMaterial({
+            visible:false
+        }));
+        this.model.userData.yellowStat = new Mesh(new CylinderGeometry(7.777,7.777), new MeshBasicMaterial({
+            visible:false
+        }));
+        this.model.userData.redStat.position.set(-20,0,-38.3);
+        this.model.userData.blueStat.position.set(0,0,-38.3);
+        this.model.userData.yellowStat.position.set(20,0,-38.3);
+        actualModel.add(this.model.userData.redStat);
+        actualModel.add(this.model.userData.blueStat);
+        actualModel.add(this.model.userData.yellowStat);
+
         textureLoader.loadAsync(`/assets/card-images/${this.card.cardData.imagePath}.jpg`).then((texture)=>{
             if(this.flipGroup.children[0] !== actualModel) return;
 
@@ -135,6 +154,17 @@ export default class VisualCard extends PositionedVisualGameElement{
             (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
             this.loadingModel=false;
         });
+    }
+    getStatModel(stat:Stat){
+        if(this.loadingModel) return;
+        switch(stat){
+            case Stat.RED:
+                return this.model.userData.redStat as Mesh;
+            case Stat.YELLOW:
+                return this.model.userData.yellowStat as Mesh;
+            case Stat.BLUE:
+                return this.model.userData.blueStat as Mesh;
+        }
     }
 
     tick(parent: VisualGame) {

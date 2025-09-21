@@ -41,7 +41,7 @@ window.addEventListener("resize", windowResize);
 frontendInit();
 
 export const game = new VisualGame(scene);
-game.changeView(ViewType.WHOLE_BOARD_YOU);
+game.changeView(ViewType.WHOLE_BOARD_A);
 setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{

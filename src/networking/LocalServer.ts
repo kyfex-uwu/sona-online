@@ -22,6 +22,7 @@ import {wait} from "../client/clientConsts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
+import {TurnState} from "../GameStates.js";
 
 export function frontendInit(){
     console.log("network initialized :D")
@@ -51,7 +52,7 @@ network.receiveFromServer = async (packed) => {
     if(event instanceof GameStartEvent){
         game.setGame(new Game(event.data.deck, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}),
             Game.localID, event.data.which));
-        game.changeView(cSideTernary(event.data.which, ViewType.WHOLE_BOARD_YOU, ViewType.WHOLE_BOARD_THEM));
+        game.changeView(cSideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
         const myDeck = cSideTernary(game, game.deckA, game.deckB);
         const theirDeck = cSideTernary(game, game.deckB, game.deckA);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
@@ -101,7 +102,7 @@ network.receiveFromServer = async (packed) => {
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
-                game.state = new VTurnState(event.data.starter, game);
+                game.setState(new VTurnState(event.data.starter, game), new TurnState(event.data.starter));
 
                 for(const field of game.fieldsA)
                     field.getCard()?.flipFaceup();

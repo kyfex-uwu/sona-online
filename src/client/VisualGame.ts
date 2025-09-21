@@ -13,7 +13,8 @@ import {Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
-import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
+import {VAttackingState, VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
+import type {GameState} from "../GameStates.js";
 
 const pointer = new Vector2();
 
@@ -24,14 +25,10 @@ window.addEventListener("pointermove", ( event: { clientX: number; clientY: numb
 const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 
 export enum ViewType{
-    WHOLE_BOARD_YOU,
-    WHOLE_BOARD_THEM,
-    FIELDS,
-}
-export enum CurrentTurn{
-    YOURS,
-    THEIRS,
-    NEITHER,
+    WHOLE_BOARD_A,
+    WHOLE_BOARD_B,
+    FIELDS_A,
+    FIELDS_B,
 }
 export enum ElementType{
     FIELD_1,
@@ -77,12 +74,17 @@ export default class VisualGame {
 
     private readonly passButtonId;
 
-    private _state:VisualGameState<any> = new VBeforeGameState(this);
+    private targetCameraPos = new Vector3();
+    private targetCameraRot = new Quaternion();
+
+    private _state:VisualGameState<GameState> = new VBeforeGameState(this);
     public get state(){ return this._state; }
-    public set state(newState){
+    public setState<T extends GameState>(newVState:VisualGameState<T>, newState:T){
         const oldState = this.state;
-        this._state = newState;
+        this._state = newVState;
+        this.game.state = newState;
         oldState.swapAway(this);
+        newVState.init();
     }
 
     public constructor(scene: Scene) {
@@ -143,6 +145,13 @@ export default class VisualGame {
                     this.sendEvent(new PassAction({}));
                     (this.state as VTurnState).decrementTurn();
                 }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
+            }
+            if(this.state instanceof VAttackingState){
+                let width=scale*1.3;
+                let height=scale*0.4;
+                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Cancel", ()=>{
+                    (this.state as VAttackingState).returnToParent();
+                }, scale, this.passButtonId);
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
@@ -223,24 +232,29 @@ ${this.state.getActionsLeft()}`, 0,0);
 
     public visualTick() {
         for (const element of this.elements) element.visualTick(this);
-    }
-    public processState(){
         this.state.visualTick(this);
+
+        camera.position.lerp(this.targetCameraPos, 0.1);
+        camera.quaternion.slerp(this.targetCameraRot, 0.1);
     }
 
     public changeView(type: ViewType) {
         switch (type) {
-            case ViewType.WHOLE_BOARD_YOU:
-                camera.position.copy(new Vector3(0, 600, 220));
-                camera.rotation.copy(new Euler(-Math.PI * 0.4, 0, 0));
+            case ViewType.WHOLE_BOARD_A:
+                this.targetCameraPos = new Vector3(0,600,220);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
                 break;
-            case ViewType.WHOLE_BOARD_THEM:
-                camera.position.copy(new Vector3(0, 600, -220));
-                camera.rotation.copy(new Euler(-Math.PI * 0.6, 0, Math.PI));
+            case ViewType.WHOLE_BOARD_B:
+                this.targetCameraPos = new Vector3(0,600,-220);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
-            case ViewType.FIELDS:
-                camera.position.copy(new Vector3(0, 450, 20));
-                camera.rotation.copy(new Euler(-Math.PI * 0.5, 0, 0));
+            case ViewType.FIELDS_A:
+                this.targetCameraPos = new Vector3(0,370, 40);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.5, 0, 0));
+                break;
+            case ViewType.FIELDS_B:
+                this.targetCameraPos = new Vector3(0,370, -40);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.5, 0, Math.PI));
                 break;
         }
     }

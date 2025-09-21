@@ -66,9 +66,7 @@ export default class CardFan extends PositionedVisualGameElement implements Card
             card.setRealPosition(this.group.worldToLocal(card.model?.position!));
             card.setRealRotation(this.group.quaternion.clone().premultiply(card.model?.getWorldQuaternion(new Quaternion()).invert()!));
             this.group.add(card.model!);
-        })
-
-        game.processState();
+        });
     }
     removeCard(game:VisualGame, card:VisualCard){
         if(this.cards.indexOf(card)>=0) this.cards.splice(this.cards.indexOf(card),1);

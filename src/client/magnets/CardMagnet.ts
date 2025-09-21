@@ -55,7 +55,6 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
     }
 
     addCard(game:VisualGame, card:VisualCard){
-        game.processState();
         return true;
     }
     abstract removeCard(parent:VisualGame):boolean;
