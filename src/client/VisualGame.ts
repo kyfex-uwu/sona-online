@@ -24,33 +24,22 @@ window.addEventListener("pointermove", ( event: { clientX: number; clientY: numb
 })
 const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 
+//The camera view
 export enum ViewType{
     WHOLE_BOARD_A,
     WHOLE_BOARD_B,
     FIELDS_A,
     FIELDS_B,
 }
-export enum ElementType{
-    FIELD_1,
-    FIELD_2,
-    FIELD_3,
-    RUNAWAY,
-    DECK,
-    HAND
-}
-export function getField(index:1|2|3){
-    switch(index){
-        case 1: return ElementType.FIELD_1;
-        case 2: return ElementType.FIELD_2;
-        case 3: return ElementType.FIELD_3;
-    }
-}
 
 const previewImages:{[k:string]:p5.Image|true} = {};
 
+//A *visual* game. This should manage everything that's part of the player's game experience. This wraps a logical {@link Game}
 export default class VisualGame {
     private game: Game;
+    //Returns the logical game
     public getGame():Game{ return this.game; }
+    //Sets the logical game
     public setGame(g:Game):void{ this.game = g; }
     public selectedCard: VisualCard | undefined;
     public readonly elements: VisualGameElement[] = [];
@@ -79,6 +68,12 @@ export default class VisualGame {
 
     private _state:VisualGameState<GameState> = new VBeforeGameState(this);
     public get state(){ return this._state; }
+
+    /**
+     * Sets both the visual game's state and the logical game's state
+     * @param newVState The new visual state
+     * @param newState The new logical state
+     */
     public setState<T extends GameState>(newVState:VisualGameState<T>, newState:T){
         const oldState = this.state;
         this._state = newVState;
@@ -87,6 +82,10 @@ export default class VisualGame {
         newVState.init();
     }
 
+    /**
+     * Creates a new visual game
+     * @param scene The ThreeJS scene for this game
+     */
     public constructor(scene: Scene) {
         this.scene = scene;
         this.game = new Game([],[],Game.localID);
@@ -168,8 +167,12 @@ ${this.state.getActionsLeft()}`, 0,0);
     private readonly releaseDrawCallback;
     private readonly releaseDebugDraw;
 
+    /**
+     * Adds the element to this game
+     * @param element The element to add
+     */
     public addElement<T extends VisualGameElement>(element: T): T {
-        element.addToScene(this.scene, this);
+        element.addToGame(this);
         this.elements.push(element);
 
         this.elements.sort((e1, e2) => {
@@ -180,6 +183,8 @@ ${this.state.getActionsLeft()}`, 0,0);
     }
 
     public cursorActive = true;
+
+    //Handles the 3d cursor and ticks all game elements
     public tick() {
         if(!this.cursorActive) {
             this.raycaster.set(new Vector3(0, 0, 0), new Vector3(0, 0, 0));
@@ -230,6 +235,7 @@ ${this.state.getActionsLeft()}`, 0,0);
         for (const element of this.elements) element.tick(this);
     }
 
+    //Visually ticks all the game elements and the camera
     public visualTick() {
         for (const element of this.elements) element.visualTick(this);
         this.state.visualTick(this);
@@ -238,6 +244,10 @@ ${this.state.getActionsLeft()}`, 0,0);
         camera.quaternion.slerp(this.targetCameraRot, 0.1);
     }
 
+    /**
+     * Changes the camera position
+     * @param type The view to change to
+     */
     public changeView(type: ViewType) {
         switch (type) {
             case ViewType.WHOLE_BOARD_A:
@@ -259,54 +269,20 @@ ${this.state.getActionsLeft()}`, 0,0);
         }
     }
 
-    get(side:Side, type:ElementType){
-        switch(type){
-            case ElementType.DECK: return side == Side.A ? this.deckA : this.deckB;
-            case ElementType.FIELD_1: return side == Side.A ? this.fieldsA[0] : this.fieldsB[0];
-            case ElementType.FIELD_2: return side == Side.A ? this.fieldsA[1] : this.fieldsB[1];
-            case ElementType.FIELD_3: return side == Side.A ? this.fieldsA[2] : this.fieldsB[2];
-            case ElementType.HAND: return side == Side.A ? this.handA : this.handB;
-            case ElementType.RUNAWAY: return side == Side.A ? this.runawayA : this.runawayB;
-        }
-    }
     getMySide(){ return this.game.mySide; }
 
-    // requestStart() {
-    //     for (const field of this.yourFields) field.removeCard(this);
-    //     for (const field of this.theirFields) field.removeCard(this);
-    //     while (this.yourDeck.removeCard(this)) {}
-    //     while (this.theirDeck.removeCard(this)) {}
-    //     while (this.yourRunaway.removeCard(this)) {}
-    //     while (this.theirRunaway.removeCard(this)) {}
-    //
-    //     this.currentTurn = CurrentTurn.NEITHER;
-    //     this.actionsLeft = 0;
-    //
-    //     this.sendEvent(new StartRequestEvent({
-    //         side:this.game.side,
-    //     }, this.game));
-    // }
+    /**
+     * Sends an event to the server
+     * @param event The event to send
+     */
     sendEvent(event:Event<any>){
         this.game.requestEvent(event);
     }
 
-    // load(yourDeck:CardTemplate[], theirDeck:CardTemplate[]){
-    //     //shuffle animation?
-    //     for(const template of shuffled(yourDeck)){
-    //         this.yourDeck.addCard(this, this.addElement(template(this.yourDeck.position.clone(), Side.YOU, this.yourDeck.rotation.clone())));
-    //     }
-    //     for(const template of shuffled(theirDeck)){
-    //         this.theirDeck.addCard(this, this.addElement(template(this.theirDeck.position.clone(), Side.THEM, this.theirDeck.rotation.clone())));
-    //     }
-    // }
-
+    //Deconstructs the game, removing it from the scene and removing all draw callbacks
     release(){
         this.releaseDrawCallback();
         this.releaseDebugDraw();
         this.scene.removeFromParent();
-    }
-
-    logicTick(){
-        // this.state.visualTick(this);
     }
 }

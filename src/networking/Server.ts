@@ -3,12 +3,18 @@ import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 
 export const network:{
+    //Sends a message to the server
     sendToServer:(event:Event<any>)=>void,
+    //Sends a message to all clients in the event's game
     sendToClients:(event:Event<any>)=>void,
+    //Replies with an event to a single client
     replyToClient:(replyTo:Event<any>, replyWith:Event<any>)=>void,
+    //Processes an event from the client
     receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:Client)=>void,
+    //Processes an event from the server
     receiveFromServer:(event:{id:number,type:string,data:SerializableType})=>void,
 
+    //unused
     findEmptyGame:()=>Game|undefined,
 } = {
     sendToServer:()=>{},

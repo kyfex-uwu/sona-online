@@ -24,6 +24,7 @@ const renderer = new WebGLRenderer({
     premultipliedAlpha: false,
     alpha: true,
 });
+//Resizes the canvas to the window bounds
 function windowResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.fov = 50

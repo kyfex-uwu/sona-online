@@ -15,7 +15,12 @@ export default class HandFan extends VisualCardFan{
         });
     }
 
-    onSelectImpl(card:VisualCard, game:VisualGame){
+    /**
+     * Runs when a card is selected
+     * @param card The selected card
+     * @param game The game
+     */
+    private onSelectImpl(card:VisualCard, game:VisualGame){
         if(!this.enabled) return false;
 
         if(game.selectedCard !== undefined){

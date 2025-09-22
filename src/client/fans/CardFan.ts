@@ -1,12 +1,13 @@
 import {Side} from "../../GameElement.js";
 import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type Scene, Vector3} from "three";
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
-import type VisualCard from "../VisualCard.js";
-import type VisualGame from "../VisualGame.js";
+import VisualCard from "../VisualCard.js";
+import VisualGame from "../VisualGame.js";
 import {clickListener, removeClickListener} from "../clientConsts.js";
 import type {CardHoldable} from "../CardHoldable.js";
+import type {SidedVisualGameElement} from "../VisualGameElement.js";
 
-export default class CardFan extends PositionedVisualGameElement implements CardHoldable{
+export default class CardFan extends PositionedVisualGameElement implements CardHoldable, SidedVisualGameElement{
 
     public readonly cards: Array<VisualCard> = [];
 
@@ -14,17 +15,25 @@ export default class CardFan extends PositionedVisualGameElement implements Card
     private readonly onSelect:(card:VisualCard, parent:VisualGame)=>void;
     private readonly fakeCard:Group;
 
-    constructor(side:Side, position: Vector3, params?: {
+    /**
+     * Creates a card fan
+     * @param side Which side this element belongs to
+     * @param position The starting position of this element
+     * @param props Optional data
+     * @param onSelect The function to run when a card in this fan is selected
+     * @param rotation The rotation of this element
+     */
+    constructor(side:Side, position: Vector3, props?: {
         onSelect: (card: VisualCard, game: VisualGame) => void;
         rotation?: Quaternion
     }) {
-        params = Object.assign({
+        props = Object.assign({
             rotation:new Quaternion(),
             onSelect:()=>{},
-        },params);
-        super(side, position, params.rotation!);
+        },props);
+        super(side, position, props.rotation!);
 
-        this.onSelect=params.onSelect!;
+        this.onSelect=props.onSelect!;
 
         this.fakeCard = new Group();
         const mesh = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({visible:false}));
@@ -34,20 +43,22 @@ export default class CardFan extends PositionedVisualGameElement implements Card
     }
 
     private listener:number=-1;
-    addToScene(scene: Scene, parent: VisualGame): void {
-        scene.add(this.group);
+    addToGame(game: VisualGame): void {
+        super.addToGame(game);
+        game.scene.add(this.group);
 
         this.listener=clickListener(()=>{
-            const intersects = parent.raycaster.intersectObjects(this.cards
+            const intersects = game.raycaster.intersectObjects(this.cards
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
-                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), parent);
+                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), game);
             }
             return false;
         });
     }
-    removeFromScene() {
+    removeFromGame() {
+        super.removeFromGame();
         removeClickListener(this.listener);
         this.group.removeFromParent();
     }
@@ -74,13 +85,15 @@ export default class CardFan extends PositionedVisualGameElement implements Card
 
         this.unchildCard(game, card);
     }
+
+    //Recalculates where each card should be in this hand, and moves them to that position
     recalculateCardPositions(){
         let pos = -(this.cards.length-1)/2;
         const posInc = 100-Math.log(this.cards.length)*30;
         const radius = this.cards.length;
         for(const card of this.cards){
             card.position = new Vector3(posInc*radius*Math.sin(pos/radius),0,posInc*(-Math.cos(pos/radius)+0.9)*radius*3/5);
-            card.rotation.slerp(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)),1)
+            card.rotation.slerp(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)),1);
             pos++;
         }
     }
@@ -89,5 +102,8 @@ export default class CardFan extends PositionedVisualGameElement implements Card
         card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
         card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);
         game.scene.add(card.model!);
+    }
+
+    tick(parent: VisualGame): void {
     }
 }

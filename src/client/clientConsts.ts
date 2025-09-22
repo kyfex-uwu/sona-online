@@ -17,15 +17,20 @@ let clickedListeners:Array<()=>boolean>=[];
 window.addEventListener("mouseup", ()=>{
     for(const listener of clickedListeners) if(listener()) break;
 });
+
+//@param listener The function that will run every time the mouse is clicked
+//@return The id of this listener
 export function clickListener(listener:()=>boolean){
     return clickedListeners.push(listener)-1;
 }
+//@param index The id of the listener to remove. Should be whatever {@link clickListener} returned
 export function removeClickListener(index:number){
     clickedListeners.splice(index,1);
 }
 
 export const updateOrder: {[k:string]:number}={};
 
+//@param ms The amount of milliseconds to wait
 export async function wait(ms:number){
     let resolve:(v:any)=>void=()=>{};
     const p = new Promise(r=>resolve=r);
@@ -33,6 +38,10 @@ export async function wait(ms:number){
     await p;
 }
 
+/**
+ * Returns either param a or param b, depending on the given side
+ * @param side The side that determines what to return. If this is a {@link VisualGame} or {@link Game}, use the game's side
+ */
 export function cSideTernary<T>(side:Side|VisualGame|Game, a:T, b:T){
     if(side instanceof Game || !(side instanceof Object)) return sideTernary(side, a, b);
     else return sideTernary(side.getMySide(), a, b);

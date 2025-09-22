@@ -10,6 +10,14 @@ import {cSideTernary} from "../clientConsts.js";
 export default class RunawayMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
 
+    /**
+     * Creates a runaway magnet
+     * @param position The position of this element
+     * @param side The side of this element
+     * @param props Optional data
+     * @param rotation The rotation of this element
+     * @param enabled If this element is enabled
+     */
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{

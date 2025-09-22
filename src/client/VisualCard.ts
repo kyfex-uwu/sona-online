@@ -12,7 +12,7 @@ import {
     Vector3
 } from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
-import Card from "../Card.js";
+import Card, {Stat} from "../Card.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {game} from "../index.js";
@@ -43,12 +43,7 @@ const cardBackMat = new MeshBasicMaterial({
     transparent:true,
 });
 
-export enum Stat{
-    RED,
-    YELLOW,
-    BLUE
-}
-
+//A *visual* card. This wraps a logical {@link Card}
 export default class VisualCard extends PositionedVisualGameElement{
     private _card:Card;
     public get card(){
@@ -59,14 +54,25 @@ export default class VisualCard extends PositionedVisualGameElement{
     private enabledMaterial:Material|undefined;
     private disabledMaterial:Material|undefined;
 
+    /**
+     * Creates a visual card
+     * @param card The logical card this is wrapping
+     * @param position The position of this element
+     * @param rotation The rotation of this element (optional)
+     */
     constructor(card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
         super(card.getSide(), position, rotation);
         this.enabled=true;
 
-        this.model.add(this.flipGroup);
         this._card=card;
+        this.model.add(this.flipGroup);
         this.populate(card);
     }
+
+    /**
+     * Assigns the logical card to this visual card, and generates a model based on the logical card
+     * @param card Logical card to assign to this visual card
+     */
     populate(card:Card){
         this._card=card;
         this.flipGroup.clear();
@@ -75,6 +81,11 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.disabledMaterial?.dispose();
         this.createModel();
     }
+
+    /**
+     * Recreates the materials for this card. This should be used when you don't need to recreate the model
+     * @param card
+     */
     async repopulate(card:Card){
         this._card=card;
 
@@ -102,6 +113,8 @@ export default class VisualCard extends PositionedVisualGameElement{
     }
 
     private loadingModel=false;
+
+    //Creates the model for this card
     async createModel(){
         if(this.flipGroup.children.length>0||this.loadingModel) return;
         this.loadingModel=true;
@@ -155,20 +168,24 @@ export default class VisualCard extends PositionedVisualGameElement{
             this.loadingModel=false;
         });
     }
+
+    /**
+     * @param stat The stat to return
+     * @return The model corresponding to the given stat
+     */
     getStatModel(stat:Stat){
         if(this.loadingModel) return;
         switch(stat){
             case Stat.RED:
                 return this.model.userData.redStat as Mesh;
-            case Stat.YELLOW:
-                return this.model.userData.yellowStat as Mesh;
             case Stat.BLUE:
                 return this.model.userData.blueStat as Mesh;
+            case Stat.YELLOW:
+                return this.model.userData.yellowStat as Mesh;
         }
     }
 
     tick(parent: VisualGame) {
-        super.tick(parent);
         if(parent.selectedCard === this) {
             this.position = parent.cursorPos;
             this.rotation = cSideTernary(game, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
@@ -206,36 +223,48 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.flipTimer=Math.max(0,this.flipTimer-1);
     }
 
-    private game:VisualGame|undefined=undefined;
-    addToScene(scene: Scene, game:VisualGame) {
-        scene.add(this.model);
-        this.game=game;
+    addToGame(game:VisualGame) {
+        super.addToGame(game);
+        game.scene.add(this.model);
     }
-    removeFromScene() {
+    removeFromGame() {
+        super.removeFromGame();
         this.model.removeFromParent();
     }
 
     private flipRotation:Quaternion = new Quaternion();
     private flipTimer=0;
+
+    //Flips both this visual card and its logical card facedown
     flipFacedown(){
         if(!this.card.getFaceUp()) return;
-        this.card._flipFacedown();
+        this.card.flipFacedown();
         this.flipRotation = new Quaternion(0,0,1,0);
         this.flipTimer = 20;
     }
+    //Flips both this visual card and its logical card faceup
     flipFaceup(){
         if(this.card.getFaceUp()) return;
-        this.card._flipFaceup();
+        this.card.flipFaceup();
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
     }
 
     private holder:CardHoldable|undefined=undefined;
+
+    //@return The thing holding this card
     public getHolder(){ return this.holder; }
+
+    /**
+     * Removes the card from any old holder and put it in the new holder
+     * @param holder
+     */
     setHolder(holder: CardHoldable | undefined){
         if(this.holder !== undefined) this.removeFromHolder();
         this.holder=holder;
     }
+
+    //Removes the card from its holder, if it has one
     removeFromHolder(){
         this.holder?.unchildCard(this.game!,this);
         this.holder=undefined;

@@ -6,6 +6,7 @@ import VisualGame from "../VisualGame.js";
 import VisualCard from "../VisualCard.js";
 import type {CardHoldable} from "../CardHoldable.js";
 
+//A game element that holds and attracts cards
 export default abstract class CardMagnet extends PositionedVisualGameElement implements CardHoldable{
     private readonly radius:number;
     private readonly hardRadius:number;
@@ -14,8 +15,18 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
     public static readonly updateOrder = 1;
     public static readonly offs = new Vector3(0,1.5,0);
 
-    public enabled: boolean;
-
+    /**
+     * Creates a card magnet
+     * @param side Which side this element belongs to
+     * @param position The position of the card magnet
+     * @param props Optional data
+     * @param radius The radius in which a card will float towards this element. Default is 70
+     * @param hardRadius The radius in which a card will snap on this element. Default is 40
+     * @param onClick The function to run when this is clicked
+     * @param rotation The rotation of this element
+     * @param enabled If this element is enabled. Default is false
+     * @protected
+     */
     protected constructor(side:Side, position:Vector3, props:{
         radius?:number,
         hardRadius?:number,
@@ -39,7 +50,6 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
 
     tick(parent: VisualGame) {
         if(!this.enabled) return;
-        super.tick(parent);
 
         const dist = parent.cursorPos.distanceTo(this.position);
         if (dist <= this.radius) {
@@ -59,18 +69,20 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
     }
     abstract removeCard(parent:VisualGame):boolean;
     private listener:number=-1;
-    addToScene(scene: Scene, parent:VisualGame) {
+    addToGame(game:VisualGame) {
+        super.addToGame(game);
         this.listener = clickListener(()=> {
             if(!this.enabled) return false;
 
-            const dist = parent.cursorPos.distanceTo(this.position);
+            const dist = game.cursorPos.distanceTo(this.position);
             if (dist <= this.radius) {
-                return this.onClick(parent);
+                return this.onClick(game);
             }
             return false;
         });
     }
-    removeFromScene() {
+    removeFromGame() {
+        super.removeFromGame();
         removeClickListener(this.listener);
     }
 

@@ -10,7 +10,14 @@ import {VTurnState} from "../VisualGameStates.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
-
+    /**
+     * Creates a deck magnet
+     * @param side Which side this element belongs to
+     * @param position The position of the card magnet
+     * @param props Optional data
+     * @param rotation The rotation of this magnet
+     * @param enabled If this magnet is enabled. Default is false
+     */
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
@@ -61,6 +68,10 @@ export default class DeckMagnet extends CardMagnet{
         }
     }
 
+    /**
+     * Draws a card and puts in in the player's hand
+     * @param game The game this element is in
+     */
     drawCard(game:VisualGame){
         const hand = cSideTernary(this.getSide(), game.handA, game.handB);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;

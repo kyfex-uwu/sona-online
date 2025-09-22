@@ -1,6 +1,12 @@
 import p5 from "p5";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
+
+/**
+ * Registers a drawing callback to be called at the specified z index
+ * @param layer The specific z index to call this callback at. Lower layers get draws under (called before) higher layers
+ * @param callback The function to call
+ */
 export function registerDrawCallback(layer:number, callback:(p5:any, scale:number)=>void){
     drawCallbacks[layer]=drawCallbacks[layer]||[];
     drawCallbacks[layer].push(callback);
@@ -58,8 +64,24 @@ new p5(p => {
 }, document.getElementById("uiLayer")!);
 
 let _buttonId=0;
+//This function returns a valid, unique button id to be used in {@link button}
 export function buttonId(){ return _buttonId++; }
 const buttonData:{[k:number]:boolean}={};
+
+/**
+ * Draws and handles a button
+ * @param p5 the p5 instance
+ * @param x
+ * @param y
+ * @param w width
+ * @param h height
+ * @param text text to display
+ * @param onClick function to run on click
+ * @param scale How zoomed in the button should appear. This does not affect the size or position,
+ * it just makes the edges of the button bigger (bigger scale) or smaller (smaller scale)
+ * @param buttonId The id of the button. This should be fetched through {@link buttonId} and stored somewhere; this button should only use this buttonId
+ * @param disabled If this button is disabled. This grays it out and prevents it from being clicked
+ */
 export function button(p5:any, x:number,y:number,w:number,h:number,text:string,onClick:()=>void, scale:number, buttonId:number, disabled:boolean=false){
     if(assets.button === undefined || assets.button_pressed === undefined || assets.button_disabled === undefined) return;
     if(buttonData[buttonId] === undefined)

@@ -1,17 +1,27 @@
-import {CardColor} from "../Card.js";
+import {Stat} from "../Card.js";
 import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import IngameCard from "../Card.js";
 
+//Generates an event id
 const eventIdGenerator = ()=>Math.random();
 export type SerializableType = string|number|boolean|undefined|{[k:string]:SerializableType}|Array<SerializableType>;
 
+// An event that can be sent to or from the server
 export abstract class Event<T extends {[k:string]:SerializableType}>{
     public readonly data:T;
     public readonly game:Game|undefined;
     public readonly sender:Client|undefined;
     public readonly id;
+
+    /**
+     * Creates an event
+     * @param data The data to send
+     * @param game The game (shouldn't need to be filled on client)
+     * @param sender Which client sent this event (shouldn't need to be filled on client)
+     * @param id The event id (optional, only if you need a reply to this event)
+     */
     constructor(data:T, game?:Game, sender?:Client, id?:number) {
         this.data=data;
         this.game=game;
@@ -19,7 +29,9 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
         this.id=id||eventIdGenerator();
         this.init();
     }
-    init(){}
+    //Initializes the event. When this method is called the event already has data, game sender, and id populated
+    protected init(){}
+    //Serializes this event into a sendable string
     serialize(pretty=false): string {
         return JSON.stringify({
             id:this.id,
@@ -31,53 +43,75 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
 
 //--
 
+//Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
     id:number,
     cardDataName?:string,
     faceUp?:boolean
 }>{}
 
+//(C2S) Asks the server to find this client a game
 export class FindGameEvent extends Event<{
     deck:Array<string>,
 }>{}
+
+//(S2C) Tells the client about the game they've just started
 export class GameStartEvent extends Event<{
     deck:Array<{type:string, id:number}>,
     otherDeck:Array<number>,
     which:Side,
 }>{}
+
+//(S2C) Tells a watcher about the game they are watching
 export class GameStartEventWatcher extends Event<{
     deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
 }>{}
+
+//(C2S) Tells the server if they want to start first or second
 export class StartRequestEvent extends Event<{
     which:"first"|"second"|"nopref",
 }>{}
+
+//(S2C) Tells the client which side is starting
 export class DetermineStarterEvent extends Event<{
     starter:Side,
     flippedCoin:boolean
 }>{}
 
+//An event that constitutes an action
 export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends Event<T>{}
+
+//Draws a card. S2C needs side, C2S does not
 export class DrawAction extends ActionEvent<{
     side?:Side,
 }>{}
+
+//Places a card in a specific slot
 export class PlaceAction extends ActionEvent<{
     cardId:number,
     position:1|2|3,
     side:Side,
     faceUp:boolean,
 }>{}
+
+//Attempts to scare a given card. C2S is a request, S2C is a confirmation
 export class ScareAction extends ActionEvent<{
+    //todo: replace these cardids with which field
     scarerId:number,
     scaredId:number,
-    attackingWith:CardColor
+    attackingWith:Stat
 }>{}
+
+//Performs a specific card action
 export class CardAction extends ActionEvent<{
     cardId:number,
     actionName:string,
     data:SerializableType
 }>{}
+
+//Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
 
 export type Card = {
@@ -85,6 +119,13 @@ export type Card = {
     cardData?:string,
     faceUp:boolean
 }
+
+/**
+ * Transforms a logical card into one that can be sent in an event
+ * @param card The logical card
+ * @param cardData Whether to send the card data
+ * @param faceUp Whether to send if the card is face up or not
+ */
 export function card(card:IngameCard, {cardData = true, faceUp = true}={}):Card{
     if(card === undefined) return card;
     return {
@@ -93,10 +134,20 @@ export function card(card:IngameCard, {cardData = true, faceUp = true}={}):Card{
         faceUp:faceUp&&card.getFaceUp(),
     };
 }
+
+/**
+ * Transforms a list of logical cards into a list of cards that can be sent in an event
+ * @param cards The logical cards
+ * @param cardData Whether to send the cards' data
+ * @param faceUp Whether to send if each of the cards are face up or not
+ */
 export function cardsTransform(cards:Array<IngameCard>, {cardData = true, faceUp = true}={}){
     return cards.map(c => card(c, {cardData, faceUp}));
 }
+
+//(C2S) A debug event that sends the entire game state as the backend knows it
 export class RequestSyncEvent extends Event<{}>{}
+//(S2C) A debug event that sends all the data of the game
 export class SyncEvent extends Event<{
     fieldsA:[Card|undefined, Card|undefined, Card|undefined],
     fieldsB:[Card|undefined, Card|undefined, Card|undefined],

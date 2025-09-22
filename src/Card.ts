@@ -1,20 +1,25 @@
 import {type GameElement, Side} from "./GameElement.js";
-import Game from "./Game.js";
 import type CardData from "./CardData.js";
 
-export enum CardColor{
+//Which stat on a card
+export enum Stat{
     RED,
-    YELLOW,
-    BLUE
+    BLUE,
+    YELLOW
 }
 
-export type CardTemplate = (side:Side)=>Card;
-
+//A *logical* card
 export default class Card implements GameElement{
     public readonly cardData: CardData;
     public readonly side:Side;
     public readonly id:number;
 
+    /**
+     * Creates a logical card
+     * @param cardData The card data
+     * @param side Which side the card belongs to
+     * @param id The id of the card (should be unique per game)
+     */
     constructor(cardData: CardData, side:Side, id:number) {
         this.cardData=cardData;
         this.side=side;
@@ -22,12 +27,16 @@ export default class Card implements GameElement{
     }
 
     private faceUp = true;
-    _flipFacedown(){
+    //Flips the logical card facedown
+    flipFacedown(){
         this.faceUp=false;
     }
-    _flipFaceup(){
+    //Flips the logical card faceup
+    flipFaceup(){
         this.faceUp=true;
     }
+    //Returns this card's side
     getSide(){ return this.side; }
+    //Returns if this card is face up
     getFaceUp(){ return this.faceUp; }
 }

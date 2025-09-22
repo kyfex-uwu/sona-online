@@ -7,6 +7,7 @@ import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {game} from "../index.js";
 import type VisualCard from "./VisualCard.js";
 
+//A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
     protected readonly game;
     constructor(game:VisualGame) {
@@ -19,6 +20,8 @@ export abstract class VisualGameState<T extends GameState>{
         return this.game.getGame().state as unknown as T;
     }
 }
+
+//During this, the player chooses a lv1 card to place. After it's placed, change to {@link VChoosingStartState}
 export class VBeforeGameState extends VisualGameState<BeforeGameState>{
     visualTick(game: VisualGame) {
         if(cSideTernary(game, game.fieldsA, game.fieldsB).some(v=>v.getCard()!==undefined)){
@@ -30,6 +33,8 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
         }
     }
 }
+
+//During this state the player chooses if they want to go first or second. Should swap to {@link VTurnState} when coin is finished flipping
 export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     private readonly removeDraw;
     private picked=false;
@@ -80,6 +85,11 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     }
 }
 
+/**
+ * During this state, the player can place a card, draw a card, attack, do a card action, or pass
+ *
+ * If the player click on a placed card, should swap to {@link VAttackingState}
+ */
 export class VTurnState extends VisualGameState<TurnState>{
     public readonly currTurn;
     constructor(currTurn:Side, game:VisualGame) {
@@ -135,11 +145,13 @@ export class VTurnState extends VisualGameState<TurnState>{
         return this;
     }
 }
+
+//During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
 export class VAttackingState extends VisualGameState<TurnState>{
     public readonly card;
     public readonly parentState;
     public readonly attackData:{
-        type?:"red"|"yellow"|"blue"|"card",
+        type?:"red"|"blue"|"yellow"|"card",
         cardAttack?:string,
     }={};
     constructor(card:VisualCard, game:VisualGame) {

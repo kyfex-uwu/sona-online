@@ -15,7 +15,7 @@ import Card from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {getField, ViewType} from "../client/VisualGame.js";
+import {ViewType} from "../client/VisualGame.js";
 import {Side} from "../GameElement.js";
 import {cSideTernary} from "../client/clientConsts.js";
 import {wait} from "../client/clientConsts.js";
@@ -86,7 +86,7 @@ network.receiveFromServer = async (packed) => {
                 new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id) :
                 oldVCard.card;
             const oldCard = oldVCard.card;
-            if(!oldCard.getFaceUp()) newCard._flipFacedown();
+            if(!oldCard.getFaceUp()) newCard.flipFacedown();
 
             if(event.data.cardDataName !== undefined){
                 game.getGame().cards.delete(oldVCard.card);
@@ -130,7 +130,7 @@ network.receiveFromServer = async (packed) => {
             element instanceof VisualCard && element.card.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(game, card);
         card.removeFromHolder();
-        (game.get(event.data.side, getField(event.data.position as 1|2|3)) as FieldMagnet)
+        (cSideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
             .addCard(game,card);
         card[event.data.faceUp?"flipFaceup":"flipFacedown"]();
         if(game.state instanceof VTurnState){

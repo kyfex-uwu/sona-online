@@ -2,17 +2,26 @@ import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
 import {cSideTernary, updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
-import VisualCard, {Stat} from "../VisualCard.js";
+import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {VAttackingState, VTurnState} from "../VisualGameStates.js";
-import {CardColor} from "../../Card.js";
+import {Stat} from "../../Card.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
     public readonly which:1|2|3;
     public getCard(){ return this.card; }
 
+    /**
+     * Creates a field magnet
+     * @param position The position of this element
+     * @param side The side of this element
+     * @param which Which field this element is
+     * @param props Optional data
+     * @param rotation The rotation of this element
+     * @param enabled If this element is enabled
+     */
     constructor(position: Vector3, side:Side, which:1|2|3, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
@@ -45,18 +54,18 @@ export default class FieldMagnet extends CardMagnet{
                         if(this.getSide() === game.getMySide()) {
                             const intersects = game.raycaster.intersectObjects([
                                 this.card.getStatModel(Stat.RED),
-                                this.card.getStatModel(Stat.YELLOW),
                                 this.card.getStatModel(Stat.BLUE),
+                                this.card.getStatModel(Stat.YELLOW),
                                 this.card.model
                             ].filter(mesh => mesh !== undefined));
 
                             if (intersects[0] !== undefined) {
                                 if (intersects[0].object === this.card.getStatModel(Stat.RED)) {
                                     state.attackData.type = "red";
-                                } else if (intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
-                                    state.attackData.type = "yellow";
                                 } else if (intersects[0].object === this.card.getStatModel(Stat.BLUE)) {
                                     state.attackData.type = "blue";
+                                } else if (intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
+                                    state.attackData.type = "yellow";
                                 } else {
                                     state.attackData.type = "card";
                                 }
@@ -72,9 +81,9 @@ export default class FieldMagnet extends CardMagnet{
                                             scaredId: this.card.card.id,
                                             scarerId: state.card.card.id,
                                             attackingWith: {
-                                                red: CardColor.RED,
-                                                yellow: CardColor.YELLOW,
-                                                blue: CardColor.BLUE,
+                                                red: Stat.RED,
+                                                blue: Stat.BLUE,
+                                                yellow: Stat.YELLOW,
                                             }[state.attackData.type]
                                         }));
                                     }

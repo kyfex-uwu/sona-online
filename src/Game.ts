@@ -7,16 +7,19 @@ import {BeforeGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/BackendServer.js";
 import {sideTernary} from "./consts.js";
 
+//The current game turn
 export enum CurrentTurn{
     A,
     B,
     NEITHER,
 }
+//Data that needs to be stored in the game but shouldn't be part of the main properties
 export type MiscData = {
     playerAStartRequest?:"first"|"second"|"nopref",
     playerBStartRequest?:"first"|"second"|"nopref",
 };
 
+//A logical game
 export default class Game{
     public readonly gameID:string;
     public readonly mySide:Side;
@@ -40,20 +43,30 @@ export default class Game{
 
     private playerA:Client|undefined=undefined;
     private playerB:Client|undefined=undefined;
+    // Sets this game's players to the given players
     public setPlayers(playerA:Client, playerB:Client){
         this.playerA=playerA;
         this.playerB=playerB;
     }
+    //@returns the player for that {@link Side}
     public player(which:Side){
         return sideTernary(which, this.playerA, this.playerB);
     }
 
     public static localID="local";
-    public constructor(yourDeck:Array<{type:string, id:number}>, theirDeck:Array<{type:string,id:number}>, gameID:string, side?:Side) {
+
+    /**
+     * Creates a game
+     * @param deckA Player A's deck
+     * @param deckB Player B's deck
+     * @param gameID The game ID
+     * @param side (CLIENT SIDE ONLY) Which side the local player is on
+     */
+    public constructor(deckA:Array<{type:string, id:number}>, deckB:Array<{type:string,id:number}>, gameID:string, side?:Side) {
         this.gameID = gameID;
         this.mySide=side||Side.A;
-        this.deckA.splice(0,0,...yourDeck.map(data=> new Card(cards[data.type]!, Side.A, data.id)));
-        this.deckB.splice(0,0,...theirDeck.map(data=> new Card(cards[data.type]!, Side.B, data.id)));
+        this.deckA.splice(0,0,...deckA.map(data=> new Card(cards[data.type]!, Side.A, data.id)));
+        this.deckB.splice(0,0,...deckB.map(data=> new Card(cards[data.type]!, Side.B, data.id)));
         for(const card of this.deckA) this.cards.add(card);
         for(const card of this.deckB) this.cards.add(card);
     }
@@ -80,10 +93,12 @@ export default class Game{
     //     }
     // }
 
+    //Sends an event to the client/server
     requestEvent(event:Event<any>){
         sendEvent(event, false);
     }
 
+    //Ticks this game's state
     stateTick(){
         this.state.tick(this);
     }
