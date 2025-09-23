@@ -5,11 +5,12 @@ import type {Client} from "./BackendServer.js";
 import IngameCard from "../Card.js";
 
 //Generates an event id
-const eventIdGenerator = ()=>Math.random();
+const eventIdGenerator = ()=>new Array(16).fill(0).map(_=>Math.floor(Math.random()*36).toString(36)).join("");
 export type SerializableType = string|number|boolean|undefined|{[k:string]:SerializableType}|Array<SerializableType>;
+export type SerializableEventData = {[k:string]:SerializableType};
 
 // An event that can be sent to or from the server
-export abstract class Event<T extends {[k:string]:SerializableType}>{
+export abstract class Event<T extends SerializableEventData>{
     public readonly data:T;
     public readonly game:Game|undefined;
     public readonly sender:Client|undefined;
@@ -22,7 +23,7 @@ export abstract class Event<T extends {[k:string]:SerializableType}>{
      * @param sender Which client sent this event (shouldn't need to be filled on client)
      * @param id The event id (optional, only if you need a reply to this event)
      */
-    constructor(data:T, game?:Game, sender?:Client, id?:number) {
+    constructor(data:T, game?:Game, sender?:Client, id?:string) {
         this.data=data;
         this.game=game;
         this.sender=sender;
@@ -49,6 +50,11 @@ export class ClarifyCardEvent extends Event<{
     cardDataName?:string,
     faceUp?:boolean
 }>{}
+
+//(S2C) Rejects a client-side event
+export class RejectEvent extends Event<{}>{}
+//(S2C) Accepts a client-side event
+export class AcceptEvent extends Event<{}>{}
 
 //(C2S) Asks the server to find this client a game
 export class FindGameEvent extends Event<{

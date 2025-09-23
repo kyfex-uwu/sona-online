@@ -1,4 +1,4 @@
-import {network} from "./Server.js";
+import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
     ClarifyCardEvent,
@@ -38,16 +38,23 @@ websocketReady.then(() => {
     }
 })
 
-network.sendToServer = async (event) => {
-    await websocketReady;
-    websocket.send(event.serialize());
-    console.log("sent "+event.serialize())
+network.sendToServer = (event) => {
+    websocketReady.then(()=>{
+        websocket.send(event.serialize());
+        console.log("sent "+event.serialize())
+    });
+    return new Replyable(event);
 }
 network.receiveFromServer = async (packed) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
-    console.log("<- "+packed.type+"\n"+event.serialize())
+    console.log("<- "+packed.type+"\n"+event.serialize());
+
+    if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
+        ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
+        return;
+    }
 
     if(event instanceof GameStartEvent){
         game.setGame(new Game(event.data.deck, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}),

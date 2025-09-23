@@ -15,6 +15,7 @@ import type Card from "../Card.js";
 import p5 from "p5";
 import {VAttackingState, VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
+import {successOrFail} from "../networking/Server.js";
 
 const pointer = new Vector2();
 
@@ -143,8 +144,9 @@ export default class VisualGame {
                 let width=scale*1.3;
                 let height=scale*0.4;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
-                    this.sendEvent(new PassAction({}));
-                    (this.state as VTurnState).decrementTurn();
+                    this.sendEvent(new PassAction({})).onReply(successOrFail(()=>{
+                        (this.state as VTurnState).decrementTurn();
+                    }));
                 }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
             }
             if(this.state instanceof VAttackingState){
@@ -283,7 +285,7 @@ ${this.state.getActionsLeft()}`, 0,0);
      * @param event The event to send
      */
     sendEvent(event:Event<any>){
-        this.game.requestEvent(event);
+        return this.game.requestEvent(event);
     }
 
     //Deconstructs the game, removing it from the scene and removing all draw callbacks

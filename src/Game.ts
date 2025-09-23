@@ -1,7 +1,7 @@
 import Card from "./Card.js";
 import {Side} from "./GameElement.js";
 import {Event} from "./networking/Events.js";
-import {sendEvent} from "./networking/Server.js";
+import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/BackendServer.js";
@@ -80,30 +80,8 @@ export default class Game{
         for(const card of this.deckB) this.cards.add(card);
     }
 
-    // requestStart(){
-    //     for(let i=0; i<this.fieldsA.length; i++) this.fieldsA[i]=undefined;
-    //     for(let i=0; i<this.fieldsB.length; i++) this.fieldsB[i]=undefined;
-    //     this.runawayA.length=0;
-    //     this.runawayB.length=0;
-    //
-    //     this.currentTurn=CurrentTurn.NEITHER;
-    //     this.actionsLeft=0;
-    // }
-    //
-    // startTurn(turn:CurrentTurn.A|CurrentTurn.B){
-    //     this.currentTurn=turn;
-    //     this.actionsLeft=2;//todo: crisis
-    //
-    //     const hand = (this.currentTurn == CurrentTurn.A ? this.handA : this.handB);
-    //     if(hand.length<5) {
-    //         hand.push(
-    //             (this.currentTurn == CurrentTurn.A ? this.deckA : this.deckB).pop()!);
-    //
-    //     }
-    // }
-
     //Sends an event to the client/server
     requestEvent(event:Event<any>){
-        sendEvent(event, false);
+        return network.sendToServer(event);
     }
 }

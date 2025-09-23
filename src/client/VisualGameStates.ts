@@ -19,6 +19,7 @@ export enum StateFeatures{
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
     protected readonly game;
+    public frozen=false;
     public readonly features:Set<StateFeatures> = new Set();
     constructor(game:VisualGame) {
         this.game=game;

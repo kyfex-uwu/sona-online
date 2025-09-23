@@ -1,6 +1,7 @@
-import {network} from "./Server.js";
+import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
+    AcceptEvent,
     type Card as SerializableCard,
     cardsTransform,
     ClarifyCardEvent,
@@ -9,9 +10,11 @@ import {
     Event,
     FindGameEvent,
     GameStartEvent,
-    GameStartEventWatcher, PassAction,
-    PlaceAction,
-    RequestSyncEvent, ScareAction,
+    GameStartEventWatcher,
+    PassAction,
+    PlaceAction, RejectEvent,
+    RequestSyncEvent,
+    ScareAction,
     StartRequestEvent,
     SyncEvent
 } from "./Events.js";
@@ -21,7 +24,7 @@ import {Side} from "../GameElement.js";
 import {shuffled, sideTernary} from "../consts.js";
 import type Card from "../Card.js";
 import cards from "../Cards.js";
-import {TurnState} from "../GameStates.js";
+import {BeforeGameState, TurnState} from "../GameStates.js";
 
 export type Client ={send:(v:Event<any>)=>void};
 const usersFromGameIDs:{[k:string]:Array<Client>}={};
@@ -31,8 +34,14 @@ const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
 export function backendInit(){
     console.log("Backend initialized");
 }
+function rejectEvent(event:Event<any>){
+    network.replyToClient(event, new RejectEvent({}, undefined, undefined, event.id));
+}
+function acceptEvent(event:Event<any>){
+    network.replyToClient(event, new AcceptEvent({}, undefined, undefined, event.id));
+}
 
-network.sendToClients = async (event) => {
+network.sendToClients = (event) => {
     for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
         user.send(event);
     }
@@ -41,7 +50,12 @@ network.receiveFromClient= (packed, client) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
-    console.log("received "+event.serialize())
+    console.log("received "+event.serialize());
+
+    if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
+        ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
+        return;
+    }
 
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
@@ -131,7 +145,7 @@ network.receiveFromClient= (packed, client) => {
             unfilledGames.push(resolve!);
         }
     }else if(event instanceof StartRequestEvent){
-        if(event.game!==undefined){
+        if(event.game!==undefined && event.game.state instanceof BeforeGameState){
             event.game.miscData[(event.sender === event.game.player(Side.A))?
                 "playerAStartRequest" :
                 "playerBStartRequest"] = event.data.which;
@@ -181,6 +195,18 @@ network.receiveFromClient= (packed, client) => {
     }else if(event instanceof PlaceAction){
         if(event.game!==undefined){
             const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
+
+            //validate
+            if(!(event.game.state instanceof BeforeGameState && event.game.player(card.side) === event.sender)){
+                rejectEvent(event);
+                return;
+            }
+            //todo debug, remove!!!
+            if(1==1) {
+                rejectEvent(event);
+                return;
+            }
+
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
@@ -251,4 +277,5 @@ network.receiveFromClient= (packed, client) => {
 }
 network.replyToClient = (replyTo, replyWith) => {
     replyTo.sender?.send(replyWith);
+    return new Replyable(replyWith);
 }

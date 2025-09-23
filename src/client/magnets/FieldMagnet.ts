@@ -7,6 +7,7 @@ import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {getVictim, Stat} from "../../Card.js";
+import {successOrFail} from "../../networking/Server.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -29,17 +30,24 @@ export default class FieldMagnet extends CardMagnet{
                 if(game.selectedCard !== undefined &&
                     state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === game.getMySide()){
                     //place card
+                    const card = game.selectedCard;
                     if(this.addCard(game, game.selectedCard)) {
+                        game.state.frozen=true;
+                        game.selectedCard = undefined;
                         game.sendEvent(new PlaceAction({
-                            cardId: game.selectedCard.logicalCard.id,
+                            cardId: card.logicalCard.id,
                             position: this.which,
                             side:game.getMySide(),
                             faceUp: (state instanceof VTurnState)
+                        })).onReply(successOrFail(()=>{
+                            game.state.frozen=false;
+                            if(state instanceof VTurnState)
+                                state.decrementTurn();
+                        },()=>{
+                            card.removeFromHolder();
+                            game.selectedCard = card;
                         }));
-                        game.selectedCard = undefined;
 
-                        // if(state instanceof VTurnState)
-                        //     state.decrementTurn();
                         return true;
                     }
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === game.getMySide() ||

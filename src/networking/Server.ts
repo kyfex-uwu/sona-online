@@ -1,14 +1,50 @@
-import {Event, type SerializableType,} from "./Events.js";
+import {AcceptEvent, Event, RejectEvent, type SerializableEventData, type SerializableType,} from "./Events.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 
+export const eventReplyIds:{[k:string]:{[k:string]:Replyable<any>}} = {}
+export class Replyable<T extends SerializableEventData>{
+    public _callback?: (event: Event<any>) => void;
+    private readonly source:Event<T>;
+    constructor(source:Event<T>) {
+        this.source=source;
+    }
+    onReply(callback:(event:Event<any>)=>void){
+        if(this.source.game === undefined){
+            console.trace("tried to add a reply callback to a message not in a game");
+            return;
+        }
+        if(this._callback !== undefined){
+            console.trace("tried to 2 event reply callbacks");
+            return;
+        }
+
+        if(eventReplyIds[this.source.game.gameID] === undefined)
+            eventReplyIds[this.source.game.gameID] = {};
+        eventReplyIds[this.source.game.gameID]![this.source.id] = this;
+        this._callback=callback;
+        return this.source;
+    }
+}
+export function successOrFail(success:()=>void, fail?:()=>void){
+    return (event:Event<any>) =>{
+        if(event instanceof AcceptEvent) success();
+        else if(fail !== undefined && event instanceof RejectEvent) fail();
+    }
+}
+export function cancelCallback(callback: () => void){
+    return (event:Event<any>) =>{
+        if(event instanceof RejectEvent) callback();
+    }
+}
+
 export const network:{
     //Sends a message to the server
-    sendToServer:(event:Event<any>)=>void,
+    sendToServer:<T extends SerializableEventData> (event:Event<T>)=>Replyable<T>,
     //Sends a message to all clients in the event's game
-    sendToClients:(event:Event<any>)=>void,
+    sendToClients:<T extends SerializableEventData> (event:Event<T>)=>void,
     //Replies with an event to a single client
-    replyToClient:(replyTo:Event<any>, replyWith:Event<any>)=>void,
+    replyToClient:<T extends SerializableEventData> (replyTo:Event<T>, replyWith:Event<any>)=>Replyable<T>,
     //Processes an event from the client
     receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:Client)=>void,
     //Processes an event from the server
@@ -17,20 +53,10 @@ export const network:{
     //unused
     findEmptyGame:()=>Game|undefined,
 } = {
-    sendToServer:()=>{},
-    sendToClients:()=>{},
-    replyToClient:()=>{},
+    sendToServer:(e)=>new Replyable(e),
+    sendToClients:(e)=>new Replyable(e),
+    replyToClient:(e)=>new Replyable(e),
     receiveFromClient:()=>{},
     receiveFromServer:()=>{},
     findEmptyGame:()=>undefined,
-}
-
-//top 10 most useless functions
-export function sendEvent(event:Event<any>, actingAsServer:boolean){
-    //console.log("sending event: "+event.serialize())
-    if(actingAsServer){
-        network.sendToClients(event);
-    }else{
-        network.sendToServer(event);
-    }
 }
