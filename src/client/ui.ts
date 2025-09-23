@@ -20,13 +20,13 @@ export function registerDrawCallback(layer:number, callback:(p5:any, scale:numbe
 const assets:{[k:string]:p5.Image} = {};
 
 //top 10 worst code snippets ever
-const oldLog = console.log;
-console.log = function(...args){
-    if(typeof args[0] === "string" && (
-        args[0].startsWith("🌸 p5.js says:") ||
-        args[0].startsWith("Zod error object"))) return;
-    oldLog(...args);
-}
+// const oldLog = console.log;
+// console.log = function(...args){
+//     if(typeof args[0] === "string" && (
+//         args[0].startsWith("🌸 p5.js says:") ||
+//         args[0].startsWith("Zod error object"))) return;
+//     oldLog(...args);
+// }
 
 const mouseData = {
     down:false,

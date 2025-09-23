@@ -1,29 +1,22 @@
 import type VisualGame from "./VisualGame.js";
-import type {Scene} from "three";
 import type {Side} from "../GameElement.js";
 
 //A game element that has a model and should update
 export abstract class VisualGameElement{
+    constructor(game:VisualGame) {
+        this.game=game;
+    }
     //the "physics" of a game element. i think this should be deprecated i think
-    abstract tick(parent: VisualGame):void;
+    abstract tick():void;
     /**
      * Run every frame, this updates the game element visually. May update while not enabled
      * @param parent VisualGame this is a part of
      */
-    abstract visualTick(game:VisualGame):void;
-    /**
-     * Adds this game element to the game
-     * @param game VisualGame to add it to
-     */
-    addToGame(game: VisualGame){
-        this.game=game;
-    }
+    abstract visualTick():void;
     //Removes this game element from the game
-    removeFromGame(){
-        this.game=undefined;
-    }
+    removeFromGame(){}
 
-    protected game:VisualGame|undefined;
+    protected game:VisualGame;
 }
 
 //A game element that belongs to a specific side

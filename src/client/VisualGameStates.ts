@@ -19,7 +19,6 @@ export enum StateFeatures{
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
     protected readonly game;
-    public frozen=false;
     public readonly features:Set<StateFeatures> = new Set();
     constructor(game:VisualGame) {
         this.game=game;
@@ -124,7 +123,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         super(game);
         this.currTurn=currTurn;
 
-        cSideTernary(currTurn, game.deckA, game.deckB).drawCard(game);
+        cSideTernary(currTurn, game.deckA, game.deckB).drawCard();
     }
     init() {
         super.init();
@@ -137,9 +136,13 @@ export class VTurnState extends VisualGameState<TurnState>{
         if(game.getMySide() === this.currTurn){
             const handSize=cSideTernary(game, game.getGame().handA, game.getGame().handB).length + (game.selectedCard !== undefined ? 1 : 0 );
             if(handSize > 5){
+                this.features.clear();
                 this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
             }else{
                 this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
+                this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
+                    StateFeatures.FIELDS_PLACEABLE,
+                    StateFeatures.DECK_DRAWABLE);
             }
             if(handSize > 4){
                 this.features.delete(StateFeatures.DECK_DRAWABLE);
@@ -153,8 +156,7 @@ export class VTurnState extends VisualGameState<TurnState>{
     decrementTurn(){
         const state = this.game.getGame().state;
         if(state instanceof TurnState) {
-            state.actionsLeft--;
-            if(state.actionsLeft<=0){
+            if(state.decrementTurn(true)){
                 game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
             }
         }

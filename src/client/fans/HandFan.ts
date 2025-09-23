@@ -6,11 +6,11 @@ import VisualGame from "../VisualGame.js";
 import {cSideTernary} from "../clientConsts.js";
 
 export default class HandFan extends VisualCardFan{
-    constructor(position:Vector3, side:Side, params:{
+    constructor(game:VisualGame, position:Vector3, side:Side, params:{
         rotation?:Quaternion
     }={}) {
-        super(side, position, {
-            onSelect:(card:VisualCard, game:VisualGame)=>this.onSelectImpl(card, game),
+        super(game, side, position, {
+            onSelect:(card:VisualCard)=>this.onSelectImpl(card),
             ...params
         });
     }
@@ -20,25 +20,25 @@ export default class HandFan extends VisualCardFan{
      * @param card The selected card
      * @param game The game
      */
-    private onSelectImpl(card:VisualCard, game:VisualGame){
-        if(this.getSide() === game.getMySide()) {
-            if (game.selectedCard !== undefined) {
-                this.addCard(game, game.selectedCard, this.cards.indexOf(card) + 1);
-                game.selectedCard = undefined;
-            } else if (game.state.canSelectHandCard(card)) {
-                this.removeCard(game, card);
-                game.selectedCard = card;
+    private onSelectImpl(card:VisualCard){
+        if(this.game !== undefined && this.getSide() === this.game.getMySide()) {
+            if (this.game.selectedCard !== undefined) {
+                this.addCard(this.game.selectedCard, this.cards.indexOf(card) + 1);
+                this.game.selectedCard = undefined;
+            } else if (this.game.state.canSelectHandCard(card)) {
+                this.removeCard(card);
+                this.game.selectedCard = card;
             }
         }
     }
 
-    addCard(game: VisualGame, card: VisualCard, index: number = 0) {
-        super.addCard(game, card, index);
-        cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB).splice(index,0,card.logicalCard);
+    addCard(card: VisualCard, index: number = 0) {
+        super.addCard(card, index);
+        cSideTernary(this.getSide(), this.game!.getGame().handA, this.game!.getGame().handB).splice(index,0,card.logicalCard);
     }
-    removeCard(game: VisualGame, card: VisualCard) {
-        super.removeCard(game, card);
-        const hand = cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB);
+    removeCard(card: VisualCard) {
+        super.removeCard(card);
+        const hand = cSideTernary(this.getSide(), this.game!.getGame().handA, this.game!.getGame().handB);
         hand.splice(hand.indexOf(card.logicalCard),1);
     }
 }

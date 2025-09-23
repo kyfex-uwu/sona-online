@@ -12,7 +12,8 @@ import {
     GameStartEvent,
     GameStartEventWatcher,
     PassAction,
-    PlaceAction, RejectEvent,
+    PlaceAction,
+    RejectEvent,
     RequestSyncEvent,
     ScareAction,
     StartRequestEvent,
@@ -197,12 +198,13 @@ network.receiveFromClient= (packed, client) => {
             const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
 
             //validate
-            if(!(event.game.state instanceof BeforeGameState && event.game.player(card.side) === event.sender)){
-                rejectEvent(event);
-                return;
-            }
-            //todo debug, remove!!!
-            if(1==1) {
+            if(!(event.game.state instanceof BeforeGameState &&
+                        event.game.player(card.side) === event.sender &&//card is the player's
+                        card.cardData.level === 1 && //card is level 1
+                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) && //player is on the same side as the field
+                    !(event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&
+                        event.game.player(card.side) === event.sender)){
                 rejectEvent(event);
                 return;
             }
@@ -221,6 +223,7 @@ network.receiveFromClient= (packed, client) => {
                     ...event.data,
                 }));
             }
+            acceptEvent(event);
         }
     }else if(event instanceof DrawAction){
         if(event.game !== undefined){
@@ -231,6 +234,13 @@ network.receiveFromClient= (packed, client) => {
                 side = Side.B;
             }
             if(side !== undefined){
+                if(!(event.game.state instanceof TurnState && event.game.state.turn === side &&
+                        sideTernary(side, event.game.handA, event.game.handB).length<5)){
+                    console.log("gorp", event.game.state, sideTernary(side, event.game.handA, event.game.handB).length)
+                    rejectEvent(event);
+                    return;
+                }
+
                 const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
                 if(card !== undefined){
                     sideTernary(side, event.game.handA, event.game.handB).push(card);
@@ -238,8 +248,12 @@ network.receiveFromClient= (packed, client) => {
                         if(user === event.sender) continue;
                         user.send(new DrawAction({side:side}, undefined, undefined, event.id));
                     }
+                    event.game.state.decrementTurn();
+                    acceptEvent(event);
+                    return;
                 }
             }
+            rejectEvent(event);
         }
     }else if (event instanceof PassAction){
         if(event.game !== undefined){

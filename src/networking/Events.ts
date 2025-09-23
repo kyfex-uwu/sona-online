@@ -3,6 +3,7 @@ import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import IngameCard from "../Card.js";
+import {network} from "./Server.js";
 
 //Generates an event id
 const eventIdGenerator = ()=>new Array(16).fill(0).map(_=>Math.floor(Math.random()*36).toString(36)).join("");
@@ -25,7 +26,7 @@ export abstract class Event<T extends SerializableEventData>{
      */
     constructor(data:T, game?:Game, sender?:Client, id?:string) {
         this.data=data;
-        this.game=game;
+        this.game=game||network.clientGame;
         this.sender=sender;
         this.id=id||eventIdGenerator();
         this.init();

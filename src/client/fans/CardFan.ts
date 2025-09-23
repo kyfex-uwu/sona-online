@@ -23,15 +23,15 @@ export default class CardFan extends PositionedVisualGameElement implements Card
      * @param onSelect The function to run when a card in this fan is selected
      * @param rotation The rotation of this element
      */
-    constructor(side:Side, position: Vector3, props?: {
-        onSelect: (card: VisualCard, game: VisualGame) => void;
+    constructor(game:VisualGame, side:Side, position: Vector3, props?: {
+        onSelect: (card: VisualCard) => void;
         rotation?: Quaternion
     }) {
         props = Object.assign({
             rotation:new Quaternion(),
             onSelect:()=>{},
         },props);
-        super(side, position, props.rotation!);
+        super(game, side, position, props.rotation!);
 
         this.onSelect=props.onSelect!;
 
@@ -40,35 +40,33 @@ export default class CardFan extends PositionedVisualGameElement implements Card
         mesh.rotateX(-Math.PI/2);
         this.fakeCard.add(mesh);
         this.group.add(this.fakeCard);
-    }
 
-    private listener:number=-1;
-    addToGame(game: VisualGame): void {
-        super.addToGame(game);
-        game.scene.add(this.group);
+        this.game.scene.add(this.group);
 
         this.listener=clickListener(()=>{
-            const intersects = game.raycaster.intersectObjects(this.cards
+            const intersects = this.game.raycaster.intersectObjects(this.cards
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
-                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), game);
+                this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), this.game);
             }
             return false;
         });
     }
+
+    private listener:number=-1;
     removeFromGame() {
         super.removeFromGame();
         removeClickListener(this.listener);
         this.group.removeFromParent();
     }
 
-    visualTick(parent: VisualGame): void {
+    visualTick(): void {
         this.group.position.lerp(this.position, 0.1);
         this.group.quaternion.slerp(this.rotation, 0.1);
     }
 
-    addCard(game:VisualGame, card:VisualCard, index:number=0){
+    addCard(card:VisualCard, index:number=0){
         this.cards.splice(index,0,card);
         card.setHolder(this);
 
@@ -79,11 +77,11 @@ export default class CardFan extends PositionedVisualGameElement implements Card
             this.group.add(card.model!);
         });
     }
-    removeCard(game:VisualGame, card:VisualCard){
+    removeCard(card:VisualCard){
         if(this.cards.indexOf(card)>=0) this.cards.splice(this.cards.indexOf(card),1);
         this.recalculateCardPositions();
 
-        this.unchildCard(game, card);
+        this.unchildCard(card);
     }
 
     //Recalculates where each card should be in this hand, and moves them to that position
@@ -97,13 +95,12 @@ export default class CardFan extends PositionedVisualGameElement implements Card
             pos++;
         }
     }
-    unchildCard(game:VisualGame, card:VisualCard){
+    unchildCard(card:VisualCard){
         card.rotation = new Quaternion();
         card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
         card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);
-        game.scene.add(card.model!);
+        this.game?.scene.add(card.model!);
     }
 
-    tick(parent: VisualGame): void {
-    }
+    tick() {}
 }

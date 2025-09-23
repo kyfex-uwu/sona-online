@@ -26,10 +26,11 @@ export class Replyable<T extends SerializableEventData>{
         return this.source;
     }
 }
-export function successOrFail(success:()=>void, fail?:()=>void){
+export function successOrFail(success: () => void, fail?: () => void, finaly?: () => void){
     return (event:Event<any>) =>{
         if(event instanceof AcceptEvent) success();
         else if(fail !== undefined && event instanceof RejectEvent) fail();
+        if(finaly !== undefined) finaly();
     }
 }
 export function cancelCallback(callback: () => void){
@@ -50,13 +51,11 @@ export const network:{
     //Processes an event from the server
     receiveFromServer:(event:{id:number,type:string,data:SerializableType})=>void,
 
-    //unused
-    findEmptyGame:()=>Game|undefined,
+    clientGame?:Game,
 } = {
     sendToServer:(e)=>new Replyable(e),
     sendToClients:(e)=>new Replyable(e),
     replyToClient:(e)=>new Replyable(e),
     receiveFromClient:()=>{},
     receiveFromServer:()=>{},
-    findEmptyGame:()=>undefined,
 }

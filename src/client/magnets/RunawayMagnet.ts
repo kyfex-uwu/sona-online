@@ -18,16 +18,16 @@ export default class RunawayMagnet extends CardMagnet{
      * @param rotation The rotation of this element
      * @param enabled If this element is enabled
      */
-    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(side, position, {
-            onClick:game=>{
-                if(game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
-                    game.selectedCard = undefined;
+    constructor(game:VisualGame, position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+        super(game, side, position, {
+            onClick:()=>{
+                if(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.game.selectedCard !== undefined && this.addCard(this.game.selectedCard)){
+                    this.game.selectedCard = undefined;
                     return true;
                 }else if(false){
                     let tempCard = this.cards[this.cards.length-1];
-                    if(this.removeCard(game)) {
-                        game.selectedCard = tempCard;
+                    if(this.removeCard()) {
+                        this.game.selectedCard = tempCard;
                     }
                     return true;
                 }
@@ -38,8 +38,8 @@ export default class RunawayMagnet extends CardMagnet{
         });
     }
 
-    addCard(game:VisualGame, card:VisualCard){
-        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).push(card.logicalCard);
+    addCard(card:VisualCard){
+        cSideTernary(this.game, this.game.getGame().runawayA, this.game.getGame().runawayB).push(card.logicalCard);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
@@ -50,17 +50,17 @@ export default class RunawayMagnet extends CardMagnet{
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
-        super.addCard(game, card);
+        super.addCard(card);
         return true;
     }
-    removeCard(game:VisualGame){
+    removeCard(){
         if(this.cards.length===0) return false;
-        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).pop();
-        this.unchildCard(game, this.cards[this.cards.length-1]!);
+        cSideTernary(this.game, this.game.getGame().runawayA, this.game.getGame().runawayB).pop();
+        this.unchildCard(this.cards[this.cards.length-1]!);
 
         return true;
     }
-    unchildCard(game:VisualGame, card:VisualCard){
+    unchildCard(card:VisualCard){
         let index = this.cards.indexOf(card);
         if(index===-1) return;
         this.cards.splice(this.cards.indexOf(card),1);

@@ -10,7 +10,7 @@ import type {CardHoldable} from "../CardHoldable.js";
 export default abstract class CardMagnet extends PositionedVisualGameElement implements CardHoldable{
     private readonly radius:number;
     private readonly hardRadius:number;
-    private readonly onClick:(v:VisualGame)=>boolean;
+    private readonly onClick:()=>boolean;
 
     public static readonly updateOrder = 1;
     public static readonly offs = new Vector3(0,1.5,0);
@@ -27,10 +27,10 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
      * @param enabled If this element is enabled. Default is false
      * @protected
      */
-    protected constructor(side:Side, position:Vector3, props:{
+    protected constructor(game:VisualGame, side:Side, position:Vector3, props:{
         radius?:number,
         hardRadius?:number,
-        onClick?: (v:VisualGame) => boolean,
+        onClick?: () => boolean,
         rotation?: Quaternion,
     }={}) {
         props = Object.assign({
@@ -39,52 +39,52 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
             onClick:()=>false,
             rotation: new Quaternion(),
         }, props);
-        super(side, position, props.rotation!);
+        super(game, side, position, props.rotation!);
         this.radius = props.radius!;
         this.hardRadius = props.hardRadius!;
         this.onClick = props.onClick!;
+
+        this.listener = clickListener(()=> {
+            if(this.game.frozen) return false;
+
+            const dist = this.game.cursorPos.distanceTo(this.position);
+            if (dist <= this.radius) {
+                return this.onClick();
+            }
+            return false;
+        });
     }
 
     //If this magnet should visually snap cards towards it. Should be false if you cant place cards there
     abstract shouldSnapCards():boolean;
-    tick(game: VisualGame) {
+    tick() {
         if(this.shouldSnapCards()) {
-            const dist = game.cursorPos.distanceTo(this.position);
+            const dist = this.game.cursorPos.distanceTo(this.position);
             if (dist <= this.radius) {
-                if (game.selectedCard !== undefined) {
+                if (this.game.selectedCard !== undefined) {
                     if (dist < this.hardRadius) {
-                        game.selectedCard!.position.copy(this.position);
-                        game.selectedCard!.rotation.copy(this.rotation);
+                        this.game.selectedCard!.position.copy(this.position);
+                        this.game.selectedCard!.rotation.copy(this.rotation);
                     } else {
-                        game.selectedCard!.position.lerp(this.position, (this.radius - dist) / this.radius);
+                        this.game.selectedCard!.position.lerp(this.position, (this.radius - dist) / this.radius);
                     }
                 }
             }
         }
     }
 
-    addCard(game:VisualGame, card:VisualCard){
+    addCard(card:VisualCard){
         return true;
     }
-    abstract removeCard(game:VisualGame):boolean;
+    abstract removeCard():boolean;
     private listener:number=-1;
-    addToGame(game:VisualGame) {
-        super.addToGame(game);
-        this.listener = clickListener(()=> {
-            const dist = game.cursorPos.distanceTo(this.position);
-            if (dist <= this.radius) {
-                return this.onClick(game);
-            }
-            return false;
-        });
-    }
     removeFromGame() {
         super.removeFromGame();
         removeClickListener(this.listener);
     }
 
-    visualTick(parent: VisualGame) {}
+    visualTick() {}
 
-    abstract unchildCard(game: VisualGame, card: VisualCard):void;
+    abstract unchildCard(card: VisualCard):void;
 }
 updateOrder[CardMagnet.name] = 1;

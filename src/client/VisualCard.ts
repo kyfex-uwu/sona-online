@@ -63,12 +63,14 @@ export default class VisualCard extends PositionedVisualGameElement{
      * @param position The position of this element
      * @param rotation The rotation of this element (optional)
      */
-    constructor(card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
-        super(card.getSide(), position, rotation);
+    constructor(game:VisualGame, card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
+        super(game, card.getSide(), position, rotation);
 
         this._logicalCard=card;
         this.model.add(this.flipGroup);
         this.populate(card);
+
+        this.game.scene.add(this.model);
     }
 
     /**
@@ -168,9 +170,9 @@ export default class VisualCard extends PositionedVisualGameElement{
         }
     }
 
-    tick(parent: VisualGame) {
-        if(parent.selectedCard === this) {
-            this.position = parent.cursorPos;
+    tick() {
+        if(this.game.selectedCard === this) {
+            this.position = this.game.cursorPos;
             this.rotation = cSideTernary(game, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
         }
 
@@ -181,12 +183,12 @@ export default class VisualCard extends PositionedVisualGameElement{
         // }
     }
 
-    visualTick(parent: VisualGame) {
+    visualTick() {
         let targetPos = this.position.clone();
         const targetRot = this.rotation.clone();
-        if(parent.selectedCard === this){
+        if(this.game.selectedCard === this){
             targetPos.y =
-                Math.max.apply(null,parent.elements
+                Math.max.apply(null,this.game.elements
                     .filter(e=>e instanceof VisualCard)
                     .filter(card => card.position.distanceTo(this.position)<70)
                     .map(card => card.position.y))+10;
@@ -200,7 +202,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         //     targetPos.lerp(camera.position, 0.5);
         //     // targetRot.slerp(camera.quaternion, 0.5);
         // }
-        super.visualTick(parent, targetPos, targetRot);
+        super.visualTick(targetPos, targetRot);
 
         this.model.position.copy(this.realPosition);
         this.model.quaternion.copy(this.realRotation);
@@ -209,10 +211,6 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.flipTimer=Math.max(0,this.flipTimer-1);
     }
 
-    addToGame(game:VisualGame) {
-        super.addToGame(game);
-        game.scene.add(this.model);
-    }
     removeFromGame() {
         super.removeFromGame();
         this.model.removeFromParent();
@@ -252,7 +250,7 @@ export default class VisualCard extends PositionedVisualGameElement{
 
     //Removes the card from its holder, if it has one
     removeFromHolder(){
-        this.holder?.unchildCard(this.game!,this);
+        this.holder?.unchildCard(this);
         this.holder=undefined;
     }
 }

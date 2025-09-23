@@ -48,6 +48,8 @@ export default class VisualGame {
     public cursorPos = new Vector3();
     public readonly raycaster = new Raycaster();
 
+    public frozen=false;
+
     public readonly fieldsA: [FieldMagnet, FieldMagnet, FieldMagnet] =
         [{} as FieldMagnet, {} as FieldMagnet, {} as FieldMagnet];
     public readonly runawayA: RunawayMagnet;
@@ -91,29 +93,29 @@ export default class VisualGame {
         this.scene = scene;
         this.game = new Game([],[],Game.localID);
 
-        this.fieldsA[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, 70), Side.A, 1));
-        this.fieldsA[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, 70), Side.A, 2));
-        this.fieldsA[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, 70), Side.A, 3));
-        this.runawayA = this.addElement(new RunawayMagnet(new Vector3(-200, 0, 200), Side.A));
-        this.deckA = this.addElement(new DeckMagnet(new Vector3(200, 0, 200), Side.A));
-        this.handA = this.addElement(new HandFan(new Vector3(0, 0, 200), Side.A));
+        this.fieldsA[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, 70), Side.A, 1));
+        this.fieldsA[1] = this.addElement(new FieldMagnet(this, new Vector3(0, 0, 70), Side.A, 2));
+        this.fieldsA[2] = this.addElement(new FieldMagnet(this, new Vector3(-100, 0, 70), Side.A, 3));
+        this.runawayA = this.addElement(new RunawayMagnet(this, new Vector3(-200, 0, 200), Side.A));
+        this.deckA = this.addElement(new DeckMagnet(this, new Vector3(200, 0, 200), Side.A));
+        this.handA = this.addElement(new HandFan(this, new Vector3(0, 0, 200), Side.A));
 
-        this.fieldsB[0] = this.addElement(new FieldMagnet(new Vector3(100, 0, -70), Side.B, 1, {
+        this.fieldsB[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, -70), Side.B, 1, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.fieldsB[1] = this.addElement(new FieldMagnet(new Vector3(0, 0, -70), Side.B, 2, {
+        this.fieldsB[1] = this.addElement(new FieldMagnet(this, new Vector3(0, 0, -70), Side.B, 2, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.fieldsB[2] = this.addElement(new FieldMagnet(new Vector3(-100, 0, -70), Side.B, 3, {
+        this.fieldsB[2] = this.addElement(new FieldMagnet(this, new Vector3(-100, 0, -70), Side.B, 3, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.runawayB = this.addElement(new RunawayMagnet(new Vector3(200, 0, -200), Side.B, {
+        this.runawayB = this.addElement(new RunawayMagnet(this, new Vector3(200, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.deckB = this.addElement(new DeckMagnet(new Vector3(-200, 0, -200), Side.B, {
+        this.deckB = this.addElement(new DeckMagnet(this, new Vector3(-200, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
-        this.handB = this.addElement(new HandFan(new Vector3(0, 0, -200), Side.B, {
+        this.handB = this.addElement(new HandFan(this, new Vector3(0, 0, -200), Side.B, {
             rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI, 0)),
         }));
 
@@ -144,7 +146,7 @@ export default class VisualGame {
                 let width=scale*1.3;
                 let height=scale*0.4;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
-                    this.sendEvent(new PassAction({})).onReply(successOrFail(()=>{
+                    this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
                         (this.state as VTurnState).decrementTurn();
                     }));
                 }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
@@ -181,7 +183,6 @@ ${this.state.getActionsLeft()}`, 0,0);
      * @param element The element to add
      */
     public addElement<T extends VisualGameElement>(element: T): T {
-        element.addToGame(this);
         this.elements.push(element);
 
         this.elements.sort((e1, e2) => {
@@ -241,12 +242,12 @@ ${this.state.getActionsLeft()}`, 0,0);
             this.previewCard = undefined;
         }
 
-        for (const element of this.elements) element.tick(this);
+        for (const element of this.elements) element.tick();
     }
 
     //Visually ticks all the game elements and the camera
     public visualTick() {
-        for (const element of this.elements) element.visualTick(this);
+        for (const element of this.elements) element.visualTick();
         this.state.visualTick(this);
 
         camera.position.lerp(this.targetCameraPos, 0.1);

@@ -6,6 +6,7 @@ import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
 import {StateFeatures, VTurnState} from "../VisualGameStates.js";
+import {successOrFail} from "../../networking/Server.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
@@ -17,14 +18,19 @@ export default class DeckMagnet extends CardMagnet{
      * @param rotation The rotation of this magnet
      * @param enabled If this magnet is enabled. Default is false
      */
-    constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
-        super(side, position, {
-            onClick:game=>{
-                if (game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === game.getMySide() && game.selectedCard === undefined) {
-                    this.drawCard(game);
-                    game.sendEvent(new DrawAction({}));
-                    if(game.state instanceof VTurnState)
-                        game.state.decrementTurn();
+    constructor(game:VisualGame, position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
+        super(game, side, position, {
+            onClick:()=>{
+                console.log(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE))
+                if (this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === this.game.getMySide() && this.game.selectedCard === undefined) {
+                    this.game.frozen=true;
+                    this.game.sendEvent(new DrawAction({})).onReply(successOrFail(()=>{
+                        this.drawCard();
+                        if(this.game.state instanceof VTurnState)
+                            this.game.state.decrementTurn();
+                    },undefined,()=>{
+                        this.game.frozen=false;
+                    }));
                     return true;
                 }
                 return false;
@@ -33,8 +39,8 @@ export default class DeckMagnet extends CardMagnet{
         });
     }
 
-    addCard(game:VisualGame, card:VisualCard){
-        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).push(card.logicalCard);
+    addCard(card:VisualCard){
+        cSideTernary(this.game, this.game.getGame().deckA, this.game.getGame().deckB).push(card.logicalCard);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
@@ -46,17 +52,17 @@ export default class DeckMagnet extends CardMagnet{
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
-        super.addCard(game, card);
+        super.addCard(card);
         return true;
     }
-    removeCard(game:VisualGame){
+    removeCard(){
         if(this.cards.length===0) return false;
-        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).pop();
-        this.unchildCard(game, this.cards[this.cards.length-1]!);
+        cSideTernary(this.game!, this.game!.getGame().deckA, this.game!.getGame().deckB).pop();
+        this.unchildCard(this.cards[this.cards.length-1]!);
 
         return true;
     }
-    unchildCard(game:VisualGame, card:VisualCard){
+    unchildCard(card:VisualCard){
         let index = this.cards.indexOf(card);
         if(index===-1) return;
         this.cards.splice(this.cards.indexOf(card),1);
@@ -72,14 +78,13 @@ export default class DeckMagnet extends CardMagnet{
 
     /**
      * Draws a card and puts in in the player's hand
-     * @param game The game this element is in
      */
-    drawCard(game:VisualGame){
-        const hand = cSideTernary(this.getSide(), game.handA, game.handB);
+    drawCard(){
+        const hand = cSideTernary(this.getSide(), this.game.handA, this.game.handB);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;
-        if (this.removeCard(game)) {
+        if (this.removeCard()) {
             tempCard.flipFaceup();
-            hand.addCard(game, tempCard, hand.cards.length);
+            hand.addCard(tempCard, hand.cards.length);
             return tempCard;
         }
     }

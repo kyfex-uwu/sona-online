@@ -25,6 +25,7 @@ import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 
 export function frontendInit(){
+    network.clientGame=game.getGame();
     console.log("network initialized :D")
 }
 
@@ -64,14 +65,14 @@ network.receiveFromServer = async (packed) => {
         const theirDeck = cSideTernary(game, game.deckB, game.deckA);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const card of event.data.deck){
-            const visualCard = game.addElement(new VisualCard(new Card(cards[card.type]!, game.getMySide(), card.id),
+            const visualCard = game.addElement(new VisualCard(game, new Card(cards[card.type]!, game.getMySide(), card.id),
                 new Vector3(), rotation));
-            myDeck.addCard(game, visualCard);
+            myDeck.addCard(visualCard);
         }
         for(const cardId of event.data.otherDeck){
-            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, other(game.getMySide()), cardId),
+            const visualCard = game.addElement(new VisualCard(game, new Card(cards.unknown!, other(game.getMySide()), cardId),
                 new Vector3(), rotation));
-            theirDeck.addCard(game, visualCard);
+            theirDeck.addCard(visualCard);
         }
 
         await wait(500);
@@ -124,17 +125,17 @@ network.receiveFromServer = async (packed) => {
     }else if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
             element instanceof VisualCard && element.logicalCard.id === event.data.cardId) as VisualCard;
-        card.getHolder()?.removeCard(game, card);
+        card.getHolder()?.removeCard(card);
         card.removeFromHolder();
         (cSideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
-            .addCard(game,card);
+            .addCard(card);
         card[event.data.faceUp?"flipFaceup":"flipFacedown"]();
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }
     }else if(event instanceof DrawAction){
         console.log(cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB))
-        cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard(game);
+        cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
 
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
@@ -146,7 +147,7 @@ network.receiveFromServer = async (packed) => {
     }else if(event instanceof ScareAction){
         const scared = game.elements.filter(e => e instanceof VisualCard)
             .find(card => card.logicalCard.id === event.data.scaredId);
-        if(scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(game, scared);
+        if(scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }

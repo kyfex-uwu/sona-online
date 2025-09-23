@@ -18,8 +18,8 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
      * @param rotation The starting rotation of this element
      * @protected
      */
-    protected constructor(side:Side, position:Vector3, rotation:Quaternion) {
-        super();
+    protected constructor(game:VisualGame, side:Side, position:Vector3, rotation:Quaternion) {
+        super(game);
         this.side=side;
         this.position = position.clone();
         this.realPosition = position.clone();
@@ -33,7 +33,7 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
      * @param targetLocation Where this element should be
      * @param targetRotation How this element should be rotated
      */
-    visualTick(game:VisualGame, targetLocation=this.position, targetRotation=this.rotation):void{
+    visualTick(targetLocation=this.position, targetRotation=this.rotation):void{
         this.realPosition.lerp(targetLocation,0.2);
         this.realRotation.slerp(targetRotation, 0.1);
     }

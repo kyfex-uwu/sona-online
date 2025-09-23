@@ -40,8 +40,6 @@ window.addEventListener("resize", windowResize);
 
 //--
 
-frontendInit();
-
 export const game = new VisualGame(scene);
 game.changeView(ViewType.WHOLE_BOARD_A);
 setTimeout(()=>{
@@ -71,3 +69,5 @@ renderer.setAnimationLoop(() => {
     game.visualTick();
     renderer.render(scene, camera)
 });
+
+frontendInit();
