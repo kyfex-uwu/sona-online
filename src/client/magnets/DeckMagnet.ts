@@ -1,12 +1,11 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {cSideTernary, updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import type VisualCard from "../VisualCard.js";
-import {cSideTernary} from "../clientConsts.js";
-import {VTurnState} from "../VisualGameStates.js";
+import {StateFeatures, VTurnState} from "../VisualGameStates.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
@@ -21,7 +20,7 @@ export default class DeckMagnet extends CardMagnet{
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
-                if (game.handA.cards.length < 5) {
+                if (game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === game.getMySide() && game.selectedCard === undefined) {
                     this.drawCard(game);
                     game.sendEvent(new DrawAction({}));
                     if(game.state instanceof VTurnState)
@@ -35,7 +34,7 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     addCard(game:VisualGame, card:VisualCard){
-        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).push(card.card);
+        cSideTernary(game, game.getGame().deckA, game.getGame().deckB).push(card.logicalCard);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
@@ -66,6 +65,9 @@ export default class DeckMagnet extends CardMagnet{
             this.cards[index]?.position.sub(CardMagnet.offs);
             index++;
         }
+    }
+    shouldSnapCards(): boolean {
+        return false;
     }
 
     /**

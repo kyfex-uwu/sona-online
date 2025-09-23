@@ -12,7 +12,7 @@ export default class CardFan extends PositionedVisualGameElement implements Card
     public readonly cards: Array<VisualCard> = [];
 
     protected readonly group: Group = new Group();
-    private readonly onSelect:(card:VisualCard, parent:VisualGame)=>void;
+    private readonly onSelect:(card:VisualCard, game:VisualGame)=>void;
     private readonly fakeCard:Group;
 
     /**

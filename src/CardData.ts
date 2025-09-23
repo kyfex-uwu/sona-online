@@ -1,4 +1,4 @@
-import type cards from "./Cards.js" ; //used for jsdocs
+import {Stat} from "./Card.js";
 
 let globalID=0;
 
@@ -23,5 +23,12 @@ export default class CardData{
         this.level=level;
         this.id=globalID++;
         this.name=name;
+    }
+    stat(stat:Stat){
+        switch(stat){
+            case Stat.RED: return this.stats[0];
+            case Stat.BLUE: return this.stats[1];
+            case Stat.YELLOW: return this.stats[2];
+        }
     }
 }

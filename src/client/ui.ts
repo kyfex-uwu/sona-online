@@ -1,4 +1,5 @@
 import p5 from "p5";
+import {clickListener} from "./clientConsts.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
@@ -56,6 +57,7 @@ new p5(p => {
         mouseData.down=p.mouseIsPressed;
 
         const scale = Math.min(p.windowWidth/4,p.windowHeight/3);
+        buttonWasClicked=false;
         for(const callbackList of Object.entries(drawCallbacks)
             .toSorted((e1, e2)=>parseFloat(e1[0])-parseFloat(e2[0]))){
             for(const callback of callbackList[1]) callback(p, scale);
@@ -68,6 +70,8 @@ let _buttonId=0;
 export function buttonId(){ return _buttonId++; }
 const buttonData:{[k:number]:boolean}={};
 
+let buttonWasClicked=false;
+clickListener(()=>buttonWasClicked);//todo
 /**
  * Draws and handles a button
  * @param p5 the p5 instance
@@ -115,9 +119,10 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
         p5.textSize(scale*50*(w-52*scale)/textWidth);
     p5.text(text,x+w/2,y+h/2);
 
-    if(!disabled && isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){
+    if(!buttonWasClicked && !disabled && isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){
         onClick();
         buttonData[buttonId]=false;
+        buttonWasClicked=true;
     }
     if(isIn && !mouseData.wasDown && mouseData.down) buttonData[buttonId]=true;
     if(!isIn) buttonData[buttonId]=false;

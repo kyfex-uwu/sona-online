@@ -118,6 +118,8 @@ export default class VisualGame {
 
         //crisis markers
 
+        this.state.init();//one-time fix for starting state
+
         //--
 
         this.passButtonId = buttonId();
@@ -154,14 +156,19 @@ export default class VisualGame {
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
+            p5.push();
+            p5.fill(255,0,0);
+            p5.textSize(scale*0.1);
+            p5.textAlign(p5.LEFT,p5.TOP);
             if(this.state instanceof VTurnState){
-                p5.fill(255,0,0);
-                p5.textSize(scale*0.2);
-                p5.textAlign(p5.LEFT,p5.TOP);
                 p5.text(`side ${this.getMySide()}
 ${this.state.getNonVisState().turn?"A":"B"}
 ${this.state.getActionsLeft()}`, 0,0);
             }
+            if(this.state instanceof VAttackingState){
+                p5.text(`${this.state.attackData.type}\n${this.state.card.logicalCard.cardData.stats.toString()}\n${this.state.card.logicalCard.cardData.level}`, 0,0);
+            }
+            p5.pop();
         });
     }
     private readonly releaseDrawCallback;
@@ -199,11 +206,11 @@ ${this.state.getActionsLeft()}`, 0,0);
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.fieldsA.filter(field=>field.getCard()?.card?.getFaceUp()).map(field => field.getCard()?.model),
-            ...this.fieldsB.filter(field=>field.getCard()?.card?.getFaceUp()).map(field => field.getCard()?.model),
-            ...this.handA.cards.filter(vCard=>vCard.card.getFaceUp())//&&vCard.card.cardData!==cards.unknown
+            ...this.fieldsA.filter(field=>field.getCard()?.logicalCard?.getFaceUp()).map(field => field.getCard()?.model),
+            ...this.fieldsB.filter(field=>field.getCard()?.logicalCard?.getFaceUp()).map(field => field.getCard()?.model),
+            ...this.handA.cards.filter(vCard=>vCard.logicalCard.getFaceUp())//&&vCard.card.cardData!==cards.unknown
                 .map(field => field.model),
-            ...this.handB.cards.filter(vCard=>vCard.card.getFaceUp())//&&vCard.card.cardData!==cards.unknown
+            ...this.handB.cards.filter(vCard=>vCard.logicalCard.getFaceUp())//&&vCard.card.cardData!==cards.unknown
                 .map(field => field.model),
 
         ].filter(v=>v!==undefined));
@@ -212,10 +219,10 @@ ${this.state.getActionsLeft()}`, 0,0);
             if(visualCardMaybe instanceof VisualCard){
                 shouldRemovePreview = false;
                 if(this.previewCard?.cardData.id !==
-                    visualCardMaybe.card.cardData.id) {
+                    visualCardMaybe.logicalCard.cardData.id) {
                     const wasPreviewCard = this.previewCard !== undefined && this.drawPreviewCard;
                     setTimeout(()=>{
-                        this.previewCard = visualCardMaybe.card;
+                        this.previewCard = visualCardMaybe.logicalCard;
                         const old = this.previewCard;
                         setTimeout(async ()=>{
                             if(this.previewCard===old){

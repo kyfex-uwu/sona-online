@@ -11,7 +11,7 @@ import {
     GameStartEvent,
     GameStartEventWatcher, PassAction,
     PlaceAction,
-    RequestSyncEvent,
+    RequestSyncEvent, ScareAction,
     StartRequestEvent,
     SyncEvent
 } from "./Events.js";
@@ -61,23 +61,25 @@ network.receiveFromClient= (packed, client) => {
                 let hasLevel1A=false;
                 let hasLevel1B=false;
                 for(let i=0;i<3;i++){
-                    if(!hasLevel1A && deckA[i]?.type !== undefined && cards[deckA[i]?.type!]?.level === 1){
+                    if(!hasLevel1A && deckA[deckA.length-1-i]?.type !== undefined && cards[deckA[deckA.length-1-i]?.type!]?.level === 1){
                         hasLevel1A=true;
                     }
-                    if(!hasLevel1B && deckB[i]?.type !== undefined && cards[deckB[i]?.type!]?.level === 1){
+                    if(!hasLevel1B && deckB[deckB.length-1-i]?.type !== undefined && cards[deckB[deckB.length-1-i]?.type!]?.level === 1){
                         hasLevel1B=true;
                     }
                 }
                 if(!hasLevel1A){
                     const toFront = shuffled(deckA.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckA.splice(deckA.indexOf(toFront), 1);
-                    deckA.splice(Math.floor(Math.random()*3), 0, toFront);
+                    deckA.splice(deckA.length-Math.floor(Math.random()*3), 0, toFront);
                 }
                 if(!hasLevel1B){
                     const toFront = shuffled(deckB.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckB.splice(deckB.indexOf(toFront), 1);
-                    deckA.splice(Math.floor(Math.random()*3), 0, toFront);
+                    deckB.splice(deckB.length-Math.floor(Math.random()*3), 0, toFront);
                 }
+                // console.log(deckA.map(card => cards[card.type]?.level))
+                // console.log(deckB.map(card => cards[card.type]?.level))
 
                 const game = new Game(deckA, deckB, uuid());
 
@@ -172,7 +174,7 @@ network.receiveFromClient= (packed, client) => {
                                 id: card.id,
                                 cardDataName:card.cardData.name,
                             }));
-                    event.game.state = new TurnState(startingSide);
+                    event.game.state = new TurnState(event.game, startingSide);
                 }
             }
         }
@@ -193,8 +195,6 @@ network.receiveFromClient= (packed, client) => {
                     ...event.data,
                 }));
             }
-
-            event.game.stateTick();
         }
     }else if(event instanceof DrawAction){
         if(event.game !== undefined){
@@ -220,6 +220,16 @@ network.receiveFromClient= (packed, client) => {
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
                 user.send(new PassAction({}));
+            }
+        }
+    }else if (event instanceof ScareAction){
+        if(event.game !== undefined){
+            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                user.send(new ScareAction({
+                    scaredId:event.data.scaredId,
+                    scarerId:event.data.scarerId,
+                    attackingWith:event.data.attackingWith,
+                }));
             }
         }
     }

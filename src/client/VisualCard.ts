@@ -4,7 +4,7 @@ import {
     Group,
     Material,
     Mesh,
-    MeshBasicMaterial,
+    MeshBasicMaterial, MeshPhongMaterial,
     type Object3D,
     Quaternion,
     type Scene,
@@ -36,23 +36,26 @@ const cardModel = (() => {
 
     return promise;
 })();
-const cardShape = textureLoader.load("/assets/card-images/card_shape.png");
-const cardBackMat = new MeshBasicMaterial({
-    map: textureLoader.load( "/assets/card-images/card_back.jpg"),
-    alphaMap: cardShape,
-    transparent:true,
+const cardMat = new MeshPhongMaterial({
+    alphaMap: textureLoader.load("/assets/card-images/card_shape.png"),
+    transparent: true,
+    emissive: new Color(0x000000),
+    specular: new Color(0xffffff),
+    shininess: 150,
 });
+const cardBackMat = cardMat.clone();
+cardBackMat.map = textureLoader.load( "/assets/card-images/card_back.jpg")
 
 //A *visual* card. This wraps a logical {@link Card}
 export default class VisualCard extends PositionedVisualGameElement{
-    private _card:Card;
-    public get card(){
-        return this._card;
+    private _logicalCard:Card;
+    public get logicalCard(){
+        return this._logicalCard;
     }
     public readonly model: Group = new Group();
     private readonly flipGroup: Group = new Group();
-    private enabledMaterial:Material|undefined;
-    private disabledMaterial:Material|undefined;
+    private enabledMaterial:MeshPhongMaterial|undefined;
+    private disabledMaterial:MeshPhongMaterial|undefined;
 
     /**
      * Creates a visual card
@@ -62,9 +65,8 @@ export default class VisualCard extends PositionedVisualGameElement{
      */
     constructor(card: Card, position: Vector3, rotation: Quaternion = new Quaternion()) {
         super(card.getSide(), position, rotation);
-        this.enabled=true;
 
-        this._card=card;
+        this._logicalCard=card;
         this.model.add(this.flipGroup);
         this.populate(card);
     }
@@ -74,7 +76,7 @@ export default class VisualCard extends PositionedVisualGameElement{
      * @param card Logical card to assign to this visual card
      */
     populate(card:Card){
-        this._card=card;
+        this._logicalCard=card;
         this.flipGroup.clear();
         this.model.userData.card=this;
         this.enabledMaterial?.dispose();
@@ -87,7 +89,7 @@ export default class VisualCard extends PositionedVisualGameElement{
      * @param card
      */
     async repopulate(card:Card){
-        this._card=card;
+        this._logicalCard=card;
 
         let texture:Texture|undefined;
 
@@ -98,18 +100,12 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         //if(this.flipGroup.children[0] !== actualModel) return;
 
-        this.enabledMaterial= new MeshBasicMaterial({
-            map: texture!,
-            alphaMap: cardShape,
-            transparent:true,
-        });
-        this.disabledMaterial = new MeshBasicMaterial({
-            map: texture!,
-            alphaMap: cardShape,
-            transparent:true,
-            color:new Color(0x777777),
-        });
-        (this.flipGroup.children[0]!.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
+        this.enabledMaterial= cardMat.clone();
+        this.enabledMaterial.map = texture!;
+        this.disabledMaterial= cardMat.clone();
+        this.disabledMaterial.map = texture!;
+        this.disabledMaterial.color = new Color(0x777777);
+        (this.flipGroup.children[0]!.children[0] as Mesh).material = this.enabledMaterial;
     }
 
     private loadingModel=false;
@@ -121,16 +117,9 @@ export default class VisualCard extends PositionedVisualGameElement{
         let actualModel = (await cardModel).clone();
         this.flipGroup.add(actualModel);
 
-        this.enabledMaterial = new MeshBasicMaterial({
-            alphaMap: cardShape,
-            transparent:true,
-        });
-        this.disabledMaterial = new MeshBasicMaterial({
-            alphaMap: cardShape,
-            transparent:true,
-            color:new Color(0x777777),
-        });
-        (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
+        this.enabledMaterial = cardMat.clone();
+        this.disabledMaterial = cardMat.clone();
+        (actualModel.children[0] as Mesh).material = this.enabledMaterial;
         (actualModel.children[1] as Mesh).material = cardBackMat;
 
         this.model.userData.redStat = new Mesh(new CylinderGeometry(7.777,7.777), new MeshBasicMaterial({
@@ -149,22 +138,16 @@ export default class VisualCard extends PositionedVisualGameElement{
         actualModel.add(this.model.userData.blueStat);
         actualModel.add(this.model.userData.yellowStat);
 
-        textureLoader.loadAsync(`/assets/card-images/${this.card.cardData.imagePath}.jpg`).then((texture)=>{
+        textureLoader.loadAsync(`/assets/card-images/${this.logicalCard.cardData.imagePath}.jpg`).then((texture)=>{
             if(this.flipGroup.children[0] !== actualModel) return;
 
-            this.enabledMaterial= new MeshBasicMaterial({
-                map: texture,
-                alphaMap: cardShape,
-                transparent:true,
-            });
-            this.disabledMaterial = new MeshBasicMaterial({
-                map: texture,
-                alphaMap: cardShape,
-                transparent:true,
-                color:new Color(0x777777),
-            });
+            this.enabledMaterial= cardMat.clone();
+            this.enabledMaterial.map = texture!;
+            this.disabledMaterial= cardMat.clone();
+            this.disabledMaterial.map = texture!;
+            this.disabledMaterial.color = new Color(0x777777);
             console.log("b");//???
-            (actualModel.children[0] as Mesh).material = this.enabled?this.enabledMaterial:this.disabledMaterial;
+            (actualModel.children[0] as Mesh).material = this.enabledMaterial;
             this.loadingModel=false;
         });
     }
@@ -209,6 +192,9 @@ export default class VisualCard extends PositionedVisualGameElement{
                     .map(card => card.position.y))+10;
 
         }
+        targetPos.sub(this.realPosition);
+        if(targetPos.length()>50) targetPos.multiplyScalar(Math.max(1-(targetPos.length()-50)*0.005,0.5));
+        targetPos = this.realPosition.clone().add(targetPos);
         // if(parent.cursorPos.distanceTo(this.position)<50 && this.faceUp &&
         //     (parent.selectedCard === this || parent.selectedCard === undefined)){
         //     targetPos.lerp(camera.position, 0.5);
@@ -237,15 +223,15 @@ export default class VisualCard extends PositionedVisualGameElement{
 
     //Flips both this visual card and its logical card facedown
     flipFacedown(){
-        if(!this.card.getFaceUp()) return;
-        this.card.flipFacedown();
+        if(!this.logicalCard.getFaceUp()) return;
+        this.logicalCard.flipFacedown();
         this.flipRotation = new Quaternion(0,0,1,0);
         this.flipTimer = 20;
     }
     //Flips both this visual card and its logical card faceup
     flipFaceup(){
-        if(this.card.getFaceUp()) return;
-        this.card.flipFaceup();
+        if(this.logicalCard.getFaceUp()) return;
+        this.logicalCard.flipFaceup();
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
     }

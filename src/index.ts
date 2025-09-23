@@ -1,14 +1,15 @@
-import {Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
+import {AmbientLight, Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
 import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
 import {FindGameEvent} from "./networking/Events.js";
 import cards from "./Cards.js";
-import {shuffled} from "./consts.js";
+import type CardData from "./CardData.js";
 
 // Init scene.
 const scene = new Scene();
 scene.background = new Color("#111111");
+scene.add(new AmbientLight(new Color(0xffffff), 3))
 
 modelLoader.load("/assets/board.glb", model => {
     (model.scene.children[0] as Mesh).material = new MeshBasicMaterial({
@@ -47,8 +48,18 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [];
+            const alreadyAdded:{[k:string]:boolean} = {};
+            const cardsValues = Object.values(cards);
+            let oneFlag = false;
             for(let i=0;i<20;i++) {
-                toReturn.push(shuffled(Object.entries(cards).filter(e => e[1].level == 1 && e[0] !== "unknown"))[0]![0]);
+                let toAdd:CardData;
+                do {
+                    toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
+                }while(alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1));
+
+                toReturn.push(toAdd.name);
+                alreadyAdded[toAdd.name]=true;
+                oneFlag = oneFlag || toAdd.level === 1;
             }
             return toReturn;
         })(),

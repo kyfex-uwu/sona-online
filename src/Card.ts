@@ -7,6 +7,20 @@ export enum Stat{
     BLUE,
     YELLOW
 }
+export function getVictim(stat:Stat){
+    switch(stat){
+        case Stat.RED: return Stat.YELLOW;
+        case Stat.BLUE: return Stat.RED;
+        case Stat.YELLOW: return Stat.BLUE;
+    }
+}
+export function getAttacker(stat:Stat){
+    switch(stat){
+        case Stat.RED: return Stat.BLUE;
+        case Stat.BLUE: return Stat.YELLOW;
+        case Stat.YELLOW: return Stat.RED;
+    }
+}
 
 //A *logical* card
 export default class Card implements GameElement{

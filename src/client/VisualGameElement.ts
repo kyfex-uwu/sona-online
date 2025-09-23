@@ -10,7 +10,7 @@ export abstract class VisualGameElement{
      * Run every frame, this updates the game element visually. May update while not enabled
      * @param parent VisualGame this is a part of
      */
-    abstract visualTick(parent:VisualGame):void;
+    abstract visualTick(game:VisualGame):void;
     /**
      * Adds this game element to the game
      * @param game VisualGame to add it to
@@ -23,11 +23,6 @@ export abstract class VisualGameElement{
         this.game=undefined;
     }
 
-    /**
-     * Whether this game element is enabled
-     * @deprecated
-     */
-    public enabled: boolean = false;
     protected game:VisualGame|undefined;
 }
 

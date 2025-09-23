@@ -7,7 +7,7 @@ import {
     Event,
     GameStartEvent, PassAction,
     PlaceAction,
-    RequestSyncEvent
+    RequestSyncEvent, ScareAction
 } from "./Events.js";
 import {game} from "../index.js";
 import Game from "../Game.js";
@@ -16,7 +16,7 @@ import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
-import {Side} from "../GameElement.js";
+import {other} from "../GameElement.js";
 import {cSideTernary} from "../client/clientConsts.js";
 import {wait} from "../client/clientConsts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
@@ -62,34 +62,23 @@ network.receiveFromServer = async (packed) => {
             myDeck.addCard(game, visualCard);
         }
         for(const cardId of event.data.otherDeck){
-            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, game.getMySide(), cardId),
+            const visualCard = game.addElement(new VisualCard(new Card(cards.unknown!, other(game.getMySide()), cardId),
                 new Vector3(), rotation));
             theirDeck.addCard(game, visualCard);
         }
-        if(game.getMySide() == Side.B){
-            game.handB.enabled=true;
-            for(const field of game.fieldsB) field.enabled=true;
-        }else{
-            game.handA.enabled=true;
-            for(const field of game.fieldsA) field.enabled=true;
-        }
 
         await wait(500);
-
-        for(const card of cSideTernary(game, game.handA, game.handB).cards){
-            if(card.card.cardData.level !== 1) card.enabled = false;
-        }
     }else if (event instanceof ClarifyCardEvent){
-        const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.card.id === event.data.id) as VisualCard;
+        const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.logicalCard.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
             const newCard = event.data.cardDataName !== undefined ?
-                new Card(cards[event.data.cardDataName!]!, oldVCard.card.side, oldVCard.card.id) :
-                oldVCard.card;
-            const oldCard = oldVCard.card;
+                new Card(cards[event.data.cardDataName!]!, oldVCard.logicalCard.side, oldVCard.logicalCard.id) :
+                oldVCard.logicalCard;
+            const oldCard = oldVCard.logicalCard;
             if(!oldCard.getFaceUp()) newCard.flipFacedown();
 
             if(event.data.cardDataName !== undefined){
-                game.getGame().cards.delete(oldVCard.card);
+                game.getGame().cards.delete(oldVCard.logicalCard);
                 oldVCard.repopulate(newCard);
             }
 
@@ -102,7 +91,7 @@ network.receiveFromServer = async (packed) => {
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
-                game.setState(new VTurnState(event.data.starter, game), new TurnState(event.data.starter));
+                game.setState(new VTurnState(event.data.starter, game), new TurnState(game.getGame(), event.data.starter));
 
                 for(const field of game.fieldsA)
                     field.getCard()?.flipFaceup();
@@ -127,7 +116,7 @@ network.receiveFromServer = async (packed) => {
         }
     }else if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
-            element instanceof VisualCard && element.card.id === event.data.cardId) as VisualCard;
+            element instanceof VisualCard && element.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(game, card);
         card.removeFromHolder();
         (cSideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
@@ -144,6 +133,13 @@ network.receiveFromServer = async (packed) => {
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
+        if(game.state instanceof VTurnState){
+            game.state.decrementTurn();
+        }
+    }else if(event instanceof ScareAction){
+        const scared = game.elements.filter(e => e instanceof VisualCard)
+            .find(card => card.logicalCard.id === event.data.scaredId);
+        if(scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(game, scared);
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }

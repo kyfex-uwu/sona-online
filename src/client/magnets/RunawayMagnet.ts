@@ -1,10 +1,10 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {cSideTernary, updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {cSideTernary} from "../clientConsts.js";
+import {StateFeatures} from "../VisualGameStates.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
@@ -21,23 +21,25 @@ export default class RunawayMagnet extends CardMagnet{
     constructor(position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(side, position, {
             onClick:game=>{
-                if(game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
+                if(game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && game.selectedCard !== undefined && this.addCard(game, game.selectedCard)){
                     game.selectedCard = undefined;
                     return true;
-                }else{
+                }else if(false){
                     let tempCard = this.cards[this.cards.length-1];
                     if(this.removeCard(game)) {
                         game.selectedCard = tempCard;
                     }
                     return true;
                 }
+
+                return false;
             },
             ...props,
         });
     }
 
     addCard(game:VisualGame, card:VisualCard){
-        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).push(card.card);
+        cSideTernary(game, game.getGame().runawayA, game.getGame().runawayB).push(card.logicalCard);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
@@ -67,6 +69,10 @@ export default class RunawayMagnet extends CardMagnet{
             this.cards[index]?.position.sub(CardMagnet.offs);
             index++;
         }
+    }
+    shouldSnapCards(): boolean {
+        if(!this.game) return false;
+        return this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.game.getMySide() === this.getSide();
     }
 }
 updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;

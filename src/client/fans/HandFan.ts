@@ -21,25 +21,24 @@ export default class HandFan extends VisualCardFan{
      * @param game The game
      */
     private onSelectImpl(card:VisualCard, game:VisualGame){
-        if(!this.enabled) return false;
-
-        if(game.selectedCard !== undefined){
-            this.addCard(game, game.selectedCard, this.cards.indexOf(card) + 1);
-            game.selectedCard = undefined;
-        }else if(card.enabled){
-            this.removeCard(game, card);
-            game.selectedCard = card;
-
+        if(this.getSide() === game.getMySide()) {
+            if (game.selectedCard !== undefined) {
+                this.addCard(game, game.selectedCard, this.cards.indexOf(card) + 1);
+                game.selectedCard = undefined;
+            } else if (game.state.canSelectHandCard(card)) {
+                this.removeCard(game, card);
+                game.selectedCard = card;
+            }
         }
     }
 
     addCard(game: VisualGame, card: VisualCard, index: number = 0) {
         super.addCard(game, card, index);
-        cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB).splice(index,0,card.card);
+        cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB).splice(index,0,card.logicalCard);
     }
     removeCard(game: VisualGame, card: VisualCard) {
         super.removeCard(game, card);
         const hand = cSideTernary(this.getSide(), game.getGame().handA, game.getGame().handB);
-        hand.splice(hand.indexOf(card.card),1);
+        hand.splice(hand.indexOf(card.logicalCard),1);
     }
 }

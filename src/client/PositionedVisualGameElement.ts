@@ -33,7 +33,7 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
      * @param targetLocation Where this element should be
      * @param targetRotation How this element should be rotated
      */
-    visualTick(parent:VisualGame, targetLocation=this.position, targetRotation=this.rotation):void{
+    visualTick(game:VisualGame, targetLocation=this.position, targetRotation=this.rotation):void{
         this.realPosition.lerp(targetLocation,0.2);
         this.realRotation.slerp(targetRotation, 0.1);
     }

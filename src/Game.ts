@@ -17,6 +17,7 @@ export enum CurrentTurn{
 export type MiscData = {
     playerAStartRequest?:"first"|"second"|"nopref",
     playerBStartRequest?:"first"|"second"|"nopref",
+    isFirstTurn:boolean,
 };
 
 //A logical game
@@ -37,9 +38,17 @@ export default class Game{
 
     public readonly cards:Set<Card> = new Set<Card>();
 
-    public state:GameState = new BeforeGameState();
+    public _state:GameState = new BeforeGameState(this);
+    public get state(){ return this._state; }
+    public set state(newState:GameState){
+        const oldState = this._state;
+        this._state = newState;
+        oldState.swapAway();
+    }
 
-    public miscData:MiscData={};
+    public miscData:MiscData={
+        isFirstTurn:true,
+    };
 
     private playerA:Client|undefined=undefined;
     private playerB:Client|undefined=undefined;
@@ -96,10 +105,5 @@ export default class Game{
     //Sends an event to the client/server
     requestEvent(event:Event<any>){
         sendEvent(event, false);
-    }
-
-    //Ticks this game's state
-    stateTick(){
-        this.state.tick(this);
     }
 }

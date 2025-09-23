@@ -5,11 +5,21 @@ import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {game} from "../index.js";
-import type VisualCard from "./VisualCard.js";
+import  VisualCard from "./VisualCard.js";
+import type {Stat} from "../Card.js";
+
+export enum StateFeatures{
+    FIELDS_PLACEABLE,
+    FIELDS_SELECTABLE,
+    ALL_FIELDS_SELECTABLE,
+    DECK_DRAWABLE,
+    CAN_DISCARD_FROM_HAND,
+}
 
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
     protected readonly game;
+    public readonly features:Set<StateFeatures> = new Set();
     constructor(game:VisualGame) {
         this.game=game;
     }
@@ -19,18 +29,35 @@ export abstract class VisualGameState<T extends GameState>{
     getNonVisState(){
         return this.game.getGame().state as unknown as T;
     }
+
+    hasFeatures(...features:StateFeatures[]){
+        for(const feature of features) if(!this.features.has(feature)) return false;
+        return true;
+    }
+    addFeatures(...features:StateFeatures[]){
+        for(const feature of features) this.features.add(feature);
+    }
+    canSelectHandCard(card:VisualCard){
+        return true;
+    }
 }
 
 //During this, the player chooses a lv1 card to place. After it's placed, change to {@link VChoosingStartState}
 export class VBeforeGameState extends VisualGameState<BeforeGameState>{
+    init() {
+        super.init();
+        this.addFeatures(StateFeatures.FIELDS_PLACEABLE);
+    }
+
     visualTick(game: VisualGame) {
         if(cSideTernary(game, game.fieldsA, game.fieldsB).some(v=>v.getCard()!==undefined)){
-            for(const field of cSideTernary(game, game.fieldsA, game.fieldsB))
-                field.enabled=false;
-            cSideTernary(game, game.handA, game.handB).enabled=false;
             game.setState(new VChoosingStartState(game), game.getGame().state);
             //draw overlay (? what)
         }
+    }
+
+    canSelectHandCard(card: VisualCard): boolean {
+        return card.logicalCard.cardData.level === 1;
     }
 }
 
@@ -100,14 +127,26 @@ export class VTurnState extends VisualGameState<TurnState>{
     }
     init() {
         super.init();
-        this.reinit();
+        this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
+            StateFeatures.FIELDS_PLACEABLE,
+            StateFeatures.DECK_DRAWABLE);
     }
 
     visualTick(game: VisualGame): void {
         if(game.getMySide() === this.currTurn){
-            cSideTernary(game, game.runawayA, game.runawayB).enabled =
-                cSideTernary(game, game.getGame().handA, game.getGame().handB).length + (game.selectedCard !== undefined ? 1 : 0 )
-                    > 5;
+            const handSize=cSideTernary(game, game.getGame().handA, game.getGame().handB).length + (game.selectedCard !== undefined ? 1 : 0 );
+            if(handSize > 5){
+                this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
+            }else{
+                this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
+            }
+            if(handSize > 4){
+                this.features.delete(StateFeatures.DECK_DRAWABLE);
+            }else{
+                this.features.add(StateFeatures.DECK_DRAWABLE);
+            }
+        }else{
+            this.features.clear();
         }
     }
     decrementTurn(){
@@ -115,7 +154,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         if(state instanceof TurnState) {
             state.actionsLeft--;
             if(state.actionsLeft<=0){
-                game.setState(new VTurnState(other(state.turn), this.game),new TurnState(other(state.turn)));
+                game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
             }
         }
     }
@@ -123,35 +162,18 @@ export class VTurnState extends VisualGameState<TurnState>{
         const state = this.game.getGame().state;
         return state instanceof TurnState ? state.actionsLeft : 0;
     }
-    swapAway(game: VisualGame) {
-        super.swapAway(game);
-        if(this.currTurn === game.getMySide()){
-            // for(const field of sideTernary(currTurn, game.fieldsA, game.fieldsB))
-            cSideTernary(this.currTurn, game.handA, game.handB).enabled=false;
-            cSideTernary(this.currTurn, game.deckA, game.deckB).enabled=false;
-            for(const field of cSideTernary(this.currTurn, game.fieldsA, game.fieldsB))
-                field.enabled=false;
-        }
-    }
-
-    reinit(){
-        if(this.currTurn === game.getMySide()){
-            // for(const field of sideTernary(currTurn, game.fieldsA, game.fieldsB))
-            cSideTernary(this.currTurn, game.handA, game.handB).enabled=true;
-            cSideTernary(this.currTurn, game.deckA, game.deckB).enabled=true;
-            for(const field of cSideTernary(this.currTurn, game.fieldsA, game.fieldsB))
-                field.enabled=true;
-        }
-        return this;
+    canSelectHandCard(card: VisualCard): boolean {
+        return card.logicalCard.cardData.level === 1 || cSideTernary(this.game, this.game.fieldsA, this.game.fieldsB).some(field =>
+            field.getCard()?.logicalCard.cardData.level === card.logicalCard.cardData.level-1);
     }
 }
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
 export class VAttackingState extends VisualGameState<TurnState>{
-    public readonly card;
+    public card;
     public readonly parentState;
     public readonly attackData:{
-        type?:"red"|"blue"|"yellow"|"card",
+        type?:Stat|"card",
         cardAttack?:string,
     }={};
     constructor(card:VisualCard, game:VisualGame) {
@@ -163,8 +185,7 @@ export class VAttackingState extends VisualGameState<TurnState>{
         super.init();
         game.changeView(cSideTernary(game, ViewType.FIELDS_A, ViewType.FIELDS_B));
 
-        for(const field of game.fieldsA) field.enabled=true;
-        for(const field of game.fieldsB) field.enabled=true;
+        this.addFeatures(StateFeatures.ALL_FIELDS_SELECTABLE);
     }
 
     visualTick(game: VisualGame): void {
@@ -172,12 +193,9 @@ export class VAttackingState extends VisualGameState<TurnState>{
     swapAway(game: VisualGame) {
         super.swapAway(game);
         game.changeView(cSideTernary(game, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
-
-        for(const field of game.fieldsA) field.enabled=false;
-        for(const field of game.fieldsB) field.enabled=false;
     }
 
     returnToParent(){
-        this.game.setState(this.parentState.reinit(), this.getNonVisState());
+        this.game.setState(this.parentState, this.getNonVisState());
     }
 }
