@@ -53,7 +53,7 @@ setTimeout(()=>{
                 let toAdd:CardData;
                 do {
                     toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
-                }while(alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1));
+                }while(toAdd === cards["unknown"] || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
 
                 toReturn.push(toAdd.name);
                 alreadyAdded[toAdd.name]=true;

@@ -17,7 +17,8 @@ export enum CurrentTurn{
 export type MiscData = {
     playerAStartRequest?:"first"|"second"|"nopref",
     playerBStartRequest?:"first"|"second"|"nopref",
-    isFirstTurn:boolean,
+    isFirstTurn:boolean,//if this is the first turn of the game (used to prevent first turn attacking)
+    canPreDraw:boolean,//if this is the draw happening at the beginning of the first turn
 };
 
 //A logical game
@@ -48,6 +49,7 @@ export default class Game{
 
     public miscData:MiscData={
         isFirstTurn:true,
+        canPreDraw:true,
     };
 
     private playerA:Client|undefined=undefined;

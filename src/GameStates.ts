@@ -1,5 +1,6 @@
 import type Game from "./Game.js";
 import {other, type Side} from "./GameElement.js";
+import {sideTernary} from "./consts.js";
 
 //A logical game state
 export abstract class GameState{
@@ -28,7 +29,7 @@ export class TurnState extends GameState{
 
     /**
      * @param suppressChanges Should this call refrain from making setting the state (useful for managing game state from visual game)
-     * @return If the turn should change, if changes were suppressed
+     * @return If the turn should change/did change
      */
     decrementTurn(suppressChanges=false){
         const state = this.game.state;
@@ -36,11 +37,22 @@ export class TurnState extends GameState{
 
             state.actionsLeft--;
             if(state.actionsLeft<=0){
-                if(suppressChanges) return true;
-                this.game.state = new TurnState(this.game, other(state.turn));
+                if(!suppressChanges)
+                    this.game.state = new TurnState(this.game, other(state.turn));
+                return true;
             }
         }
 
         return false;
+    }
+    serverInit(){
+        const hand = sideTernary(this.game, this.game.handA, this.game.handB);
+        if(hand.length>=5) return false;
+
+        const toAdd = sideTernary(this.game, this.game.deckA, this.game.deckB).pop();
+        if(toAdd===undefined) return false;
+
+        hand.push(toAdd);
+        return true;
     }
 }

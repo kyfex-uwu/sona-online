@@ -7,7 +7,7 @@ import {
     Event,
     GameStartEvent, PassAction,
     PlaceAction,
-    RequestSyncEvent, ScareAction
+    RequestSyncEvent, ScareAction, SyncEvent
 } from "./Events.js";
 import {game} from "../index.js";
 import Game from "../Game.js";
@@ -134,10 +134,9 @@ network.receiveFromServer = async (packed) => {
             game.state.decrementTurn();
         }
     }else if(event instanceof DrawAction){
-        console.log(cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB))
         cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
 
-        if(game.state instanceof VTurnState){
+        if(game.state instanceof VTurnState && event.data.isAction !== false){
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
@@ -145,12 +144,24 @@ network.receiveFromServer = async (packed) => {
             game.state.decrementTurn();
         }
     }else if(event instanceof ScareAction){
-        const scared = game.elements.filter(e => e instanceof VisualCard)
-            .find(card => card.logicalCard.id === event.data.scaredId);
-        if(scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+        if(event.data.failed !== true) {
+            const scared = cSideTernary(event.data.scaredSide, game.fieldsA, game.fieldsB)[event.data.scaredPos-1]!.getCard();
+            if (scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+        }
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }
+    }
+
+    else if(event instanceof SyncEvent){
+        console.log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        console.log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
     }
 }
 

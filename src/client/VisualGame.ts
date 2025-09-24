@@ -9,7 +9,7 @@ import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
 import {camera, cSideTernary, updateOrder} from "./clientConsts.js";
-import {Event, PassAction} from "../networking/Events.js";
+import {Event, PassAction, RequestSyncEvent, StringReprSyncEvent} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
@@ -32,6 +32,8 @@ export enum ViewType{
     FIELDS_A,
     FIELDS_B,
 }
+
+let debugLast="";
 
 const previewImages:{[k:string]:p5.Image|true} = {};
 
@@ -146,8 +148,11 @@ export default class VisualGame {
                 let width=scale*1.3;
                 let height=scale*0.4;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
+                    this.frozen=true;
                     this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
                         (this.state as VTurnState).decrementTurn();
+                    },undefined,()=>{
+                        this.frozen=false;
                     }));
                 }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
             }
@@ -165,13 +170,17 @@ export default class VisualGame {
             p5.textSize(scale*0.1);
             p5.textAlign(p5.LEFT,p5.TOP);
             if(this.state instanceof VTurnState){
-                p5.text(`side ${this.getMySide()}
+                p5.text(`side ${Side[this.getMySide()]}
 ${this.state.getNonVisState().turn?"A":"B"}
 ${this.state.getActionsLeft()}`, 0,0);
             }
             if(this.state instanceof VAttackingState){
-                p5.text(`${this.state.attackData.type}\n${this.state.card.logicalCard.cardData.stats.toString()}\n${this.state.card.logicalCard.cardData.level}`, 0,0);
+                p5.text(`${this.state.attackData.type}\n${cSideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
+                    .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
             }
+
+            p5.textAlign(p5.LEFT,p5.BOTTOM);
+            p5.text(debugLast, 0,p5.height);
             p5.pop();
         });
     }

@@ -1,12 +1,13 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
 import {cSideTernary} from "./clientConsts.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
-import {StartRequestEvent} from "../networking/Events.js";
+import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {game} from "../index.js";
 import  VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
+import {network} from "../networking/Server.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -123,13 +124,17 @@ export class VTurnState extends VisualGameState<TurnState>{
         super(game);
         this.currTurn=currTurn;
 
-        cSideTernary(currTurn, game.deckA, game.deckB).drawCard();
     }
     init() {
         super.init();
         this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
             StateFeatures.FIELDS_PLACEABLE,
             StateFeatures.DECK_DRAWABLE);
+
+        if(this.game.getGame().miscData.isFirstTurn && this.currTurn === this.game.getMySide()) {
+            cSideTernary(this.currTurn, game.deckA, game.deckB).drawCard();
+            network.sendToServer(new DrawAction({}));
+        }
     }
 
     visualTick(game: VisualGame): void {
@@ -173,15 +178,15 @@ export class VTurnState extends VisualGameState<TurnState>{
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
 export class VAttackingState extends VisualGameState<TurnState>{
-    public card;
+    public cardIndex;
     public readonly parentState;
     public readonly attackData:{
         type?:Stat|"card",
         cardAttack?:string,
     }={};
-    constructor(card:VisualCard, game:VisualGame) {
+    constructor(cardIndex:1|2|3, game:VisualGame) {
         super(game);
-        this.card=card;
+        this.cardIndex=cardIndex;
         this.parentState = game.state as VTurnState;
     }
     init() {

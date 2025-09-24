@@ -16,14 +16,14 @@ import {
     RejectEvent,
     RequestSyncEvent,
     ScareAction,
-    StartRequestEvent,
+    StartRequestEvent, StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary} from "../consts.js";
-import type Card from "../Card.js";
+import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 
@@ -40,6 +40,55 @@ function rejectEvent(event:Event<any>){
 }
 function acceptEvent(event:Event<any>){
     network.replyToClient(event, new AcceptEvent({}, undefined, undefined, event.id));
+}
+
+//Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
+//@returns If a card was actually drawn
+function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean=true){
+    const card = sideTernary(side, game.deckA, game.deckB).pop();
+    if(card !== undefined){
+        sideTernary(side, game.handA, game.handB).push(card);
+        for(const user of (usersFromGameIDs[game.gameID]||[])){
+            if(user !== sender){
+                user.send(new DrawAction({side: side, isAction}, undefined, undefined));
+            }
+        }
+        if(game.state instanceof TurnState && isAction) {
+            if(game.state.decrementTurn()){
+                if(game.state.serverInit()){
+                    for(const user of (usersFromGameIDs[game.gameID]||[])){
+                        user.send(new DrawAction({side: game.state.turn, isAction:false}, undefined, undefined));
+                    }
+                }
+            }
+        }
+        return true;
+    }else{
+        return false;
+    }
+}
+function endTurn(game:Game){
+    if(game.state instanceof TurnState)
+        if(game.state.decrementTurn())
+            draw(game, undefined, game.state.turn, false);
+}
+//unused until i need it
+function findAndRemove(game:Game, card:Card){
+    for(const group of [game.deckA, game.deckB, game.runawayA, game.runawayB, game.handA, game.handB]) {
+        for (let i = 0; i < group.length; i++) {
+            if (group[i] === card) {
+                group.splice(i, 1);
+                break;
+            }
+        }
+    }
+    for(const fields of [game.fieldsA, game.fieldsB]){
+        for (let i = 0; i < fields.length; i++) {
+            if (fields[i] === card) {
+                fields[i]=undefined;
+            }
+        }
+    }
 }
 
 network.sendToClients = (event) => {
@@ -124,24 +173,11 @@ network.receiveFromClient= (packed, client) => {
                             which:Side.B,
                         }, game));
                     }
-                    for(let i=0;i<3;i++){
-                        user.send(new DrawAction({side:Side.A}));
-                        user.send(new DrawAction({side:Side.B}));
-                    }
                 }
-
-                // for(const card of deckA){
-                //     network.replyToClient(other, new ClarifyCardEvent({
-                //         id:card.id,
-                //         cardDataName:card.type
-                //     }))
-                // }
-                // for(const card of deckB){
-                //     network.replyToClient(event, new ClarifyCardEvent({
-                //         id:card.id,
-                //         cardDataName:card.type
-                //     }))
-                // }
+                for(let i=0;i<3;i++){
+                    draw(game, undefined, Side.A);
+                    draw(game, undefined, Side.B);
+                }
             })
             unfilledGames.push(resolve!);
         }
@@ -198,21 +234,31 @@ network.receiveFromClient= (packed, client) => {
             const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
 
             //validate
-            if(!(event.game.state instanceof BeforeGameState &&
+            if(!((event.game.state instanceof BeforeGameState &&
                         event.game.player(card.side) === event.sender &&//card is the player's
                         card.cardData.level === 1 && //card is level 1
-                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) && //player is on the same side as the field
-                    !(event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&
-                        event.game.player(card.side) === event.sender)){
+                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
+                    (event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
+                        event.game.player(card.side) === event.sender &&//card is the player's
+                        !event.game.miscData.canPreDraw))){//not predraw
                 rejectEvent(event);
                 return;
             }
 
+            for(const group of [event.game.handA, event.game.handB]) {
+                for (let i = 0; i < group.length; i++) {
+                    if (group[i] === card) {
+                        group.splice(i, 1);
+                        break;
+                    }
+                }
+            }
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                if(user === event.sender) continue;
                 if(event.data.faceUp)
                     user.send(new ClarifyCardEvent({
                         id: event.data.cardId,
@@ -223,32 +269,43 @@ network.receiveFromClient= (packed, client) => {
                     ...event.data,
                 }));
             }
+
+            endTurn(event.game);
             acceptEvent(event);
         }
     }else if(event instanceof DrawAction){
         if(event.game !== undefined){
-            let side:Side|undefined=undefined;
+            let side:Side|undefined=undefined;//the side of the player drawing
             if(event.sender === event.game.player(Side.A)){
                 side = Side.A;
             }else if(event.sender === event.game.player(Side.B)){
                 side = Side.B;
             }
             if(side !== undefined){
-                if(!(event.game.state instanceof TurnState && event.game.state.turn === side &&
-                        sideTernary(side, event.game.handA, event.game.handB).length<5)){
+                if(!(event.game.state instanceof TurnState &&
+                        event.game.state.turn === side &&//it is the player's turn
+                        sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
                     console.log("gorp", event.game.state, sideTernary(side, event.game.handA, event.game.handB).length)
                     rejectEvent(event);
                     return;
                 }
-
-                const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
-                if(card !== undefined){
-                    sideTernary(side, event.game.handA, event.game.handB).push(card);
-                    for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                        if(user === event.sender) continue;
-                        user.send(new DrawAction({side:side}, undefined, undefined, event.id));
+                if(event.game.miscData.canPreDraw){
+                    const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
+                    if(card !== undefined){//bro it better not be
+                        sideTernary(side, event.game.handA, event.game.handB).push(card);
+                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                            if(user !== event.sender){
+                                user.send(new DrawAction({side: side, isAction:false}, undefined, undefined));
+                            }
+                        }
                     }
-                    event.game.state.decrementTurn();
+
+                    if(event.game.miscData.canPreDraw) event.game.miscData.canPreDraw=false;
+                    acceptEvent(event);
+                    return;
+                }
+
+                if(draw(event.game, event.sender, side)){
                     acceptEvent(event);
                     return;
                 }
@@ -257,37 +314,80 @@ network.receiveFromClient= (packed, client) => {
         }
     }else if (event instanceof PassAction){
         if(event.game !== undefined){
+            if(!(event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn))){//if its the player's turn
+                rejectEvent(event);
+                return;
+            }
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
                 user.send(new PassAction({}));
             }
+
+            endTurn(event.game);
+            acceptEvent(event);//todo:validation
         }
     }else if (event instanceof ScareAction){
         if(event.game !== undefined){
-            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                user.send(new ScareAction({
-                    scaredId:event.data.scaredId,
-                    scarerId:event.data.scarerId,
-                    attackingWith:event.data.attackingWith,
-                }));
+            let side:Side|undefined=undefined;//the side of the player scaring
+            if(event.sender === event.game.player(Side.A)){
+                side = Side.A;
+            }else if(event.sender === event.game.player(Side.B)){
+                side = Side.B;
             }
+            if(side===undefined) return rejectEvent(event);
+            console.log("SCARING\n---")
+
+            const scarer = sideTernary(side, event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos-1];
+            const scared = sideTernary(side, event.game.fieldsB, event.game.fieldsA)[event.data.scaredPos-1];
+            console.log(scarer, scared, scarer?.cardData.stat(event.data.attackingWith) !== undefined , scared?.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)
+            if(!(event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                    scarer !==undefined && scared!==undefined&&//the cards exist
+                    scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
+                rejectEvent(event);
+                return;
+            }
+
+            const toSend = new ScareAction({
+                scaredPos:event.data.scaredPos,
+                scarerPos:event.data.scarerPos,
+                scaredSide:other(side),
+                attackingWith:event.data.attackingWith,
+                failed:!(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
+            });
+
+
+            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                user.send(toSend);
+            }
+
+            endTurn(event.game);
         }
     }
 
-    else if(event instanceof RequestSyncEvent && true){
-        if(event.game!==undefined) {
-            event.sender?.send(new SyncEvent({
-                fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
-                fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
-                deckA: cardsTransform(event.game.deckA),
-                deckB: cardsTransform(event.game.deckB),
-                handA: cardsTransform(event.game.handA),
-                handB: cardsTransform(event.game.handB),
-                runawayA: cardsTransform(event.game.runawayA),
-                runawayB: cardsTransform(event.game.runawayB),
-            }));
-        }
-    }
+    //DEBUG, DONT UNCOMMENT UNLESS DEVELOPING
+    // else if(event instanceof RequestSyncEvent){
+    //     if(event.game!==undefined) {
+    //         event.sender?.send(new SyncEvent({
+    //             fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
+    //             fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
+    //             deckA: cardsTransform(event.game.deckA),
+    //             deckB: cardsTransform(event.game.deckB),
+    //             handA: cardsTransform(event.game.handA),
+    //             handB: cardsTransform(event.game.handB),
+    //             runawayA: cardsTransform(event.game.runawayA),
+    //             runawayB: cardsTransform(event.game.runawayB),
+    //         }));
+    //         network.replyToClient(event, new StringReprSyncEvent({
+    //             str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
+    //                 `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
+    //                 `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
+    //                 `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
+    //                 `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
+    //         }, undefined, undefined, event.id));
+    //     }
+    // }
 }
 network.replyToClient = (replyTo, replyWith) => {
     replyTo.sender?.send(replyWith);

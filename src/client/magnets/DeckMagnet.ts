@@ -57,7 +57,7 @@ export default class DeckMagnet extends CardMagnet{
     }
     removeCard(){
         if(this.cards.length===0) return false;
-        cSideTernary(this.game!, this.game!.getGame().deckA, this.game!.getGame().deckB).pop();
+        cSideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB).pop();
         this.unchildCard(this.cards[this.cards.length-1]!);
 
         return true;

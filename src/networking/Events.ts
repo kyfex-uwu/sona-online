@@ -93,6 +93,7 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 //Draws a card. S2C needs side, C2S does not
 export class DrawAction extends ActionEvent<{
     side?:Side,
+    isAction?:boolean
 }>{}
 
 //Places a card in a specific slot
@@ -105,10 +106,11 @@ export class PlaceAction extends ActionEvent<{
 
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation
 export class ScareAction extends ActionEvent<{
-    //todo: replace these cardids with which field
-    scarerId:number,
-    scaredId:number,
-    attackingWith:Stat
+    scarerPos:number,
+    scaredPos:number,
+    attackingWith:Stat,
+    failed?:boolean,
+    scaredSide:Side,
 }>{}
 
 //Performs a specific card action
@@ -165,3 +167,4 @@ export class SyncEvent extends Event<{
     runawayA:Array<Card>,
     runawayB:Array<Card>
 }>{}
+export class StringReprSyncEvent extends Event<{str:string}>{}

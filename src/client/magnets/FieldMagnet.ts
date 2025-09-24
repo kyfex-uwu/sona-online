@@ -55,7 +55,7 @@ export default class FieldMagnet extends CardMagnet{
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
                     if(state instanceof VTurnState && !this.game.getGame().miscData.isFirstTurn){
                         if(this.card === undefined) return false;
-                        this.game.setState(new VAttackingState(this.card, this.game), state.getNonVisState());
+                        this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
                     }
                     if(state instanceof VAttackingState &&
@@ -81,7 +81,7 @@ export default class FieldMagnet extends CardMagnet{
                                 } else if(intersects[0].object === this.card.model){
                                     state.attackData.type = "card";
                                 }
-                                state.card=this.card;
+                                state.cardIndex=this.which;
                             }
                         }else{
                             if(state.attackData.type !== undefined) {
@@ -91,9 +91,10 @@ export default class FieldMagnet extends CardMagnet{
                                 if (intersects[0] !== undefined) {
                                     if (state.attackData.type !== "card" && getVictim(state.attackData.type) !== undefined) {
                                         this.game.sendEvent(new ScareAction({
-                                            scaredId: this.card.logicalCard.id,
-                                            scarerId: state.card.logicalCard.id,
+                                            scaredPos: this.which,
+                                            scarerPos: state.cardIndex,
                                             attackingWith: state.attackData.type,
+                                            scaredSide: this.game.getMySide(),
                                         }));
                                     }
                                     state.returnToParent();
