@@ -9,7 +9,7 @@ import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
-import {Event, PassAction, RequestSyncEvent, StringReprSyncEvent} from "../networking/Events.js";
+import {Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";

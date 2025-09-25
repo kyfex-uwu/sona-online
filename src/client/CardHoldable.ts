@@ -1,4 +1,3 @@
-import type VisualGame from "./VisualGame.js";
 import type VisualCard from "./VisualCard.js";
 
 //Something that can hold and store {@link VisualCard}s

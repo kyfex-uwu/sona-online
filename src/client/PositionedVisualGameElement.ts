@@ -1,5 +1,5 @@
 import VisualGame from "./VisualGame.js";
-import type {Quaternion, Scene, Vector3} from "three";
+import type {Quaternion, Vector3} from "three";
 import type {Side} from "../GameElement.js";
 import {type SidedVisualGameElement, VisualGameElement} from "./VisualGameElement.js";
 

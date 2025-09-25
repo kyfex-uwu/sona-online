@@ -2,8 +2,6 @@ import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
     AcceptEvent,
-    type Card as SerializableCard,
-    cardsTransform,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
@@ -14,10 +12,8 @@ import {
     PassAction,
     PlaceAction,
     RejectEvent,
-    RequestSyncEvent,
     ScareAction,
-    StartRequestEvent, StringReprSyncEvent,
-    SyncEvent
+    StartRequestEvent
 } from "./Events.js";
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"

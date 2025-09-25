@@ -1,5 +1,5 @@
 import {Side} from "../../GameElement.js";
-import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type Scene, Vector3} from "three";
+import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector3} from "three";
 import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";

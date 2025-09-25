@@ -1,9 +1,5 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PerspectiveCamera, TextureLoader} from "three";
-import {Side} from "../GameElement.js";
-import {sideTernary} from "./../consts.js"
-import type VisualGame from "./VisualGame.js";
-import Game from "../Game.js";
 
 export const modelLoader = new GLTFLoader();
 

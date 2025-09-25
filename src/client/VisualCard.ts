@@ -1,13 +1,13 @@
 import {
-    Color, CylinderGeometry,
+    Color,
+    CylinderGeometry,
     Euler,
     Group,
-    Material,
     Mesh,
-    MeshBasicMaterial, MeshPhongMaterial,
+    MeshBasicMaterial,
+    MeshPhongMaterial,
     type Object3D,
     Quaternion,
-    type Scene,
     Texture,
     Vector3
 } from "three";
@@ -15,7 +15,6 @@ import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card, {Stat} from "../Card.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
-import {game} from "../index.js";
 import type {CardHoldable} from "./CardHoldable.js";
 import {sideTernary} from "../consts.js";
 
@@ -172,7 +171,7 @@ export default class VisualCard extends PositionedVisualGameElement{
     tick() {
         if(this.game.selectedCard === this) {
             this.position = this.game.cursorPos;
-            this.rotation = sideTernary(game.getMySide(), new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+            this.rotation = sideTernary(this.game.getMySide(), new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
         }
 
         // if(!this.enabled){

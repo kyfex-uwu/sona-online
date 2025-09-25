@@ -1,8 +1,7 @@
-import {Stat} from "../Card.js";
+import IngameCard, {Stat} from "../Card.js";
 import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
-import IngameCard from "../Card.js";
 import {network} from "./Server.js";
 
 //Generates an event id
