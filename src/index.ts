@@ -6,6 +6,10 @@ import {FindGameEvent} from "./networking/Events.js";
 import cards from "./Cards.js";
 import type CardData from "./CardData.js";
 
+/////
+// version 0.1.0
+/////
+
 // Init scene.
 const scene = new Scene();
 scene.background = new Color("#111111");

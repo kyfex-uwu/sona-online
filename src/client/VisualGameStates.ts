@@ -170,8 +170,9 @@ export class VTurnState extends VisualGameState<TurnState>{
         return state instanceof TurnState ? state.actionsLeft : 0;
     }
     canSelectHandCard(card: VisualCard): boolean {
+        if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
         return card.logicalCard.cardData.level === 1 || sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
-            field.getCard()?.logicalCard.cardData.level === card.logicalCard.cardData.level-1);
+            (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
     }
 }
 
@@ -203,5 +204,8 @@ export class VAttackingState extends VisualGameState<TurnState>{
 
     returnToParent(){
         this.game.setState(this.parentState, this.getNonVisState());
+    }
+    canSelectHandCard(card: VisualCard): boolean {
+        return false;
     }
 }

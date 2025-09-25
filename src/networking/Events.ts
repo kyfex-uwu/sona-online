@@ -119,6 +119,9 @@ export class CardAction extends ActionEvent<{
     data:SerializableType
 }>{}
 
+//Discards a card
+export class DiscardEvent extends Event<{which:number}>{}
+
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
 

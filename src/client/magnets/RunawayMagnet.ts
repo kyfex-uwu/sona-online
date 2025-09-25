@@ -6,6 +6,8 @@ import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {StateFeatures} from "../VisualGameStates.js";
 import {sideTernary} from "../../consts.js";
+import {DiscardEvent} from "../../networking/Events.js";
+import {cancelCallback} from "../../networking/Server.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
@@ -23,7 +25,15 @@ export default class RunawayMagnet extends CardMagnet{
         super(game, side, position, {
             onClick:()=>{
                 if(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.game.selectedCard !== undefined && this.addCard(this.game.selectedCard)){
+                    this.game.frozen=true;
+                    const card = this.game.selectedCard;
                     this.game.selectedCard = undefined;
+                    this.game.sendEvent(new DiscardEvent({which:card.logicalCard.id})).onReply(cancelCallback(()=>{
+                        this.removeCard();
+                        this.game.selectedCard = card;
+                    },()=>{
+                        this.game.frozen=false;
+                    }));
                     return true;
                 }else if(false){
                     let tempCard = this.cards[this.cards.length-1];
@@ -74,6 +84,13 @@ export default class RunawayMagnet extends CardMagnet{
     shouldSnapCards(): boolean {
         if(!this.game) return false;
         return this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.game.getMySide() === this.getSide();
+    }
+
+    visualTick() {
+        super.visualTick();
+        for(const card of this.cards){
+            card.rotation = this.rotation.clone();//bruh
+        }
     }
 }
 updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;

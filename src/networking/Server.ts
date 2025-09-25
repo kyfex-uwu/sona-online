@@ -33,9 +33,10 @@ export function successOrFail(success: () => void, fail?: () => void, finaly?: (
         if(finaly !== undefined) finaly();
     }
 }
-export function cancelCallback(callback: () => void){
+export function cancelCallback(callback: () => void, finaly?:()=>void){
     return (event:Event<any>) =>{
         if(event instanceof RejectEvent) callback();
+        if(finaly !== undefined) finaly();
     }
 }
 

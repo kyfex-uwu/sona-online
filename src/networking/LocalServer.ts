@@ -70,6 +70,14 @@ network.receiveFromServer = async (packed) => {
         game.getGame().setDeck(Side.B, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}));
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        if(game.getMySide() === Side.A){
+            game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-2,Math.PI,0)),1);
+            game.handB.position.add(new Vector3(0,100,0));
+        }else{
+            game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(2,0, 0)),1);
+            game.handA.position.add(new Vector3(0,100,0));
+        }
+
         const myDeck = sideTernary(game.getMySide(), game.deckA, game.deckB);
         const theirDeck = sideTernary(other(game.getMySide()), game.deckA, game.deckB);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
@@ -139,7 +147,8 @@ network.receiveFromServer = async (packed) => {
         card.removeFromHolder();
         (sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
             .addCard(card);
-        card[event.data.faceUp?"flipFaceup":"flipFacedown"]();
+        if(event.data.faceUp) card.flipFaceup();
+        else card.flipFacedown();
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }

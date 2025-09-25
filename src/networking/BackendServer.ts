@@ -3,7 +3,7 @@ import * as Events from "./Events.js";
 import {
     AcceptEvent,
     ClarifyCardEvent,
-    DetermineStarterEvent,
+    DetermineStarterEvent, DiscardEvent,
     DrawAction,
     Event,
     FindGameEvent,
@@ -65,7 +65,7 @@ function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean
 }
 function endTurn(game:Game){
     if(game.state instanceof TurnState)
-        if(game.state.decrementTurn())
+        if(game.state.decrementTurn() && sideTernary(game.state.turn,game.handA,game.handB).length<5)
             draw(game, undefined, game.state.turn, false);
 }
 //unused until i need it
@@ -235,6 +235,8 @@ network.receiveFromClient= (packed, client) => {
                     (event.game.state instanceof TurnState &&
                         event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
                         event.game.player(card.side) === event.sender &&//card is the player's
+                        sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
+                            .some(other => (other?.cardData.level??0) >= card.cardData.level-1) && //placed card's level is at most 1 above all other cards
                         !event.game.miscData.canPreDraw))){//not predraw
                 rejectEvent(event);
                 return;
@@ -354,6 +356,30 @@ network.receiveFromClient= (packed, client) => {
             }
 
             endTurn(event.game);
+        }
+    }else if(event instanceof DiscardEvent){
+        if(event.game !== undefined) {
+            let side: Side | undefined = undefined;//the side of the player discarding
+            if (event.sender === event.game.player(Side.A)) {
+                side = Side.A;
+            } else if (event.sender === event.game.player(Side.B)) {
+                side = Side.B;
+            }
+            if (side === undefined) return rejectEvent(event);
+
+            const hand = sideTernary(side, event.game.handA, event.game.handB);
+            const toDiscard = hand.find(card => card.id === event.data.which);
+            if (!(event.game.state instanceof TurnState &&
+                event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                toDiscard !== undefined&&//the card exists AND is in the player's hand
+                hand.length>5)) {//the player is in a position to discard
+                rejectEvent(event);
+                return;
+            }
+
+            sideTernary(side, event.game.runawayA, event.game.runawayB).push(
+                hand.splice(hand.indexOf(toDiscard),1)[0]!);
+            acceptEvent(event);
         }
     }
 
