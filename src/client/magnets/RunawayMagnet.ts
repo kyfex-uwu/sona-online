@@ -9,9 +9,9 @@ import {sideTernary} from "../../consts.js";
 import {DiscardEvent} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 
-
+type CardWithRot = {card:VisualCard,rot:number}
 export default class RunawayMagnet extends CardMagnet{
-    private cards:Array<VisualCard> = [];
+    private cards:Array<CardWithRot> = [];
 
     /**
      * Creates a runaway magnet
@@ -38,7 +38,7 @@ export default class RunawayMagnet extends CardMagnet{
                 }else if(false){
                     let tempCard = this.cards[this.cards.length-1];
                     if(this.removeCard()) {
-                        this.game.selectedCard = tempCard;
+                        this.game.selectedCard = tempCard?.card;
                     }
                     return true;
                 }
@@ -54,10 +54,11 @@ export default class RunawayMagnet extends CardMagnet{
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
+        const rotAmt = (Math.random()*0.3-0.15)*5;
         const newRot = new Euler().setFromQuaternion(this.rotation);
-        newRot.y+=Math.random()*0.3-0.15;
+        newRot.y+=rotAmt;
         card.rotation.copy(new Quaternion().setFromEuler(newRot))
-        this.cards.push(card);
+        this.cards.push({card,rot:rotAmt});
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
@@ -67,17 +68,17 @@ export default class RunawayMagnet extends CardMagnet{
     removeCard(){
         if(this.cards.length===0) return false;
         sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB).pop();
-        this.unchildCard(this.cards[this.cards.length-1]!);
+        this.unchildCard(this.cards[this.cards.length-1]!.card);
 
         return true;
     }
     unchildCard(card:VisualCard){
-        let index = this.cards.indexOf(card);
+        let index = this.cards.findIndex(c => c.card === card);
         if(index===-1) return;
-        this.cards.splice(this.cards.indexOf(card),1);
+        this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
         while(this.cards[index] !== undefined){
-            this.cards[index]?.position.sub(CardMagnet.offs);
+            this.cards[index]?.card.position.sub(CardMagnet.offs);
             index++;
         }
     }
@@ -88,8 +89,9 @@ export default class RunawayMagnet extends CardMagnet{
 
     visualTick() {
         super.visualTick();
-        for(const card of this.cards){
-            card.rotation = this.rotation.clone();//bruh
+        for(const data of this.cards){
+            data.card.rotation = this.rotation.clone();
+            data.card.rotation.y+=data.rot;
         }
     }
 }

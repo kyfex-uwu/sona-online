@@ -71,10 +71,10 @@ network.receiveFromServer = async (packed) => {
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
         if(game.getMySide() === Side.A){
-            game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-2,Math.PI,0)),1);
+            game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1);
             game.handB.position.add(new Vector3(0,100,0));
         }else{
-            game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(2,0, 0)),1);
+            game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(1.7,0, 0)),1);
             game.handA.position.add(new Vector3(0,100,0));
         }
 
