@@ -8,7 +8,7 @@ import Game from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
-import {camera, cSideTernary, updateOrder} from "./clientConsts.js";
+import {camera, updateOrder} from "./clientConsts.js";
 import {Event, PassAction, RequestSyncEvent, StringReprSyncEvent} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
@@ -16,6 +16,7 @@ import p5 from "p5";
 import {VAttackingState, VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
+import {sideTernary} from "../consts.js";
 
 const pointer = new Vector2();
 
@@ -42,8 +43,6 @@ export default class VisualGame {
     private game: Game;
     //Returns the logical game
     public getGame():Game{ return this.game; }
-    //Sets the logical game
-    public setGame(g:Game):void{ this.game = g; }
     public selectedCard: VisualCard | undefined;
     public readonly elements: VisualGameElement[] = [];
     public readonly scene: Scene;
@@ -83,7 +82,7 @@ export default class VisualGame {
         const oldState = this.state;
         this._state = newVState;
         this.game.state = newState;
-        oldState.swapAway(this);
+        oldState.swapAway();
         newVState.init();
     }
 
@@ -93,7 +92,7 @@ export default class VisualGame {
      */
     public constructor(scene: Scene) {
         this.scene = scene;
-        this.game = new Game([],[],Game.localID);
+        this.game = new Game([],[],Game.localID+Math.random());
 
         this.fieldsA[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, 70), Side.A, 1));
         this.fieldsA[1] = this.addElement(new FieldMagnet(this, new Vector3(0, 0, 70), Side.A, 2));
@@ -154,7 +153,7 @@ export default class VisualGame {
                     },undefined,()=>{
                         this.frozen=false;
                     }));
-                }, scale, this.passButtonId, cSideTernary(this, this.game.handA, this.game.handB).length>5);
+                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5);
             }
             if(this.state instanceof VAttackingState){
                 let width=scale*1.3;
@@ -175,12 +174,18 @@ ${this.state.getNonVisState().turn?"A":"B"}
 ${this.state.getActionsLeft()}`, 0,0);
             }
             if(this.state instanceof VAttackingState){
-                p5.text(`${this.state.attackData.type}\n${cSideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
+                p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
                     .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
             }
 
             p5.textAlign(p5.LEFT,p5.BOTTOM);
             p5.text(debugLast, 0,p5.height);
+
+            if(this.previewCard !== undefined){
+                p5.textAlign(p5.RIGHT,p5.TOP);
+                p5.text(this.previewCard.cardData.stats.join(","), p5.width,0);
+            }
+
             p5.pop();
         });
     }
@@ -257,7 +262,7 @@ ${this.state.getActionsLeft()}`, 0,0);
     //Visually ticks all the game elements and the camera
     public visualTick() {
         for (const element of this.elements) element.visualTick();
-        this.state.visualTick(this);
+        this.state.visualTick();
 
         camera.position.lerp(this.targetCameraPos, 0.1);
         camera.quaternion.slerp(this.targetCameraRot, 0.1);

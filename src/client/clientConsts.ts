@@ -38,11 +38,3 @@ export async function wait(ms:number){
     await p;
 }
 
-/**
- * Returns either param a or param b, depending on the given side
- * @param side The side that determines what to return. If this is a {@link VisualGame} or {@link Game}, use the game's side
- */
-export function cSideTernary<T>(side:Side|VisualGame|Game, a:T, b:T){
-    if(side instanceof Game || !(side instanceof Object)) return sideTernary(side, a, b);
-    else return sideTernary(side.getMySide(), a, b);
-}

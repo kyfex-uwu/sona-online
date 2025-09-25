@@ -1,6 +1,6 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
-import {cSideTernary, updateOrder} from "../clientConsts.js";
+import {updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
@@ -8,6 +8,7 @@ import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
+import {sideTernary} from "../../consts.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -121,7 +122,7 @@ export default class FieldMagnet extends CardMagnet{
     addCard(card:VisualCard){
         if(this.card !== undefined) return false;
         this.card = card;
-        cSideTernary(this.game, this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = card.logicalCard;
+        sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = card.logicalCard;
         this.card!.position.copy(this.position);
         this.card!.rotation.copy(this.rotation);
         this.position.add(CardMagnet.offs);
@@ -132,7 +133,7 @@ export default class FieldMagnet extends CardMagnet{
     }
     removeCard(){
         if(this.card === undefined) return false;
-        cSideTernary(this.game, this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = undefined;
+        sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = undefined;
         this.unchildCard(this.card);
         this.position.sub(CardMagnet.offs);
 
@@ -143,6 +144,13 @@ export default class FieldMagnet extends CardMagnet{
     }
     shouldSnapCards(): boolean {
         return this.card === undefined && this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.game.getMySide() === this.getSide();
+    }
+
+    visualTick() {
+        super.visualTick();
+        if(this.card !== undefined){
+            this.card.rotation = this.rotation.clone();//bruh
+        }
     }
 }
 updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;

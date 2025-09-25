@@ -16,8 +16,8 @@ import Card, {Stat} from "../Card.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {game} from "../index.js";
-import {cSideTernary} from "./clientConsts.js";
 import type {CardHoldable} from "./CardHoldable.js";
+import {sideTernary} from "../consts.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -148,7 +148,6 @@ export default class VisualCard extends PositionedVisualGameElement{
             this.disabledMaterial= cardMat.clone();
             this.disabledMaterial.map = texture!;
             this.disabledMaterial.color = new Color(0x777777);
-            console.log("b");//???
             (actualModel.children[0] as Mesh).material = this.enabledMaterial;
             this.loadingModel=false;
         });
@@ -173,7 +172,7 @@ export default class VisualCard extends PositionedVisualGameElement{
     tick() {
         if(this.game.selectedCard === this) {
             this.position = this.game.cursorPos;
-            this.rotation = cSideTernary(game, new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+            this.rotation = sideTernary(game.getMySide(), new Quaternion(), new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
         }
 
         // if(!this.enabled){

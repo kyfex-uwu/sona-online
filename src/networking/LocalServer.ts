@@ -5,28 +5,36 @@ import {
     DetermineStarterEvent,
     DrawAction,
     Event,
-    GameStartEvent, PassAction,
+    GameStartEvent,
+    PassAction,
     PlaceAction,
-    RequestSyncEvent, ScareAction, SyncEvent
+    RequestSyncEvent,
+    ScareAction,
+    SyncEvent
 } from "./Events.js";
 import {game} from "../index.js";
-import Game from "../Game.js";
 import Card from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
-import {other} from "../GameElement.js";
-import {cSideTernary} from "../client/clientConsts.js";
+import {other, Side} from "../GameElement.js";
 import {wait} from "../client/clientConsts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
+import {sideTernary} from "../consts.js";
+
+const log = (data: any) => {
+    //@ts-ignore
+    if(window.showNetworkLogs)
+        console.log(...data);
+}
 
 export function frontendInit(){
     network.clientGame=game.getGame();
-    console.log("network initialized :D")
+    log("network initialized :D")
 }
 
 const websocket = new WebSocket("ws://"+window.location.host);
@@ -34,7 +42,7 @@ const websocketReady = new Promise(r=>websocket.addEventListener("open",r));
 websocketReady.then(() => {
     websocket.onmessage = (message:MessageEvent<any>) => {
         const parsed = JSON.parse(message.data.toString());
-        if(parsed.error !== undefined) console.log("Server error: "+parsed.error)
+        if(parsed.error !== undefined) log("Server error: "+parsed.error)
         else network.receiveFromServer(parsed);
     }
 })
@@ -42,7 +50,7 @@ websocketReady.then(() => {
 network.sendToServer = (event) => {
     websocketReady.then(()=>{
         websocket.send(event.serialize());
-        console.log("sent "+event.serialize())
+        log("sent "+event.serialize())
     });
     return new Replyable(event);
 }
@@ -50,7 +58,7 @@ network.receiveFromServer = async (packed) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
-    console.log("<- "+packed.type+"\n"+event.serialize());
+    log("<- "+packed.type+"\n"+event.serialize());
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
@@ -58,11 +66,12 @@ network.receiveFromServer = async (packed) => {
     }
 
     if(event instanceof GameStartEvent){
-        game.setGame(new Game(event.data.deck, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}),
-            Game.localID, event.data.which));
-        game.changeView(cSideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
-        const myDeck = cSideTernary(game, game.deckA, game.deckB);
-        const theirDeck = cSideTernary(game, game.deckB, game.deckA);
+        game.getGame().setDeck(Side.A, event.data.deck);
+        game.getGame().setDeck(Side.B, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}));
+        game.getGame().setMySide(event.data.which);
+        game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        const myDeck = sideTernary(game.getMySide(), game.deckA, game.deckB);
+        const theirDeck = sideTernary(other(game.getMySide()), game.deckA, game.deckB);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const card of event.data.deck){
             const visualCard = game.addElement(new VisualCard(game, new Card(cards[card.type]!, game.getMySide(), card.id),
@@ -99,7 +108,8 @@ network.receiveFromServer = async (packed) => {
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
-                game.setState(new VTurnState(event.data.starter, game), new TurnState(game.getGame(), event.data.starter));
+                game.setState(new VTurnState(event.data.starter, game),
+                    new TurnState(game.getGame(), event.data.starter, false));
 
                 for(const field of game.fieldsA)
                     field.getCard()?.flipFaceup();
@@ -127,14 +137,14 @@ network.receiveFromServer = async (packed) => {
             element instanceof VisualCard && element.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);
         card.removeFromHolder();
-        (cSideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
+        (sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
             .addCard(card);
         card[event.data.faceUp?"flipFaceup":"flipFacedown"]();
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
         }
     }else if(event instanceof DrawAction){
-        cSideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
+        sideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
 
         if(game.state instanceof VTurnState && event.data.isAction !== false){
             game.state.decrementTurn();
@@ -145,8 +155,8 @@ network.receiveFromServer = async (packed) => {
         }
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
-            const scared = cSideTernary(event.data.scaredSide, game.fieldsA, game.fieldsB)[event.data.scaredPos-1]!.getCard();
-            if (scared !== undefined) cSideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+            const scared = sideTernary(event.data.scaredSide, game.fieldsA, game.fieldsB)[event.data.scaredPos-1]!.getCard();
+            if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         }
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
@@ -154,14 +164,14 @@ network.receiveFromServer = async (packed) => {
     }
 
     else if(event instanceof SyncEvent){
-        console.log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        console.log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
     }
 }
 

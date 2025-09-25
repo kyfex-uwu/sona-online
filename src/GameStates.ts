@@ -17,10 +17,13 @@ export class BeforeGameState extends GameState{}
 //During a player's turn
 export class TurnState extends GameState{
     public readonly turn;
+    public readonly crisis;
     public actionsLeft=2;
-    constructor(game:Game, turn:Side){
+    constructor(game:Game, turn:Side, crisis?:boolean){
         super(game);
         this.turn=turn;
+        this.crisis=crisis ?? !sideTernary(turn, game.fieldsA, game.fieldsB).some(card => card !== undefined);
+        if(this.crisis) this.actionsLeft=3;
     }
     swapAway() {
         super.swapAway();

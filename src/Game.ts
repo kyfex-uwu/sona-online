@@ -24,7 +24,8 @@ export type MiscData = {
 //A logical game
 export default class Game{
     public readonly gameID:string;
-    public readonly mySide:Side;
+    public _mySide:Side;
+    public get mySide(){ return this._mySide; }
 
     public readonly fieldsA:[Card|undefined,Card|undefined,Card|undefined] =
         [undefined,undefined,undefined];
@@ -75,12 +76,16 @@ export default class Game{
      */
     public constructor(deckA:Array<{type:string, id:number}>, deckB:Array<{type:string,id:number}>, gameID:string, side?:Side) {
         this.gameID = gameID;
-        this.mySide=side||Side.A;
-        this.deckA.splice(0,0,...deckA.map(data=> new Card(cards[data.type]!, Side.A, data.id)));
-        this.deckB.splice(0,0,...deckB.map(data=> new Card(cards[data.type]!, Side.B, data.id)));
+        this._mySide=side||Side.A;
+        this.setDeck(Side.A, deckA);
+        this.setDeck(Side.B, deckB);
         for(const card of this.deckA) this.cards.add(card);
         for(const card of this.deckB) this.cards.add(card);
     }
+    public setDeck(side:Side, deck:Array<{type:string, id:number}>){
+        sideTernary(side,this.deckA, this.deckB).splice(0,0,...deck.map(data=> new Card(cards[data.type]!, side, data.id)));
+    }
+    public setMySide(side:Side){ this._mySide=side; }
 
     //Sends an event to the client/server
     requestEvent(event:Event<any>){

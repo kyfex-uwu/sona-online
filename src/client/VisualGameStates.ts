@@ -1,13 +1,12 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
-import {cSideTernary} from "./clientConsts.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
-import {game} from "../index.js";
 import  VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
+import {sideTernary} from "../consts.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -24,9 +23,9 @@ export abstract class VisualGameState<T extends GameState>{
     constructor(game:VisualGame) {
         this.game=game;
     }
-    abstract visualTick(game: VisualGame):void;
+    abstract visualTick():void;
     init(){}
-    swapAway(game:VisualGame){}
+    swapAway(){}
     getNonVisState(){
         return this.game.getGame().state as unknown as T;
     }
@@ -50,9 +49,9 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
         this.addFeatures(StateFeatures.FIELDS_PLACEABLE);
     }
 
-    visualTick(game: VisualGame) {
-        if(cSideTernary(game, game.fieldsA, game.fieldsB).some(v=>v.getCard()!==undefined)){
-            game.setState(new VChoosingStartState(game), game.getGame().state);
+    visualTick() {
+        if(sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(v=>v.getCard()!==undefined)){
+            this.game.setState(new VChoosingStartState(this.game), this.game.getGame().state);
             //draw overlay (? what)
         }
     }
@@ -103,12 +102,12 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     }
     init() {
         super.init();
-        game.cursorActive=false;
+        this.game.cursorActive=false;
     }
 
-    visualTick(game: VisualGame) {}
-    swapAway(game: VisualGame) {
-        super.swapAway(game);
+    visualTick() {}
+    swapAway() {
+        super.swapAway();
         this.removeDraw();
     }
 }
@@ -132,14 +131,14 @@ export class VTurnState extends VisualGameState<TurnState>{
             StateFeatures.DECK_DRAWABLE);
 
         if(this.game.getGame().miscData.isFirstTurn && this.currTurn === this.game.getMySide()) {
-            cSideTernary(this.currTurn, game.deckA, game.deckB).drawCard();
+            sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
             network.sendToServer(new DrawAction({}));
         }
     }
 
-    visualTick(game: VisualGame): void {
-        if(game.getMySide() === this.currTurn){
-            const handSize=cSideTernary(game, game.getGame().handA, game.getGame().handB).length + (game.selectedCard !== undefined ? 1 : 0 );
+    visualTick(): void {
+        if(this.game.getMySide() === this.currTurn){
+            const handSize=sideTernary(this.game.getMySide(), this.game.getGame().handA, this.game.getGame().handB).length + (this.game.selectedCard !== undefined ? 1 : 0 );
             if(handSize > 5){
                 this.features.clear();
                 this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
@@ -162,7 +161,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         const state = this.game.getGame().state;
         if(state instanceof TurnState) {
             if(state.decrementTurn(true)){
-                game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+                this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
             }
         }
     }
@@ -171,7 +170,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         return state instanceof TurnState ? state.actionsLeft : 0;
     }
     canSelectHandCard(card: VisualCard): boolean {
-        return card.logicalCard.cardData.level === 1 || cSideTernary(this.game, this.game.fieldsA, this.game.fieldsB).some(field =>
+        return card.logicalCard.cardData.level === 1 || sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
             field.getCard()?.logicalCard.cardData.level === card.logicalCard.cardData.level-1);
     }
 }
@@ -191,16 +190,15 @@ export class VAttackingState extends VisualGameState<TurnState>{
     }
     init() {
         super.init();
-        game.changeView(cSideTernary(game, ViewType.FIELDS_A, ViewType.FIELDS_B));
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
 
         this.addFeatures(StateFeatures.ALL_FIELDS_SELECTABLE);
     }
 
-    visualTick(game: VisualGame): void {
-    }
-    swapAway(game: VisualGame) {
-        super.swapAway(game);
-        game.changeView(cSideTernary(game, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+    visualTick(): void {}
+    swapAway() {
+        super.swapAway();
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
     }
 
     returnToParent(){

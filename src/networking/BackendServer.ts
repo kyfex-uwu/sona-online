@@ -100,7 +100,7 @@ network.receiveFromClient= (packed, client) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
-    console.log("received "+event.serialize());
+    if(true) console.log("received "+event.serialize());
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
@@ -142,8 +142,6 @@ network.receiveFromClient= (packed, client) => {
                     deckB.splice(deckB.indexOf(toFront), 1);
                     deckB.splice(deckB.length-Math.floor(Math.random()*3), 0, toFront);
                 }
-                // console.log(deckA.map(card => cards[card.type]?.level))
-                // console.log(deckB.map(card => cards[card.type]?.level))
 
                 const game = new Game(deckA, deckB, uuid());
 
@@ -225,7 +223,7 @@ network.receiveFromClient= (packed, client) => {
                                 id: card.id,
                                 cardDataName:card.cardData.name,
                             }));
-                    event.game.state = new TurnState(event.game, startingSide);
+                    event.game.state = new TurnState(event.game, startingSide, false);
                 }
             }
         }
@@ -285,7 +283,6 @@ network.receiveFromClient= (packed, client) => {
                 if(!(event.game.state instanceof TurnState &&
                         event.game.state.turn === side &&//it is the player's turn
                         sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
-                    console.log("gorp", event.game.state, sideTernary(side, event.game.handA, event.game.handB).length)
                     rejectEvent(event);
                     return;
                 }
@@ -336,11 +333,9 @@ network.receiveFromClient= (packed, client) => {
                 side = Side.B;
             }
             if(side===undefined) return rejectEvent(event);
-            console.log("SCARING\n---")
 
             const scarer = sideTernary(side, event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos-1];
             const scared = sideTernary(side, event.game.fieldsB, event.game.fieldsA)[event.data.scaredPos-1];
-            console.log(scarer, scared, scarer?.cardData.stat(event.data.attackingWith) !== undefined , scared?.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)
             if(!(event.game.state instanceof TurnState &&
                     event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                     scarer !==undefined && scared!==undefined&&//the cards exist

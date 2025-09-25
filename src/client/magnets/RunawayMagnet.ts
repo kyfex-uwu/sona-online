@@ -1,10 +1,11 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {cSideTernary, updateOrder} from "../clientConsts.js";
+import {updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
 import type VisualCard from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {StateFeatures} from "../VisualGameStates.js";
+import {sideTernary} from "../../consts.js";
 
 
 export default class RunawayMagnet extends CardMagnet{
@@ -39,7 +40,7 @@ export default class RunawayMagnet extends CardMagnet{
     }
 
     addCard(card:VisualCard){
-        cSideTernary(this.game, this.game.getGame().runawayA, this.game.getGame().runawayB).push(card.logicalCard);
+        sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB).push(card.logicalCard);
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
@@ -55,7 +56,7 @@ export default class RunawayMagnet extends CardMagnet{
     }
     removeCard(){
         if(this.cards.length===0) return false;
-        cSideTernary(this.game, this.game.getGame().runawayA, this.game.getGame().runawayB).pop();
+        sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB).pop();
         this.unchildCard(this.cards[this.cards.length-1]!);
 
         return true;
