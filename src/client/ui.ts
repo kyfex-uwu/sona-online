@@ -32,6 +32,7 @@ const mouseData = {
     down:false,
     wasDown:false,
 };
+let p5Inst;
 new p5(p => {
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
@@ -56,22 +57,32 @@ new p5(p => {
         mouseData.wasDown=mouseData.down;
         mouseData.down=p.mouseIsPressed;
 
+        buttons.length=0;
         const scale = Math.min(p.windowWidth/4,p.windowHeight/3);
-        buttonWasClicked=false;
         for(const callbackList of Object.entries(drawCallbacks)
             .toSorted((e1, e2)=>parseFloat(e1[0])-parseFloat(e2[0]))){
             for(const callback of callbackList[1]) callback(p, scale);
         }
     };
+    p5Inst=p;
 }, document.getElementById("uiLayer")!);
+clickListener(()=>{
+    for(const b of buttons){
+        if(buttonData[b.id] && p5Inst!.mouseX>=b.x&&p5Inst!.mouseX<=b.x+b.w&&p5Inst!.mouseY>=b.y&&p5Inst!.mouseY<=b.y+b.h){
+            b.onClick();
+            buttonData[b.id]=false;
+            return true;
+        }
+    }
+    return false;
+})
 
 let _buttonId=0;
 //This function returns a valid, unique button id to be used in {@link button}
 export function buttonId(){ return _buttonId++; }
 const buttonData:{[k:number]:boolean}={};
 
-let buttonWasClicked=false;
-clickListener(()=>buttonWasClicked);//todo
+const buttons:{x:number,y:number,w:number,h:number,id:number,onClick:()=>void}[]=[];
 /**
  * Draws and handles a button
  * @param p5 the p5 instance
@@ -119,10 +130,10 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
         p5.textSize(scale*50*(w-52*scale)/textWidth);
     p5.text(text,x+w/2,y+h/2);
 
-    if(!buttonWasClicked && !disabled && isIn && mouseData.wasDown && !mouseData.down && buttonData[buttonId]){
-        onClick();
-        buttonData[buttonId]=false;
-        buttonWasClicked=true;
+    if(!disabled){
+        buttons.push({
+            x,y,w,h,onClick,id:buttonId,
+        });
     }
     if(isIn && !mouseData.wasDown && mouseData.down) buttonData[buttonId]=true;
     if(!isIn) buttonData[buttonId]=false;

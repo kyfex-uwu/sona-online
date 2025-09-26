@@ -28,6 +28,9 @@ export default class Card implements GameElement{
     public readonly side:Side;
     public readonly id:number;
 
+    public miscData: { [k: string]: any } = {};
+    public hasAttacked=false;
+
     /**
      * Creates a logical card
      * @param cardData The card data

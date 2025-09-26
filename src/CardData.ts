@@ -1,6 +1,50 @@
-import {Stat} from "./Card.js";
+import Card, {Stat} from "./Card.js";
+import type Game from "./Game.js";
 
 let globalID=0;
+
+export class CardActionType<T>{
+    private static nextId=0;
+    public readonly id=CardActionType.nextId++;
+
+    public static readonly ACTION = new CardActionType<
+        (c:Card,g:Game)=>void>();
+    public static readonly LAST_ACTION = new CardActionType<
+        (c:Card,g:Game)=>void>();
+    public static readonly PLACED = new CardActionType<
+        (c:Card,g:Game)=>void>();
+    public static readonly SCARED = new CardActionType<
+        (self:Card,scarer:Card,stat:Stat|"card",game:Game)=>void>();
+    public static readonly GET_STATS = new CardActionType<
+        (c:Card,g:Game)=>[number|undefined,number|undefined,number|undefined]>();
+    public static readonly INTERRUPT_CRISIS = new CardActionType<
+        (c:Card, g:Game)=>void>();
+    public static readonly INTERRUPT_SCARE = new CardActionType<
+        (self:Card, scared:Card, scarer:Card, stat:Stat|"card", statg:Game)=>void>();
+
+    public static readonly TURN_START = new CardActionType<
+        (self:Card, game:Game)=>void>();
+    public static readonly IS_FREE = new CardActionType<
+        (self:Card, game:Game)=>boolean>();
+    public static readonly SHOULD_SHOW_HAND = new CardActionType<
+        (self:Card, game:Game)=>boolean>();
+}
+
+export enum Species{
+    CANINE,
+    FELINE,
+    BAT,
+    MUSTELOID,
+    LAGOMORPH,
+    EQUINE,
+    REPTILE,
+    AVIAN,
+    RODENTIA,
+    VULPES,
+    AMPHIBIAN,
+
+    UNKNOWN,
+}
 
 //The data of a card
 export default class CardData{
@@ -8,21 +52,30 @@ export default class CardData{
     public readonly stats: [number|undefined,number|undefined,number|undefined];
     public readonly id:number;
     public readonly level:1|2|3;
-    public readonly name:string
+    public readonly name:string;
+    public readonly species;
+
+    private cardActions:{ [k:number]:any}={};
 
     /**
      * Creates a card data
      * @param name The name of the card data (should be the same as its key in {@link cards})
      * @param stats The stats of the card: red, blue, yellow
      * @param level The level of the card
+     * @param species The species of the card
      * @param imagePath The image of the card
      */
-    constructor(name:string, stats:[number|undefined,number|undefined,number|undefined], level:1|2|3, imagePath:string=name) {
+    constructor(name:string,
+                stats:[number|undefined,number|undefined,number|undefined],
+                level:1|2|3,
+                species:Species,
+                imagePath:string=name) {
         this.imagePath=imagePath;
         this.stats=stats;
         this.level=level;
         this.id=globalID++;
         this.name=name;
+        this.species=species;
     }
     stat(stat:Stat){
         switch(stat){
@@ -30,5 +83,16 @@ export default class CardData{
             case Stat.BLUE: return this.stats[1];
             case Stat.YELLOW: return this.stats[2];
         }
+    }
+
+    with<T>(type:CardActionType<T>, value:T){
+        this.cardActions[type.id]=value;
+        return this;
+    }
+    free(){
+        return this.with(CardActionType.IS_FREE, ()=>true);
+    }
+    getAction<T>(type:CardActionType<T>):T{
+        return this.cardActions[type.id];
     }
 }

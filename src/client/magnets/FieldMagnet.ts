@@ -29,7 +29,8 @@ export default class FieldMagnet extends CardMagnet{
                 const state = this.game.state;
 
                 if(this.game.selectedCard !== undefined &&
-                    state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide()){
+                    state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide() &&
+                    state.canSelectHandCard(this.game.selectedCard)){//todo: this is technically a bandaid fix
                     //place card
                     const card = this.game.selectedCard;
                     if(this.addCard(this.game.selectedCard)) {

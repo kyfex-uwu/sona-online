@@ -2,9 +2,10 @@ import {AmbientLight, Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from
 import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
-import {FindGameEvent} from "./networking/Events.js";
+import {FindGameEvent, RequestSyncEvent} from "./networking/Events.js";
 import cards from "./Cards.js";
 import type CardData from "./CardData.js";
+import {network} from "./networking/Server.js";
 
 /////
 // version 0.1.0
@@ -75,3 +76,7 @@ renderer.setAnimationLoop(() => {
 });
 
 frontendInit();
+
+// setInterval(()=>{
+//     network.sendToServer(new RequestSyncEvent({}));
+// },1000)

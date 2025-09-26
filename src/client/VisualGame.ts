@@ -34,8 +34,6 @@ export enum ViewType{
     FIELDS_B,
 }
 
-let debugLast="";
-
 const previewImages:{[k:string]:p5.Image|true} = {};
 
 //A *visual* game. This should manage everything that's part of the player's game experience. This wraps a logical {@link Game}
@@ -85,6 +83,7 @@ export default class VisualGame {
         oldState.swapAway();
         newVState.init();
     }
+    public debugLast="";
 
     /**
      * Creates a new visual game
@@ -179,7 +178,7 @@ ${this.state.getActionsLeft()}`, 0,0);
             }
 
             p5.textAlign(p5.LEFT,p5.BOTTOM);
-            p5.text(debugLast, 0,p5.height);
+            p5.text(this.debugLast, 0,p5.height);
 
             if(this.previewCard !== undefined){
                 p5.textAlign(p5.RIGHT,p5.TOP);

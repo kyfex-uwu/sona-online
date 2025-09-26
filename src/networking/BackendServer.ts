@@ -1,7 +1,7 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
-    AcceptEvent,
+    AcceptEvent, cardsTransform,
     ClarifyCardEvent,
     DetermineStarterEvent, DiscardEvent,
     DrawAction,
@@ -11,9 +11,9 @@ import {
     GameStartEventWatcher,
     PassAction,
     PlaceAction,
-    RejectEvent,
+    RejectEvent, RequestSyncEvent,
     ScareAction,
-    StartRequestEvent
+    StartRequestEvent, StringReprSyncEvent, SyncEvent
 } from "./Events.js";
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
@@ -337,6 +337,7 @@ network.receiveFromClient= (packed, client) => {
             if(!(event.game.state instanceof TurnState &&
                     event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                     scarer !==undefined && scared!==undefined&&//the cards exist
+                    !scarer.hasAttacked&&//if the card hasnt scared yet
                     scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
                 rejectEvent(event);
                 return;
@@ -349,7 +350,7 @@ network.receiveFromClient= (packed, client) => {
                 attackingWith:event.data.attackingWith,
                 failed:!(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
             });
-
+            scarer.hasAttacked=true;
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 user.send(toSend);
@@ -387,8 +388,8 @@ network.receiveFromClient= (packed, client) => {
     // else if(event instanceof RequestSyncEvent){
     //     if(event.game!==undefined) {
     //         event.sender?.send(new SyncEvent({
-    //             fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
-    //             fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [SerializableCard|undefined, SerializableCard|undefined, SerializableCard|undefined],
+    //             fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
+    //             fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
     //             deckA: cardsTransform(event.game.deckA),
     //             deckB: cardsTransform(event.game.deckB),
     //             handA: cardsTransform(event.game.handA),

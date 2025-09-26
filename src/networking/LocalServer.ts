@@ -9,7 +9,7 @@ import {
     PassAction,
     PlaceAction,
     RequestSyncEvent,
-    ScareAction,
+    ScareAction, StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
 import {game} from "../index.js";
@@ -181,6 +181,8 @@ network.receiveFromServer = async (packed) => {
         log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
         log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
         log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
+    }else if(event instanceof StringReprSyncEvent){
+        game.debugLast=event.data.str;
     }
 }
 
