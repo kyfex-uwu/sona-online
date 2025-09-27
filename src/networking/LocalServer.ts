@@ -25,6 +25,7 @@ import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 import {sideTernary} from "../consts.js";
+import {loadFrontendWrappers} from "../client/VisualCardData.js";
 
 const log = (data: any) => {
     //@ts-ignore
@@ -34,6 +35,7 @@ const log = (data: any) => {
 
 export function frontendInit(){
     network.clientGame=game.getGame();
+    loadFrontendWrappers();
     log("network initialized :D")
 }
 

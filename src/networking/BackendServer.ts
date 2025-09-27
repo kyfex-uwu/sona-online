@@ -22,6 +22,8 @@ import {shuffled, sideTernary} from "../consts.js";
 import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
+import {loadBackendWrappers} from "./BackendCardData.js";
+import {CardActionType} from "../CardData.js";
 
 export type Client ={send:(v:Event<any>)=>void};
 const usersFromGameIDs:{[k:string]:Array<Client>}={};
@@ -29,6 +31,7 @@ const gamesFromUser:Map<any, Game> = new Map();
 const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
 
 export function backendInit(){
+    loadBackendWrappers();
     console.log("Backend initialized");
 }
 function rejectEvent(event:Event<any>){
@@ -351,10 +354,14 @@ network.receiveFromClient= (packed, client) => {
                 failed:!(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
             });
             scarer.hasAttacked=true;
+            sideTernary(scared.side, event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos-1]=undefined;
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 user.send(toSend);
             }
+
+            const action = scared.cardData.getAction(CardActionType.AFTER_SCARED);
+            if(action !== undefined) action({self:scared, scarer, game:event.game, stat:event.data.attackingWith});
 
             endTurn(event.game);
         }
@@ -385,27 +392,27 @@ network.receiveFromClient= (packed, client) => {
     }
 
     //DEBUG, DONT UNCOMMENT UNLESS DEVELOPING
-    // else if(event instanceof RequestSyncEvent){
-    //     if(event.game!==undefined) {
-    //         event.sender?.send(new SyncEvent({
-    //             fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-    //             fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-    //             deckA: cardsTransform(event.game.deckA),
-    //             deckB: cardsTransform(event.game.deckB),
-    //             handA: cardsTransform(event.game.handA),
-    //             handB: cardsTransform(event.game.handB),
-    //             runawayA: cardsTransform(event.game.runawayA),
-    //             runawayB: cardsTransform(event.game.runawayB),
-    //         }));
-    //         network.replyToClient(event, new StringReprSyncEvent({
-    //             str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
-    //                 `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
-    //                 `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
-    //                 `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
-    //                 `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
-    //         }, undefined, undefined, event.id));
-    //     }
-    // }
+    else if(event instanceof RequestSyncEvent){
+        if(event.game!==undefined) {
+            event.sender?.send(new SyncEvent({
+                fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
+                fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
+                deckA: cardsTransform(event.game.deckA),
+                deckB: cardsTransform(event.game.deckB),
+                handA: cardsTransform(event.game.handA),
+                handB: cardsTransform(event.game.handB),
+                runawayA: cardsTransform(event.game.runawayA),
+                runawayB: cardsTransform(event.game.runawayB),
+            }));
+            network.replyToClient(event, new StringReprSyncEvent({
+                str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
+                    `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
+                    `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
+                    `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
+                    `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
+            }, undefined, undefined, event.id));
+        }
+    }
 }
 network.replyToClient = (replyTo, replyWith) => {
     replyTo.sender?.send(replyWith);
