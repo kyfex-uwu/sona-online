@@ -6,6 +6,7 @@ let globalID=0;
 export class CardActionType<P extends {[k:string]:any}, R>{
     private static nextId=0;
     public readonly id=CardActionType.nextId++;
+    private constructor() {}
 
     public static readonly ACTION = new CardActionType<
         {self:Card,game:Game}, void>();

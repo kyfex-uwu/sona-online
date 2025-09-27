@@ -55,10 +55,11 @@ export default class DeckMagnet extends CardMagnet{
         super.addCard(card);
         return true;
     }
-    removeCard(){
-        if(this.cards.length===0) return false;
-        sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB).pop();
-        this.unchildCard(this.cards[this.cards.length-1]!);
+    removeCard(card:VisualCard){
+        if(this.cards.find(c=>c===card) === undefined) return false;
+        const deck = sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB);
+        deck.splice(deck.indexOf(card.logicalCard),1);
+        this.unchildCard(card);
 
         return true;
     }
@@ -79,10 +80,11 @@ export default class DeckMagnet extends CardMagnet{
     /**
      * Draws a card and puts in in the player's hand
      */
-    drawCard(){
+    drawCard(bottom?:boolean){
         const hand = sideTernary(this.getSide(), this.game.handA, this.game.handB);
         let tempCard = this.cards[this.cards.length - 1] as VisualCard;
-        if (this.removeCard()) {
+        if(bottom) tempCard=this.cards[0] as VisualCard;
+        if (this.removeCard(tempCard)) {
             tempCard.flipFaceup();
             hand.addCard(tempCard, hand.cards.length);
             return tempCard;

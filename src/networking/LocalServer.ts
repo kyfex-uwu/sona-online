@@ -1,6 +1,7 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
+    CardAction, CardActionOptions,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
@@ -26,6 +27,7 @@ import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 import {sideTernary} from "../consts.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
+import {CardActionType} from "../CardData.js";
 
 const log = (data: any) => {
     //@ts-ignore
@@ -171,6 +173,12 @@ network.receiveFromServer = async (packed) => {
         }
         if(game.state instanceof VTurnState){
             game.state.decrementTurn();
+        }
+    }else if(event instanceof CardAction){
+        switch(event.data.actionName){
+            case CardActionOptions.BOTTOM_DRAW:
+                sideTernary(event.data.cardData.side, game.deckA, game.deckB).drawCard(true);
+                break;
         }
     }
 

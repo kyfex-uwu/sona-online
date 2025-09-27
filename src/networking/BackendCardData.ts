@@ -1,7 +1,7 @@
 import CardData, {CardActionType} from "../CardData.js";
 import cards from "../Cards.js";
 import {network} from "./Server.js";
-import {DrawAction} from "./Events.js";
+import {CardAction, CardActionOptions, DrawAction} from "./Events.js";
 
 export function loadBackendWrappers(){}
 
@@ -19,4 +19,21 @@ wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, stat, 
         isAction:false,
         side:self.side,
     }, game));
-})
+});
+wrap(cards["og-024"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    network.sendToClients(new DrawAction({
+        isAction:false,
+        side:self.side,
+    }, game));
+});
+wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    network.sendToClients(new CardAction({
+        cardId: self.id,
+        actionName:CardActionOptions.BOTTOM_DRAW,
+        cardData:{side:self.side},
+    }, game));
+});

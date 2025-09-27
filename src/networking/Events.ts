@@ -112,11 +112,16 @@ export class ScareAction extends ActionEvent<{
     scaredSide:Side,
 }>{}
 
+type CardActionOption<T> = {};
+export const CardActionOptions = {
+    BOTTOM_DRAW: "bottom_draw" as CardActionOption<{side:Side}>
+};
+
 //Performs a specific card action
-export class CardAction extends ActionEvent<{
+export class CardAction<T extends SerializableType> extends ActionEvent<{
     cardId:number,
-    actionName:string,
-    data:SerializableType
+    actionName:CardActionOption<T>,
+    cardData:T
 }>{}
 
 //Discards a card

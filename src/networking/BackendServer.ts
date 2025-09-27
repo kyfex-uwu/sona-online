@@ -269,6 +269,9 @@ network.receiveFromClient= (packed, client) => {
                 }));
             }
 
+            const action = card.cardData.getAction(CardActionType.PLACED);
+            if(action !== undefined) action({self:card, game:event.game});
+
             endTurn(event.game);
             acceptEvent(event);
         }
