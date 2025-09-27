@@ -3,31 +3,31 @@ import type Game from "./Game.js";
 
 let globalID=0;
 
-export class CardActionType<T>{
+export class CardActionType<P extends {[k:string]:any}, R>{
     private static nextId=0;
     public readonly id=CardActionType.nextId++;
 
     public static readonly ACTION = new CardActionType<
-        (c:Card,g:Game)=>void>();
+        {self:Card,game:Game}, void>();
     public static readonly LAST_ACTION = new CardActionType<
-        (c:Card,g:Game)=>void>();
+        {self:Card,game:Game}, void>();
     public static readonly PLACED = new CardActionType<
-        (c:Card,g:Game)=>void>();
-    public static readonly SCARED = new CardActionType<
-        (self:Card,scarer:Card,stat:Stat|"card",game:Game)=>void>();
+        {self:Card,game:Game}, void>();
+    public static readonly AFTER_SCARED = new CardActionType<
+        {self:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
     public static readonly GET_STATS = new CardActionType<
-        (c:Card,g:Game)=>[number|undefined,number|undefined,number|undefined]>();
+        {self:Card,game:Game}, [number|undefined,number|undefined,number|undefined]>();
     public static readonly INTERRUPT_CRISIS = new CardActionType<
-        (c:Card, g:Game)=>void>();
+        {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardActionType<
-        (self:Card, scared:Card, scarer:Card, stat:Stat|"card", statg:Game)=>void>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
 
     public static readonly TURN_START = new CardActionType<
-        (self:Card, game:Game)=>void>();
+        {self:Card,game:Game}, void>();
     public static readonly IS_FREE = new CardActionType<
-        (self:Card, game:Game)=>boolean>();
+        {self:Card,game:Game}, boolean>();
     public static readonly SHOULD_SHOW_HAND = new CardActionType<
-        (self:Card, game:Game)=>boolean>();
+        {self:Card,game:Game}, boolean>();
 }
 
 export enum Species{
@@ -85,14 +85,14 @@ export default class CardData{
         }
     }
 
-    with<T>(type:CardActionType<T>, value:T){
+    with<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, value:(params:P)=>R){
         this.cardActions[type.id]=value;
         return this;
     }
     free(){
         return this.with(CardActionType.IS_FREE, ()=>true);
     }
-    getAction<T>(type:CardActionType<T>):T{
+    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];
     }
 }
