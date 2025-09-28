@@ -136,7 +136,7 @@ export default class VisualGame {
                 } else {
                     previewImages[this.previewCard.cardData.imagePath] = true;
                     const path = this.previewCard.cardData.imagePath
-                    p5.loadImage(`/assets/card-images/${path}.jpg`, (image: p5.Image) => {
+                    p5.loadImage(`/assets/card-images/${path}`, (image: p5.Image) => {
                         previewImages[path] = image;//.mask(the card mask)
                     })
                 }

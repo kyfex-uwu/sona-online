@@ -1,4 +1,5 @@
 import {
+    BoxGeometry,
     Color,
     CylinderGeometry,
     Euler,
@@ -43,7 +44,15 @@ const cardMat = new MeshPhongMaterial({
     shininess: 150,
 });
 const cardBackMat = cardMat.clone();
-cardBackMat.map = textureLoader.load( "/assets/card-images/card_back.jpg")
+cardBackMat.map = textureLoader.load( "/assets/card-images/card_back.jpg");
+
+const cardHighlight = new Mesh(new BoxGeometry(75*1.3,0,100*1.3), new MeshBasicMaterial({
+    map:textureLoader.load("/assets/card-images/card_highlight.jpg"),
+    alphaMap: textureLoader.load("/assets/card-images/card_highlight_alpha.jpg"),
+    transparent: true,
+    depthWrite:false,
+}));
+cardHighlight.position.set(0,-1,0);
 
 //A *visual* card. This wraps a logical {@link Card}
 export default class VisualCard extends PositionedVisualGameElement{
@@ -55,6 +64,7 @@ export default class VisualCard extends PositionedVisualGameElement{
     private readonly flipGroup: Group = new Group();
     private enabledMaterial:MeshPhongMaterial|undefined;
     private disabledMaterial:MeshPhongMaterial|undefined;
+    private readonly highlightObj = cardHighlight.clone();
 
     /**
      * Creates a visual card
@@ -67,6 +77,8 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         this._logicalCard=card;
         this.model.add(this.flipGroup);
+        this.model.add(this.highlightObj);
+        this.highlight(false);
         this.populate(card);
 
         this.game.scene.add(this.model);
@@ -95,7 +107,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         let texture:Texture|undefined;
 
         await Promise.all([this.createModel(),
-        textureLoader.loadAsync(`/assets/card-images/${card.cardData.imagePath}.jpg`).then(t=>{
+        textureLoader.loadAsync(`/assets/card-images/${card.cardData.imagePath}`).then(t=>{
             texture=t;
         })]);
 
@@ -139,7 +151,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         actualModel.add(this.model.userData.blueStat);
         actualModel.add(this.model.userData.yellowStat);
 
-        textureLoader.loadAsync(`/assets/card-images/${this.logicalCard.cardData.imagePath}.jpg`).then((texture)=>{
+        textureLoader.loadAsync(`/assets/card-images/${this.logicalCard.cardData.imagePath}`).then((texture)=>{
             if(this.flipGroup.children[0] !== actualModel) return;
 
             this.enabledMaterial= cardMat.clone();
@@ -250,6 +262,10 @@ export default class VisualCard extends PositionedVisualGameElement{
     removeFromHolder(){
         this.holder?.unchildCard(this);
         this.holder=undefined;
+    }
+
+    highlight(isHighlighted:boolean){
+        this.highlightObj.visible=isHighlighted;
     }
 }
 updateOrder[VisualCard.name] = 0;

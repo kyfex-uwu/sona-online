@@ -4,13 +4,16 @@ import {updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
-import type VisualCard from "../VisualCard.js";
+import VisualCard from "../VisualCard.js";
 import {StateFeatures, VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
+import Card from "../../Card.js";
+import cards from "../../Cards.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<VisualCard> = [];
+    private readonly utilityCard;
     /**
      * Creates a deck magnet
      * @param side Which side this element belongs to
@@ -37,6 +40,8 @@ export default class DeckMagnet extends CardMagnet{
             },
             ...props,
         });
+
+        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, -1),this.position, this.rotation));
     }
 
     addCard(card:VisualCard){
@@ -89,6 +94,13 @@ export default class DeckMagnet extends CardMagnet{
             hand.addCard(tempCard, hand.cards.length);
             return tempCard;
         }
+    }
+
+    visualTick() {
+        super.visualTick();
+        this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
+        this.utilityCard.rotation.copy(this.rotation);
+        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === this.game.getMySide() && this.game.selectedCard === undefined);
     }
 }
 updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;

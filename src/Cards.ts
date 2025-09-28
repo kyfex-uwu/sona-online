@@ -149,6 +149,7 @@ setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)//todo
     }));
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
 
-setCard(new CardData("unknown", [0,0,0], 1, Species.UNKNOWN));
+setCard(new CardData("unknown", [0,0,0], -1, Species.UNKNOWN));
+setCard(new CardData("utility", [0,0,0], -1, Species.UNKNOWN, "utility.png"));
 
 export default cards;
