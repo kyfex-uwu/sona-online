@@ -50,17 +50,23 @@ game.changeView(ViewType.WHOLE_BOARD_A);
 setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
-            const toReturn = [];
+            const toReturn = [
+                "og-022",
+                "og-024",
+                "og-025"
+            ];
             const alreadyAdded:{[k:string]:boolean} = {};
             const cardsValues = Object.values(cards);
             let oneFlag = false;
             for(let i=0;i<20;i++) {
+                if(toReturn[i] !== undefined) continue;
+
                 let toAdd:CardData;
                 do {
                     toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
                 }while(toAdd === cards["unknown"] || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
 
-                toReturn.push(toAdd.name);
+                toReturn[i]=toAdd.name;
                 alreadyAdded[toAdd.name]=true;
                 oneFlag = oneFlag || toAdd.level === 1;
             }

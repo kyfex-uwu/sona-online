@@ -130,6 +130,8 @@ export class DiscardEvent extends Event<{which:number}>{}
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
 
+export class PickCardEvent extends Event<{which:number}>{}
+
 export type Card = {
     id:number,
     cardData?:string,

@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, PickCardsState, TurnState} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
@@ -23,13 +23,13 @@ export abstract class VisualGameState<T extends GameState>{
     constructor(game:VisualGame) {
         this.game=game;
     }
-    abstract visualTick():void;
+    visualTick(){};
     init(){}
     swapAway(){}
+
     getNonVisState(){
         return this.game.getGame().state as unknown as T;
     }
-
     hasFeatures(...features:StateFeatures[]){
         for(const feature of features) if(!this.features.has(feature)) return false;
         return true;
@@ -105,7 +105,6 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
         this.game.cursorActive=false;
     }
 
-    visualTick() {}
     swapAway() {
         super.swapAway();
         this.removeDraw();
@@ -196,7 +195,6 @@ export class VAttackingState extends VisualGameState<TurnState>{
         this.addFeatures(StateFeatures.ALL_FIELDS_SELECTABLE);
     }
 
-    visualTick(): void {}
     swapAway() {
         super.swapAway();
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
@@ -205,6 +203,22 @@ export class VAttackingState extends VisualGameState<TurnState>{
     returnToParent(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
+    canSelectHandCard(card: VisualCard): boolean {
+        return false;
+    }
+}
+
+export class VPickCardsState extends VisualGameState<PickCardsState>{
+    constructor(game:VisualGame) {
+        super(game);
+    }
+    init() {
+        super.init();
+    }
+    swapAway() {
+        super.swapAway();
+    }
+
     canSelectHandCard(card: VisualCard): boolean {
         return false;
     }

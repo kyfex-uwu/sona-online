@@ -9,7 +9,7 @@ import {
     FindGameEvent,
     GameStartEvent,
     GameStartEventWatcher,
-    PassAction,
+    PassAction, PickCardEvent,
     PlaceAction,
     RejectEvent, RequestSyncEvent,
     ScareAction,
@@ -21,7 +21,7 @@ import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary} from "../consts.js";
 import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, PickCardsState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {CardActionType} from "../CardData.js";
 
@@ -106,6 +106,7 @@ network.receiveFromClient= (packed, client) => {
         return;
     }
 
+    //todo: verify things are in array bounds!!!!
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
             return;
@@ -390,6 +391,17 @@ network.receiveFromClient= (packed, client) => {
 
             sideTernary(side, event.game.runawayA, event.game.runawayB).push(
                 hand.splice(hand.indexOf(toDiscard),1)[0]!);
+            acceptEvent(event);
+        }
+    }else if(event instanceof PickCardEvent){
+        if(event.game !== undefined){
+            if (!(event.game.state instanceof PickCardsState &&
+                event.sender === event.game.player(event.game.state.parentState.turn) &&//if its the player's turn
+                event.data.which>=0&&event.data.which<event.game.state.cardsToPick.length)) {//the card picked is in the array
+                rejectEvent(event);
+                return;
+            }
+            event.game.state.pick(event.data.which);
             acceptEvent(event);
         }
     }

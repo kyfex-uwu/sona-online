@@ -1,4 +1,8 @@
 import CardData, {CardActionType} from "../CardData.js";
+import cards from "../Cards.js";
+import {game as visualGame} from "../index.js";
+import {VPickCardsState} from "./VisualGameStates.js";
+import type {PickCardsState} from "../GameStates.js";
 
 export function loadFrontendWrappers(){}
 
@@ -8,3 +12,9 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
         return wrapper(oldAction, args);
     });
 }
+
+wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    visualGame.setState(new VPickCardsState(visualGame), game.state as PickCardsState);
+});

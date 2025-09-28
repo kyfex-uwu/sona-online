@@ -90,7 +90,7 @@ export default class CardData{
         this.cardActions[type.id]=value;
         return this;
     }
-    free(){
+    setFree(){
         return this.with(CardActionType.IS_FREE, ()=>true);
     }
     getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
