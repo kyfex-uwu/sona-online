@@ -16,7 +16,7 @@ export abstract class VisualGameElement{
     //Removes this game element from the game
     removeFromGame(){}
 
-    protected game:VisualGame;
+    public readonly game:VisualGame;
 }
 
 //A game element that belongs to a specific side

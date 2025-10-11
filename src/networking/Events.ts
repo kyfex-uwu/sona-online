@@ -43,12 +43,15 @@ export abstract class Event<T extends SerializableEventData>{
 }
 
 //--
-
+export enum ClarificationJustification{
+    BROWNIE
+}
 //Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
     id:number,
     cardDataName?:string,
-    faceUp?:boolean
+    faceUp?:boolean,
+    justification?:ClarificationJustification
 }>{}
 
 //(S2C) Rejects a client-side event
@@ -112,10 +115,20 @@ export class ScareAction extends ActionEvent<{
     scaredSide:Side,
 }>{}
 
-type CardActionOption<T> = {};
+export type CardActionOption<T> = {};
 export const CardActionOptions = {
-    BOTTOM_DRAW: "bottom_draw" as CardActionOption<{side:Side}>
+    BOTTOM_DRAW: "bottom_draw" as CardActionOption<{side:Side}>,
+
+    K9_ALPHA: "k9_alpha" as CardActionOption<{ canineFields: [boolean, boolean, boolean] }>,
+    BROWNIE_DRAW: "brownie_draw" as CardActionOption<{id:number}>,
 };
+{
+    const options:{[key:string]:true} = {};
+    for (const option of Object.values(CardActionOptions)) {
+        if(options[option as string]) console.error(`Duplicate card action option: ${option}`);
+        options[option as string]=true;
+    }
+}
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{

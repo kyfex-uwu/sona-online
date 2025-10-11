@@ -9,6 +9,8 @@ import {StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js
 import {getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
+import {CardActionType} from "../../CardData.js";
+import {visualCardClientActions} from "../VisualCardData.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -34,8 +36,15 @@ export default class FieldMagnet extends CardMagnet{
                     //place card
                     const card = this.game.selectedCard;
                     if(this.addCard(this.game.selectedCard)) {
-                        this.game.frozen=true;
+                        if(this.game.selectedCard.logicalCard.cardData.getAction(CardActionType.PLACED) !== undefined){
+                            this.game.selectedCard.logicalCard.cardData.getAction(CardActionType.PLACED)!({
+                                self:this.game.selectedCard.logicalCard,
+                                game:this.game.getGame()
+                            });
+                        }
                         this.game.selectedCard = undefined;
+
+                        this.game.frozen=true;
                         this.game.sendEvent(new PlaceAction({
                             cardId: card.logicalCard.id,
                             position: this.which,
@@ -81,7 +90,12 @@ export default class FieldMagnet extends CardMagnet{
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
                                 } else if(intersects[0].object === this.card.model){
-                                    state.attackData.type = "card";
+                                    if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
+                                        if(visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card)) {
+                                            state.cancel();
+                                        }
+                                        return true;
+                                    }
                                 }
                                 state.cardIndex=this.which;
                             }
@@ -91,7 +105,7 @@ export default class FieldMagnet extends CardMagnet{
                                     this.card.model
                                 ].filter(mesh => mesh !== undefined));
                                 if (intersects[0] !== undefined) {
-                                    if (state.attackData.type !== "card" && getVictim(state.attackData.type) !== undefined) {
+                                    if (getVictim(state.attackData.type) !== undefined) {
                                         this.game.sendEvent(new ScareAction({
                                             scaredPos: this.which,
                                             scarerPos: state.cardIndex,
@@ -99,7 +113,8 @@ export default class FieldMagnet extends CardMagnet{
                                             scaredSide: this.game.getMySide(),
                                         }));
                                     }
-                                    state.returnToParent();
+                                    state.cancel();
+                                    return true;
                                 }
                             }
                         }
@@ -152,6 +167,7 @@ export default class FieldMagnet extends CardMagnet{
         if(this.card !== undefined){
             this.card.rotation = this.rotation.clone();//bruh
         }
+        // this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide());
     }
 }
 updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;

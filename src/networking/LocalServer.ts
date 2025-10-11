@@ -20,7 +20,7 @@ import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
-import {wait} from "../client/clientConsts.js";
+import {wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
@@ -98,7 +98,7 @@ network.receiveFromServer = async (packed) => {
 
         await wait(500);
     }else if (event instanceof ClarifyCardEvent){
-        const oldVCard = game.elements.find(e=>e instanceof VisualCard && e.logicalCard.id === event.data.id) as VisualCard;
+        const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
             const newCard = event.data.cardDataName !== undefined ?
                 new Card(cards[event.data.cardDataName!]!, oldVCard.logicalCard.side, oldVCard.logicalCard.id) :
@@ -146,7 +146,7 @@ network.receiveFromServer = async (packed) => {
         }
     }else if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
-            element instanceof VisualCard && element.logicalCard.id === event.data.cardId) as VisualCard;
+            VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);
         card.removeFromHolder();
         (sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
@@ -176,9 +176,17 @@ network.receiveFromServer = async (packed) => {
         }
     }else if(event instanceof CardAction){
         switch(event.data.actionName){
-            case CardActionOptions.BOTTOM_DRAW:
+            case CardActionOptions.BOTTOM_DRAW:{
                 sideTernary(event.data.cardData.side, game.deckA, game.deckB).drawCard(true);
-                break;
+            }break;
+            case CardActionOptions.BROWNIE_DRAW: {
+                const card = game.elements.find(element => VisualCard.getExactVisualCard(element) && (element as VisualCard).logicalCard.id === event.data.cardData.id) as VisualCard
+                if (card) {
+                    sideTernary(card.logicalCard.side, game.deckA, game.deckB).removeCard(card);
+                    sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
+                    card.flipFaceup();
+                }
+            }break;
         }
     }
 

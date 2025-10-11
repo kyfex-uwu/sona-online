@@ -32,7 +32,7 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     network.sendToClients(new CardAction({
-        cardId: self.id,
+        cardId: -1,
         actionName:CardActionOptions.BOTTOM_DRAW,
         cardData:{side:self.side},
     }, game));

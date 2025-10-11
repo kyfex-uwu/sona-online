@@ -25,12 +25,3 @@ export function removeClickListener(index:number){
 }
 
 export const updateOrder: {[k:string]:number}={};
-
-//@param ms The amount of milliseconds to wait
-export async function wait(ms:number){
-    let resolve:(v:any)=>void=()=>{};
-    const p = new Promise(r=>resolve=r);
-    setTimeout(resolve, ms);
-    await p;
-}
-

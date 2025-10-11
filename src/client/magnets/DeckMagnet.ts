@@ -8,12 +8,12 @@ import VisualCard from "../VisualCard.js";
 import {StateFeatures, VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
-import Card from "../../Card.js";
-import cards from "../../Cards.js";
+import type {CardWithRot} from "./RunawayMagnet.js";
 
 export default class DeckMagnet extends CardMagnet{
-    private cards:Array<VisualCard> = [];
-    private readonly utilityCard;
+    private cards:Array<CardWithRot> = [];
+    //Returns a snapshot of the current cards. DOES NOT return the actual data structure, this will not update
+    public getCards(){ return [...this.cards];}
     /**
      * Creates a deck magnet
      * @param side Which side this element belongs to
@@ -40,8 +40,6 @@ export default class DeckMagnet extends CardMagnet{
             },
             ...props,
         });
-
-        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, -1),this.position, this.rotation));
     }
 
     addCard(card:VisualCard){
@@ -49,11 +47,12 @@ export default class DeckMagnet extends CardMagnet{
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
+        const rotAmt = Math.random()*0.04-0.02;
         const newRot = new Euler().setFromQuaternion(this.rotation);
-        newRot.y+=Math.random()*0.04-0.02;
+        newRot.y+=rotAmt;
         card.rotation.copy(new Quaternion().setFromEuler(newRot));
         card.flipFacedown();
-        this.cards.push(card);
+        this.cards.push({card, rot:rotAmt});
         this.position.add(CardMagnet.offs);
         card.setHolder(this);
 
@@ -61,7 +60,7 @@ export default class DeckMagnet extends CardMagnet{
         return true;
     }
     removeCard(card:VisualCard){
-        if(this.cards.find(c=>c===card) === undefined) return false;
+        if(this.cards.find(data=>data.card===card) === undefined) return false;
         const deck = sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB);
         deck.splice(deck.indexOf(card.logicalCard),1);
         this.unchildCard(card);
@@ -69,13 +68,12 @@ export default class DeckMagnet extends CardMagnet{
         return true;
     }
     unchildCard(card:VisualCard){
-        let index = this.cards.indexOf(card);
+        let index = this.cards.findIndex(data=>data.card===card);
         if(index===-1) return;
-        this.cards.splice(this.cards.indexOf(card),1);
+        this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
-        while(this.cards[index] !== undefined){
-            this.cards[index]?.position.sub(CardMagnet.offs);
-            index++;
+        for(let i=index;i<this.cards.length;i++){
+            this.cards[i]?.card.position.sub(CardMagnet.offs);
         }
     }
     shouldSnapCards(): boolean {
@@ -87,9 +85,9 @@ export default class DeckMagnet extends CardMagnet{
      */
     drawCard(bottom?:boolean){
         const hand = sideTernary(this.getSide(), this.game.handA, this.game.handB);
-        let tempCard = this.cards[this.cards.length - 1] as VisualCard;
-        if(bottom) tempCard=this.cards[0] as VisualCard;
-        if (this.removeCard(tempCard)) {
+        let tempCard = this.cards[this.cards.length - 1]?.card as VisualCard;
+        if(bottom) tempCard=this.cards[0]?.card as VisualCard;
+        if (tempCard && this.removeCard(tempCard)) {
             tempCard.flipFaceup();
             hand.addCard(tempCard, hand.cards.length);
             return tempCard;
@@ -98,6 +96,10 @@ export default class DeckMagnet extends CardMagnet{
 
     visualTick() {
         super.visualTick();
+        for(const data of this.cards){
+            data.card.rotation = this.rotation.clone();
+            data.card.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,data.rot,0)))
+        }
         this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
         this.utilityCard.rotation.copy(this.rotation);
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === this.game.getMySide() && this.game.selectedCard === undefined);

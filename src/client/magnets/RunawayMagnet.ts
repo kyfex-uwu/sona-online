@@ -9,7 +9,7 @@ import {sideTernary} from "../../consts.js";
 import {DiscardEvent} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 
-type CardWithRot = {card:VisualCard,rot:number}
+export type CardWithRot = {card:VisualCard,rot:number}
 export default class RunawayMagnet extends CardMagnet{
     private cards:Array<CardWithRot> = [];
 
@@ -77,9 +77,8 @@ export default class RunawayMagnet extends CardMagnet{
         if(index===-1) return;
         this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
-        while(this.cards[index] !== undefined){
-            this.cards[index]?.card.position.sub(CardMagnet.offs);
-            index++;
+        for(let i=index;i<this.cards.length;i++){
+            this.cards[i]?.card.position.sub(CardMagnet.offs);
         }
     }
     shouldSnapCards(): boolean {
@@ -93,6 +92,8 @@ export default class RunawayMagnet extends CardMagnet{
             data.card.rotation = this.rotation.clone();
             data.card.rotation.y+=data.rot;
         }
+        this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
+        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide());
     }
 }
 updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;

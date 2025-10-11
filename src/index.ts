@@ -51,11 +51,10 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [
-                "og-022",
-                "og-024",
-                "og-025"
+                "og-005"
             ];
-            const alreadyAdded:{[k:string]:boolean} = {};
+            const alreadyAdded:{[k:string]:true} = {};
+            for(const card of toReturn) alreadyAdded[card]=true;
             const cardsValues = Object.values(cards);
             let oneFlag = false;
             for(let i=0;i<20;i++) {
@@ -86,3 +85,6 @@ frontendInit();
 // setInterval(()=>{
 //     network.sendToServer(new RequestSyncEvent({}));
 // },1000)
+
+// @ts-ignore
+window.logGame = ()=> console.log(game)

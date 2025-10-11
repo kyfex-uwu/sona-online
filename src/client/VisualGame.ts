@@ -1,4 +1,4 @@
-import {Euler, Mesh, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
+import {Euler, Mesh, Object3D, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
@@ -13,7 +13,14 @@ import {Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
-import {VAttackingState, VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
+import {
+    type Cancellable,
+    isCancellable,
+    VAttackingState,
+    VBeforeGameState,
+    type VisualGameState,
+    VTurnState
+} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
@@ -154,11 +161,11 @@ export default class VisualGame {
                     }));
                 }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5);
             }
-            if(this.state instanceof VAttackingState){
+            if(isCancellable(this.state)){
                 let width=scale*1.3;
                 let height=scale*0.4;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Cancel", ()=>{
-                    (this.state as VAttackingState).returnToParent();
+                    (this.state as unknown as Cancellable).cancel();//trust
                 }, scale, this.passButtonId);
             }
         });
@@ -222,13 +229,8 @@ ${this.state.getActionsLeft()}`, 0,0);
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.fieldsA.filter(field=>field.getCard()?.logicalCard?.getFaceUp()).map(field => field.getCard()?.model),
-            ...this.fieldsB.filter(field=>field.getCard()?.logicalCard?.getFaceUp()).map(field => field.getCard()?.model),
-            ...this.handA.cards.filter(vCard=>vCard.logicalCard.getFaceUp())//&&vCard.card.cardData!==cards.unknown
-                .map(field => field.model),
-            ...this.handB.cards.filter(vCard=>vCard.logicalCard.getFaceUp())//&&vCard.card.cardData!==cards.unknown
-                .map(field => field.model),
-
+            ...this.elements.filter(element => element instanceof VisualCard && element.logicalCard.getFaceUp())
+                .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
         if(cardsIntersects[0] !== undefined){
             const visualCardMaybe = cardsIntersects[0].object.parent?.parent?.parent?.userData.card as VisualCard|undefined;

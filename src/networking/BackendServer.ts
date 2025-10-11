@@ -1,24 +1,31 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
-    AcceptEvent, cardsTransform,
+    AcceptEvent, CardAction, CardActionOptions,
+    cardsTransform,
+    ClarificationJustification,
     ClarifyCardEvent,
-    DetermineStarterEvent, DiscardEvent,
+    DetermineStarterEvent,
+    DiscardEvent,
     DrawAction,
     Event,
     FindGameEvent,
     GameStartEvent,
     GameStartEventWatcher,
-    PassAction, PickCardEvent,
+    PassAction,
+    PickCardEvent,
     PlaceAction,
-    RejectEvent, RequestSyncEvent,
+    RejectEvent,
+    RequestSyncEvent,
     ScareAction,
-    StartRequestEvent, StringReprSyncEvent, SyncEvent
+    StartRequestEvent,
+    StringReprSyncEvent,
+    SyncEvent
 } from "./Events.js";
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {other, Side} from "../GameElement.js";
-import {shuffled, sideTernary} from "../consts.js";
+import {shuffled, sideTernary, wait} from "../consts.js";
 import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, PickCardsState, TurnState} from "../GameStates.js";
@@ -110,6 +117,11 @@ network.receiveFromClient= (packed, client) => {
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
             return;
+        }
+        const cardDuplChecker:{[key:string]:true} = {};
+        for(const card of event.data.deck) {
+            if (cardDuplChecker[card] !== undefined) return;
+            cardDuplChecker[card] = true;
         }
 
         if(unfilledGames.length>0){
@@ -369,6 +381,30 @@ network.receiveFromClient= (packed, client) => {
 
             endTurn(event.game);
         }
+    }else if(event instanceof CardAction){
+        if(event.game !== undefined) {
+            switch(event.data.actionName){
+                case CardActionOptions.BROWNIE_DRAW: {
+                    const id = (event as CardAction<{ id: number }>).data.cardData.id;
+                    const card = event.game.cards.values().find(card => card.id === id);
+                    if (card && event.game.player(card.side) === event.sender &&
+                            card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)){
+                        findAndRemove(event.game, card);
+                        sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+
+                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                            if(user !== event.sender){
+                                user.send(new CardAction({
+                                    cardId: -1,
+                                    actionName:CardActionOptions.BROWNIE_DRAW,
+                                    cardData:{id:card.id},
+                                }))
+                            }
+                        }
+                    }
+                }break;
+            }
+        }
     }else if(event instanceof DiscardEvent){
         if(event.game !== undefined) {
             let side: Side | undefined = undefined;//the side of the player discarding
@@ -403,6 +439,31 @@ network.receiveFromClient= (packed, client) => {
             }
             event.game.state.pick(event.data.which);
             acceptEvent(event);
+        }
+    }else if(event instanceof ClarifyCardEvent){
+        if(event.game !== undefined){
+            let shouldClarify:string|undefined=undefined;
+            switch(event.data.justification){
+                case ClarificationJustification.BROWNIE:
+                    if(event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&
+                        sideTernary(event.game.state.turn, event.game.handA, event.game.handB)
+                            .find(card =>card.cardData.name === "og-005")) {
+
+                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
+                            .find(card => card.id === event.data.id &&
+                                card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined)?.cardData.name;
+                        //should remember that the player clarified cards with the purpose of seeing them with brownie, so the next card they place should be brownie
+                    }
+                    break;
+            }
+
+            if(shouldClarify !== undefined){
+                network.replyToClient(event, new ClarifyCardEvent({
+                    id:event.data.id,
+                    cardDataName:shouldClarify
+                }));
+            }
         }
     }
 

@@ -267,5 +267,9 @@ export default class VisualCard extends PositionedVisualGameElement{
     highlight(isHighlighted:boolean){
         this.highlightObj.visible=isHighlighted;
     }
+
+    static getExactVisualCard(obj:any){
+        return obj.constructor === VisualCard ? obj : undefined;
+    }
 }
 updateOrder[VisualCard.name] = 0;

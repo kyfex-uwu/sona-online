@@ -5,6 +5,8 @@ import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualGame from "../VisualGame.js";
 import VisualCard from "../VisualCard.js";
 import type {CardHoldable} from "../CardHoldable.js";
+import Card from "../../Card.js";
+import cards from "../../Cards.js";
 
 //A game element that holds and attracts cards
 export default abstract class CardMagnet extends PositionedVisualGameElement implements CardHoldable{
@@ -14,6 +16,8 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
 
     public static readonly updateOrder = 1;
     public static readonly offs = new Vector3(0,1.5,0);
+
+    protected readonly utilityCard;
 
     /**
      * Creates a card magnet
@@ -53,6 +57,8 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
             }
             return false;
         });
+
+        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, -1),this.position, this.rotation));
     }
 
     //If this magnet should visually snap cards towards it. Should be false if you cant place cards there
@@ -83,7 +89,11 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
         removeClickListener(this.listener);
     }
 
-    visualTick() {}
+    visualTick() {
+        super.visualTick();
+        this.utilityCard.position.copy(this.position);
+        this.utilityCard.rotation.copy(this.rotation);
+    }
 
     abstract unchildCard(card: VisualCard):void;
 }

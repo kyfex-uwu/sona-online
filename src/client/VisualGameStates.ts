@@ -6,7 +6,10 @@ import {BeforeGameState, GameState, PickCardsState, TurnState} from "../GameStat
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
-import {sideTernary} from "../consts.js";
+import {sideTernary, wait} from "../consts.js";
+import {camera, clickListener, removeClickListener} from "./clientConsts.js";
+import {Euler, Group, Quaternion, Vector3} from "three";
+import VisualCardClone from "./VisualCardClone.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -174,13 +177,18 @@ export class VTurnState extends VisualGameState<TurnState>{
             (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
     }
 }
+export interface Cancellable{
+    __isCancellable():void;
+    cancel():void;
+}
+export const isCancellable = (inst:any) => inst.__isCancellable!==undefined;
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
-export class VAttackingState extends VisualGameState<TurnState>{
+export class VAttackingState extends VisualGameState<TurnState> implements Cancellable{
     public cardIndex;
     public readonly parentState;
     public readonly attackData:{
-        type?:Stat|"card",
+        type?:Stat,
         cardAttack?:string,
     }={};
     constructor(cardIndex:1|2|3, game:VisualGame) {
@@ -200,7 +208,8 @@ export class VAttackingState extends VisualGameState<TurnState>{
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
     }
 
-    returnToParent(){
+    __isCancellable(){}
+    cancel(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
     canSelectHandCard(card: VisualCard): boolean {
@@ -208,18 +217,70 @@ export class VAttackingState extends VisualGameState<TurnState>{
     }
 }
 
-export class VPickCardsState extends VisualGameState<PickCardsState>{
-    constructor(game:VisualGame) {
+export class VPickCardsState extends VisualGameState<PickCardsState>{// implements Cancellable
+    public readonly cards;
+    private readonly parentState;
+    private listener?:number;
+    private readonly onPick;
+    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards:VisualCard[], onPick:(card:VisualCard)=>void) {
         super(game);
+        this.cards=cards;
+        this.parentState=parentState;
+        this.onPick=onPick;
     }
     init() {
         super.init();
+
+        this.listener = clickListener(()=> {
+            const intersects = this.game.raycaster.intersectObjects(this.cards
+                .map(card => card.model).filter(model => model !== undefined));
+            if (intersects[0] !== undefined) {
+                this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard);
+            }
+
+            return false;
+        });
+
+        for(let i=0;i<this.cards.length;i++){
+            this.cards[i] = new VisualCardClone(this.cards[i]!);
+            this.game.addElement(this.cards[i]!);
+        }
+
+        let index=0;
+        for(const card of this.cards){
+            card.flipFaceup();
+
+            let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
+                .add(new Vector3((index-(this.cards.length-1)/2)*100,0,0));
+            card.position.copy(pos);
+            card.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0)));
+
+            index++;
+        }
     }
     swapAway() {
         super.swapAway();
+        removeClickListener(this.listener!);
     }
 
     canSelectHandCard(card: VisualCard): boolean {
         return false;
     }
+
+    finish(){
+        this.game.setState(this.parentState[0], this.parentState[1]);
+
+        for(const card of this.cards){
+            card.position = new Vector3(0,-50,0);
+        }
+        wait(1000).then(()=>{
+            for(const card of this.cards){
+                card.removeFromGame();
+            }
+        });
+    }
+    // __isCancellable(){}
+    // cancel(){
+    //     this.game.setState(this.parentState, this.getNonVisState());
+    // }
 }
