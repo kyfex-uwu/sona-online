@@ -150,13 +150,10 @@ export default class FieldMagnet extends CardMagnet{
     removeCard(){
         if(this.card === undefined) return false;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = undefined;
-        this.unchildCard(this.card);
+        this.card = undefined;
         this.position.sub(CardMagnet.offs);
 
         return true;
-    }
-    unchildCard(card:VisualCard){
-        if(card === this.card) this.card = undefined;
     }
     shouldSnapCards(): boolean {
         return this.card === undefined && this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.game.getMySide() === this.getSide();

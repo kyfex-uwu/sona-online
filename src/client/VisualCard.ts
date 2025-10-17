@@ -254,13 +254,13 @@ export default class VisualCard extends PositionedVisualGameElement{
      * @param holder
      */
     setHolder(holder: CardHoldable | undefined){
-        if(this.holder !== undefined) this.removeFromHolder();
+        this.removeFromHolder();
         this.holder=holder;
     }
 
     //Removes the card from its holder, if it has one
     removeFromHolder(){
-        this.holder?.unchildCard(this);
+        this.holder?.removeCard(this);
         this.holder=undefined;
     }
 

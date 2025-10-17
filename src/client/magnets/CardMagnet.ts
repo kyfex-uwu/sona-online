@@ -94,7 +94,5 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
         this.utilityCard.position.copy(this.position);
         this.utilityCard.rotation.copy(this.rotation);
     }
-
-    abstract unchildCard(card: VisualCard):void;
 }
 updateOrder[CardMagnet.name] = 1;

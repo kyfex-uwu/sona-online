@@ -63,25 +63,22 @@ export default class DeckMagnet extends CardMagnet{
         if(this.cards.find(data=>data.card===card) === undefined) return false;
         const deck = sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB);
         deck.splice(deck.indexOf(card.logicalCard),1);
-        this.unchildCard(card);
 
-        return true;
-    }
-    unchildCard(card:VisualCard){
         let index = this.cards.findIndex(data=>data.card===card);
-        if(index===-1) return;
         this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
         for(let i=index;i<this.cards.length;i++){
             this.cards[i]?.card.position.sub(CardMagnet.offs);
         }
+
+        return true;
     }
     shouldSnapCards(): boolean {
         return false;
     }
 
     /**
-     * Draws a card and puts in in the player's hand
+     * Draws a card and puts it in the player's hand
      */
     drawCard(bottom?:boolean){
         const hand = sideTernary(this.getSide(), this.game.handA, this.game.handB);
