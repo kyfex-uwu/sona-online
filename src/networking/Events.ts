@@ -117,10 +117,13 @@ export class ScareAction extends ActionEvent<{
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
-    BOTTOM_DRAW: "bottom_draw" as CardActionOption<{side:Side}>,
+    BOTTOM_DRAW: "og-025_bottom_draw" as CardActionOption<{side:Side}>,
 
-    K9_ALPHA: "k9_alpha" as CardActionOption<{ canineFields: [boolean, boolean, boolean] }>,
-    BROWNIE_DRAW: "brownie_draw" as CardActionOption<{id:number}>,
+    K9_ALPHA: "og-001_alpha" as CardActionOption<{ canineFields: [boolean, boolean, boolean] }>,
+    BROWNIE_DRAW: "og-005_draw" as CardActionOption<{id:number}>,
+
+    GREMLIN_CANCEL:"og-009_cancel" as CardActionOption<{}>,
+    GREMLIN_SCARE:"og-009_scare" as CardActionOption<{id:number}>,
 };
 {
     const options:{[key:string]:true} = {};
@@ -143,7 +146,7 @@ export class DiscardEvent extends Event<{which:number}>{}
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
 
-export class PickCardEvent extends Event<{which:number}>{}
+export class PickCardEvent extends Event<{whiches:number[]}>{}
 
 export type Card = {
     id:number,

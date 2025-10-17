@@ -13,7 +13,6 @@ import {
     GameStartEvent,
     GameStartEventWatcher,
     PassAction,
-    PickCardEvent,
     PlaceAction,
     RejectEvent,
     RequestSyncEvent,
@@ -74,11 +73,11 @@ function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean
     }
 }
 function endTurn(game:Game){
-    if(game.state instanceof TurnState)
-        if(game.state.decrementTurn() && sideTernary(game.state.turn,game.handA,game.handB).length<5)
+    if(game.state instanceof TurnState) {
+        if (game.state.decrementTurn() && sideTernary(game.state.turn, game.handA, game.handB).length < 5)
             draw(game, undefined, game.state.turn, false);
+    }
 }
-//unused until i need it
 function findAndRemove(game:Game, card:Card){
     for(const group of [game.deckA, game.deckB, game.runawayA, game.runawayB, game.handA, game.handB]) {
         for (let i = 0; i < group.length; i++) {
@@ -427,17 +426,6 @@ network.receiveFromClient= (packed, client) => {
 
             sideTernary(side, event.game.runawayA, event.game.runawayB).push(
                 hand.splice(hand.indexOf(toDiscard),1)[0]!);
-            acceptEvent(event);
-        }
-    }else if(event instanceof PickCardEvent){
-        if(event.game !== undefined){
-            if (!(event.game.state instanceof PickCardsState &&
-                event.sender === event.game.player(event.game.state.parentState.turn) &&//if its the player's turn
-                event.data.which>=0&&event.data.which<event.game.state.cardsToPick.length)) {//the card picked is in the array
-                rejectEvent(event);
-                return;
-            }
-            event.game.state.pick(event.data.which);
             acceptEvent(event);
         }
     }else if(event instanceof ClarifyCardEvent){

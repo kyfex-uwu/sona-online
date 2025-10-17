@@ -136,6 +136,9 @@ export class VTurnState extends VisualGameState<TurnState>{
             sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
             network.sendToServer(new DrawAction({}));
         }
+        if(!sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
+
+        }
     }
 
     visualTick(): void {
@@ -178,10 +181,10 @@ export class VTurnState extends VisualGameState<TurnState>{
     }
 }
 export interface Cancellable{
-    __isCancellable():void;
+    isCancellable():void;
     cancel():void;
 }
-export const isCancellable = (inst:any) => inst.__isCancellable!==undefined;
+export const isCancellable = (inst:any) => inst.isCancellable instanceof Function && inst.cancel instanceof Function;
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
 export class VAttackingState extends VisualGameState<TurnState> implements Cancellable{
@@ -208,7 +211,7 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
     }
 
-    __isCancellable(){}
+    isCancellable(){}
     cancel(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
@@ -217,16 +220,27 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     }
 }
 
-export class VPickCardsState extends VisualGameState<PickCardsState>{// implements Cancellable
+export enum EndType{
+    CANCEL,
+    FINISH,
+    BOTH,
+    NONE
+}
+export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable {
     public readonly cards;
     private readonly parentState;
     private listener?:number;
     private readonly onPick;
-    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards:VisualCard[], onPick:(card:VisualCard)=>void) {
+    public readonly endType;
+    public readonly onFinish;
+    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCard)=>void,
+                endType:EndType, onFinish?:()=>void) {
         super(game);
         this.cards=cards;
         this.parentState=parentState;
         this.onPick=onPick;
+        this.endType=endType;
+        this.onFinish=onFinish;
     }
     init() {
         super.init();
@@ -247,13 +261,13 @@ export class VPickCardsState extends VisualGameState<PickCardsState>{// implemen
         }
 
         let index=0;
-        for(const card of this.cards){
-            card.flipFaceup();
+        for(const fakeCard of this.cards){
+            fakeCard.flipFaceup();
 
             let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
                 .add(new Vector3((index-(this.cards.length-1)/2)*100,0,0));
-            card.position.copy(pos);
-            card.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0)));
+            fakeCard.position.copy(pos);
+            fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0)));
 
             index++;
         }
@@ -267,7 +281,8 @@ export class VPickCardsState extends VisualGameState<PickCardsState>{// implemen
         return false;
     }
 
-    finish(){
+    isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
+    cancel(){
         this.game.setState(this.parentState[0], this.parentState[1]);
 
         for(const card of this.cards){
@@ -279,8 +294,5 @@ export class VPickCardsState extends VisualGameState<PickCardsState>{// implemen
             }
         });
     }
-    // __isCancellable(){}
-    // cancel(){
-    //     this.game.setState(this.parentState, this.getNonVisState());
-    // }
 }
+//server side picking cards state?

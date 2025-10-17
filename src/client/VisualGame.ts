@@ -1,4 +1,4 @@
-import {Euler, Mesh, Object3D, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
+import {Euler, Mesh, PlaneGeometry, Quaternion, Raycaster, type Scene, Vector2, Vector3} from "three";
 import FieldMagnet from "./magnets/FieldMagnet.js";
 import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
@@ -15,15 +15,18 @@ import type Card from "../Card.js";
 import p5 from "p5";
 import {
     type Cancellable,
+    EndType,
     isCancellable,
     VAttackingState,
     VBeforeGameState,
     type VisualGameState,
+    VPickCardsState,
     VTurnState
 } from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
+import {CrisisCounter} from "./CrisisCounter.js";
 
 const pointer = new Vector2();
 
@@ -71,6 +74,7 @@ export default class VisualGame {
     private drawPreviewCard=false;
 
     private readonly passButtonId;
+    private readonly finishButtonId;
 
     private targetCameraPos = new Vector3();
     private targetCameraRot = new Quaternion();
@@ -127,12 +131,16 @@ export default class VisualGame {
         }));
 
         //crisis markers
+        this.addElement(new CrisisCounter(this, Side.A, new Vector3(-200, 0, 70)));
+        this.addElement(new CrisisCounter(this, Side.B, new Vector3(200, 0, -70),
+            new Quaternion().setFromEuler(new Euler(0,Math.PI, 0))));
 
         this.state.init();//one-time fix for starting state
 
         //--
 
         this.passButtonId = buttonId();
+        this.finishButtonId = buttonId();
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
             if(this.previewCard !== undefined && this.drawPreviewCard) {
                 if (previewImages[this.previewCard.cardData.imagePath] !== undefined) {
@@ -159,13 +167,33 @@ export default class VisualGame {
                     },undefined,()=>{
                         this.frozen=false;
                     }));
-                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5);
+                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 && !this.frozen);
             }
-            if(isCancellable(this.state)){
-                let width=scale*1.3;
-                let height=scale*0.4;
-                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Cancel", ()=>{
+
+            const width = scale * 1.3;
+            const x = p5.width/2-width/2;
+            const height = scale * 0.4;
+            if(isCancellable(this.state) && (!(this.state instanceof VPickCardsState)||
+                    (this.state.endType === EndType.CANCEL||this.state.endType === EndType.BOTH))){
+                let splitMaybeWidth = width;
+                let splitMaybeX = x;
+                if(this.state instanceof VPickCardsState && this.state.endType === EndType.BOTH) {
+                    splitMaybeWidth = scale * 0.8;
+                    splitMaybeX = p5.width/2-scale*0.9;
+
+                    button(p5, p5.width/2+scale*0.1, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Finish", () => {
+                        const toCall = (this.state as unknown as VPickCardsState).onFinish;
+                        if(toCall) toCall();
+                    }, scale, this.finishButtonId, !this.frozen);
+                }
+                button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Cancel", () => {
                     (this.state as unknown as Cancellable).cancel();//trust
+                }, scale, this.passButtonId, !this.frozen);
+            }
+            if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
+                button(p5, x, p5.height - height - scale * 0.1, width, height, "Cancel", () => {
+                    const toCall = (this.state as unknown as VPickCardsState).onFinish;
+                    if(toCall) toCall();
                 }, scale, this.passButtonId);
             }
         });

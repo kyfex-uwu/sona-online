@@ -26,7 +26,10 @@ export class TurnState extends GameState{
         for(const card of sideTernary(turn,game.fieldsA,game.fieldsB))
             if(card !==undefined) card.hasAttacked=false;
         this.crisis=crisis ?? !sideTernary(turn, game.fieldsA, game.fieldsB).some(card => card !== undefined);
-        if(this.crisis) this.actionsLeft=3;
+        if(this.crisis){
+            this.actionsLeft=3;
+            game.crisis(turn);
+        }
     }
     swapAway() {
         super.swapAway();

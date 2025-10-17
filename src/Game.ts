@@ -52,6 +52,13 @@ export default class Game{
         isFirstTurn:true,
         canPreDraw:true,
     };
+    private _crisises:[number,number]=[0,0];
+    public getCrisis(side:Side){
+        return this._crisises[side];
+    }
+    public crisis(side:Side){
+        this._crisises[side]++;
+    }
 
     private playerA:Client|undefined=undefined;
     private playerB:Client|undefined=undefined;

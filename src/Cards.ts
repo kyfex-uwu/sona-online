@@ -2,6 +2,8 @@ import CardData, {CardActionType, Species} from "./CardData.js";
 import {shuffled, sideTernary} from "./consts.js";
 import {other} from "./GameElement.js";
 import {PickCardsState, TurnState} from "./GameStates.js";
+import type VisualCard from "./client/VisualCard.js";
+import type Card from "./Card.js";
 
 const cards:{[k:string]:CardData} = {};
 
@@ -9,7 +11,19 @@ const setCard = (data:CardData) => cards[data.name] = data;
 
 setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
     .with(CardActionType.LAST_ACTION, ({self, game})=>{
-
+        //todo: remove this
+        if(game.state instanceof TurnState) {
+            const takeFrom = sideTernary(self.side, game.fieldsA, game.fieldsB);
+            game.state = new PickCardsState(game, game.state, takeFrom
+                    .filter(c => c !== undefined && c.cardData.species === Species.CANINE) as Card[],
+                (picked) => {
+                    takeFrom.splice(takeFrom.indexOf(picked),1);
+                    sideTernary(self.side, game.handA, game.handB).push(picked);
+                    shuffled(takeFrom);
+                    game.state = (game.state as PickCardsState).parentState;
+                    return true;
+                });
+        }
     }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
@@ -37,12 +51,7 @@ setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)//done only here
 setCard(new CardData("og-006", [undefined,2,1], 1, Species.FELINE).setFree());
 setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE).setFree());
-setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE)//todo
-    .with(CardActionType.PLACED, ({self, game})=>{
-        if(sideTernary(other(self.side),game.fieldsA,game.fieldsB).filter(c=>c!==undefined).length>=2){
-
-        }
-    }));
+setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());
 setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
     .with(CardActionType.PLACED, ({self, game})=>{

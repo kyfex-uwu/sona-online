@@ -1,12 +1,12 @@
 import CardData, {CardActionType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {VPickCardsState, VTurnState} from "./VisualGameStates.js";
-import type {PickCardsState} from "../GameStates.js";
-import type VisualCard from "./VisualCard.js";
+import {EndType, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network} from "../networking/Server.js";
 import {CardAction, CardActionOptions, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
+import {Stat} from "../Card.js";
 
 export function loadFrontendWrappers(){}
 
@@ -25,7 +25,9 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     card.game.setState(new VPickCardsState(card.game, [card.game.state, card.game.getGame().state],
             sideTernary(card.getSide(), card.game.fieldsA, card.game.fieldsB).map(field => field.getCard())
             .filter(card => card !== undefined)
-            .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (card)=>{}),
+            .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (card)=>{
+
+            }, EndType.BOTH),
         card.game.getGame().state);
     return true;
 });
@@ -42,21 +44,22 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    const cards = sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards()
-        .filter(cwr => cwr.card.logicalCard.cardData.level === 1 &&cwr.card.logicalCard.cardData.getAction(CardActionType.IS_FREE) !== undefined)
-        .map(cwr => cwr.card);
+    const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
+        card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);
     for(const card of cards){
         network.sendToServer(new ClarifyCardEvent({
-            id:card.logicalCard.id,
+            id:card.id,
             justification: ClarificationJustification.BROWNIE
         }));
     }
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state], cards, (card)=>{
+
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, game.state], visualGame.elements.filter(element =>
+            VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
         const state = visualGame.state as VPickCardsState;
         state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 
         const deck = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB);
-        const toRemove  =deck.getCards().find(cwr => cwr.card.logicalCard.id === card.logicalCard.id)?.card
+        const toRemove =deck.getCards().find(cwr => cwr.card.logicalCard.id === card.logicalCard.id)?.card
         if(toRemove) {
             deck.removeCard(toRemove);
             toRemove.setRealPosition(card.position.clone());
@@ -72,6 +75,28 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
             }));
         }
 
-        state.finish();
-    }), game.state as PickCardsState);
+        state.cancel();
+    }, EndType.NONE), game.state);
+});
+wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
+    if(orig) orig({self, game});
+
+    const target=sideTernary(self.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
+    if(target.length>=2 &&//if there are at least 2 cards on opponent field
+        target.some(card => //and at least one card has at least 1 stat less than 2
+            ((card.cardData.stat(Stat.RED)??99)<2 || (card.cardData.stat(Stat.BLUE)??99)<2 || (card.cardData.stat(Stat.YELLOW)??99)<2))) {
+
+        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+            visualGame.elements.filter(element => VisualCard.getExactVisualCard(element) &&
+                (((element as VisualCard).logicalCard.cardData.stat(Stat.RED)??99)<2||
+                    ((element as VisualCard).logicalCard.cardData.stat(Stat.BLUE)??99)<2||
+                    ((element as VisualCard).logicalCard.cardData.stat(Stat.YELLOW)??99)<2)) as VisualCard[],
+            (card) => {
+                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
+                    id:card.logicalCard.id,
+                }}));
+            }, EndType.CANCEL, ()=>{
+                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_CANCEL, cardData:{}}));
+            }), visualGame.getGame().state);
+    }
 });
