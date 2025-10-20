@@ -32,8 +32,22 @@ const renderer = new WebGLRenderer({
 //Resizes the canvas to the window bounds
 function windowResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
-    camera.fov = 50
-    if(camera.aspect < 4/3) camera.fov = 180-(1-(1-(camera.aspect*3/4))**1.8)*130//todo: not done :c
+
+    //taken from https://discourse.threejs.org/t/keeping-an-object-scaled-based-on-the-bounds-of-the-canvas-really-battling-to-explain-this-one/17574/10
+    //i was ripping my HAIR out
+    const fov = 50;
+    const planeAspectRatio = 4/3;
+    if (camera.aspect > planeAspectRatio) {
+        // window too large
+        camera.fov = fov;
+    } else {
+        // window too narrow
+        const cameraHeight = Math.tan((fov / 2)/360*2*Math.PI);
+        const ratio = camera.aspect / planeAspectRatio;
+        const newCameraHeight = cameraHeight / ratio;
+        camera.fov = (Math.atan(newCameraHeight))/2/Math.PI*360  * 2;
+    }
+
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }

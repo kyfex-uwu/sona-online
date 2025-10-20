@@ -273,6 +273,9 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 return false;
             });
 
+            let width=this.cards.length;
+            let height=1;
+            let scale=1;
             for (let i = 0; i < this.cards.length; i++) {
                 this.cards[i] = new VisualCardClone(this.cards[i]!);
                 this.game.addElement(this.cards[i]!);
