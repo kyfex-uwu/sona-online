@@ -16,6 +16,8 @@ export abstract class Event<T extends SerializableEventData>{
     public readonly sender:Client|undefined;
     public readonly id;
 
+    public interruptScareBypass?:{};
+
     /**
      * Creates an event
      * @param data The data to send

@@ -1,5 +1,6 @@
 import VisualCard from "./VisualCard.js";
 import {Vector3} from "three";
+import type {MiscDataString} from "../Card.js";
 
 export default class VisualCardClone extends VisualCard{
     constructor(clonedFrom:VisualCard) {
@@ -8,7 +9,9 @@ export default class VisualCardClone extends VisualCard{
             get side(){ return clonedFrom.logicalCard.side; },
             getSide() { return this.side; },
             get id(){ return clonedFrom.logicalCard.id; },
-            get miscData(){ return clonedFrom.logicalCard.miscData; },
+            get miscData(){ return {}; },//dont
+            getMiscData:<T>(key:MiscDataString<T>)=>{ return clonedFrom.logicalCard.getMiscData(key);},
+            setMiscData:()=>{},
             get hasAttacked(){ return clonedFrom.logicalCard.hasAttacked; },
             getFaceUp(){ return clonedFrom.logicalCard.getFaceUp(); },
 

@@ -95,3 +95,9 @@ export class EndGameState extends GameState{
         this.winner=winner;
     }
 }
+
+export class InterruptScareActionsState extends GameState{
+    constructor(game:Game, validCards:Card[], ) {
+        super(game);
+    }
+}

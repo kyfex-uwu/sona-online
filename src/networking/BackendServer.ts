@@ -98,24 +98,9 @@ function findAndRemove(game:Game, card:Card){
     }
 }
 
-network.sendToClients = (event) => {
-    for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
-        user.send(event);
-    }
-}
-network.receiveFromClient= async (packed, client) => {
-    await wait(50);
+const bypassInterruptScareMarker = {};
 
-    //todo: this smells like vulnerability
-    // @ts-ignore
-    const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
-    if(true) console.log("received "+event.serialize());
-
-    if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
-        ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
-        return;
-    }
-
+function parseEvent(event:Event<any>, client:Client){
     //todo: verify things are in array bounds!!!!
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
@@ -248,15 +233,15 @@ network.receiveFromClient= async (packed, client) => {
 
             //validate
             if(!((event.game.state instanceof BeforeGameState &&
-                        event.game.player(card.side) === event.sender &&//card is the player's
-                        card.cardData.level === 1 && //card is level 1
-                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
-                    (event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
-                        event.game.player(card.side) === event.sender &&//card is the player's
-                        sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
-                            .some(other => (other?.cardData.level??0) >= card.cardData.level-1) && //placed card's level is at most 1 above all other cards
-                        !event.game.miscData.canPreDraw))){//not predraw
+                    event.game.player(card.side) === event.sender &&//card is the player's
+                    card.cardData.level === 1 && //card is level 1
+                    (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
+                (event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
+                    event.game.player(card.side) === event.sender &&//card is the player's
+                    sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
+                        .some(other => (other?.cardData.level??0) >= card.cardData.level-1) && //placed card's level is at most 1 above all other cards
+                    !event.game.miscData.canPreDraw))){//not predraw
                 rejectEvent(event);
                 return;
             }
@@ -301,8 +286,8 @@ network.receiveFromClient= async (packed, client) => {
             }
             if(side !== undefined){
                 if(!(event.game.state instanceof TurnState &&
-                        event.game.state.turn === side &&//it is the player's turn
-                        sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
+                    event.game.state.turn === side &&//it is the player's turn
+                    sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
                     rejectEvent(event);
                     return;
                 }
@@ -332,7 +317,7 @@ network.receiveFromClient= async (packed, client) => {
     }else if (event instanceof PassAction){
         if(event.game !== undefined){
             if(!(event.game.state instanceof TurnState &&
-                    event.sender === event.game.player(event.game.state.turn))){//if its the player's turn
+                event.sender === event.game.player(event.game.state.turn))){//if its the player's turn
                 rejectEvent(event);
                 return;
             }
@@ -357,12 +342,17 @@ network.receiveFromClient= async (packed, client) => {
             const scarer = sideTernary(side, event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos-1];
             const scared = sideTernary(side, event.game.fieldsB, event.game.fieldsA)[event.data.scaredPos-1];
             if(!(event.game.state instanceof TurnState &&
-                    event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
-                    scarer !==undefined && scared!==undefined&&//the cards exist
-                    !scarer.hasAttacked&&//if the card hasnt scared yet
-                    scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
+                event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                scarer !==undefined && scared!==undefined&&//the cards exist
+                !scarer.hasAttacked&&//if the card hasnt scared yet
+                scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
                 rejectEvent(event);
                 return;
+            }
+
+            if(event.interruptScareBypass !== bypassInterruptScareMarker){
+                const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
+                // if(interruptAction !== undefined) interruptAction({self:scared, scarer, game:event.game, stat:event.data.attackingWith});
             }
 
             const toSend = new ScareAction({
@@ -392,8 +382,8 @@ network.receiveFromClient= async (packed, client) => {
                     const card = event.game.cards.values().find(card => card.id === id);
                     if (event.game.state instanceof PickCardsState &&//player is picking cards
                         card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
-                            card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
-                            event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
+                        card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                        event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
                         findAndRemove(event.game, card);
                         sideTernary(card.side, event.game.handA, event.game.handB).push(card);
                         event.game.state = event.game.state.parentState;//this might be wrong perchance
@@ -484,6 +474,27 @@ network.receiveFromClient= async (packed, client) => {
             }, undefined, undefined, event.id));
         }
     }
+}
+
+network.sendToClients = (event) => {
+    for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
+        user.send(event);
+    }
+}
+network.receiveFromClient= async (packed, client) => {
+    await wait(50);
+
+    //todo: this smells like vulnerability
+    // @ts-ignore
+    const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
+    if(true) console.log("received "+event.serialize());
+
+    if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
+        ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
+        return;
+    }
+
+    parseEvent(event, client);
 }
 network.replyToClient = (replyTo, replyWith) => {
     replyTo.sender?.send(replyWith);

@@ -21,7 +21,7 @@ export class CardActionType<P extends {[k:string]:any}, R>{
     public static readonly INTERRUPT_CRISIS = new CardActionType<
         {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardActionType<
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, boolean>();//return false to cancel the scare
 
     public static readonly TURN_START = new CardActionType<
         {self:Card,game:Game}, void>();

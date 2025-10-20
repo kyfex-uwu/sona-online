@@ -22,13 +22,20 @@ export function getAttacker(stat:Stat){
     }
 }
 
+export type MiscDataString<T> = {};
+export const MiscDataStrings = {
+    TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
+};
+
 //A *logical* card
 export default class Card implements GameElement{
     public readonly cardData: CardData;
     public readonly side:Side;
     public readonly id:number;
 
-    public miscData: { [k: string]: any } = {};
+    private miscData: { [k: string]: any } = {};
+    public getMiscData<T>(key:MiscDataString<T>){ return this.miscData[key as string] as T; }
+    public setMiscData<T>(key:MiscDataString<T>, val: T){ this.miscData[key as string]=val; }
     public hasAttacked=false;
 
     /**
