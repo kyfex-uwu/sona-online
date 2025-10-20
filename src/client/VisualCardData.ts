@@ -7,6 +7,7 @@ import {sideTernary} from "../consts.js";
 import {network} from "../networking/Server.js";
 import {CardAction, CardActionOptions, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import {Stat} from "../Card.js";
+import type {PickCardsState} from "../GameStates.js";
 
 export function loadFrontendWrappers(){}
 
@@ -53,7 +54,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         }));
     }
 
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, game.state], visualGame.elements.filter(element =>
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as PickCardsState).parentState], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
         const state = visualGame.state as VPickCardsState;
         state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();

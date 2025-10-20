@@ -41,17 +41,18 @@ export class TurnState extends GameState{
      * @return If the turn should change/did change
      */
     decrementTurn(suppressChanges=false){
-        const state = this.game.state;
-        if(state instanceof TurnState) {
+        this.actionsLeft--;
+        if(this.actionsLeft<=0){
+            if(!suppressChanges) {
+                this.game.state = new TurnState(this.game, other(this.turn));
 
-            state.actionsLeft--;
-            if(state.actionsLeft<=0){
-                if(!suppressChanges) {
-                    // if(state.crisis && sideTernary())
-                    this.game.state = new TurnState(this.game, other(state.turn));
+                if(this.crisis && !sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
+                    this.game.state = new EndGameState(this.game, other(this.turn));
+                }else if(this.game.getCrisis(other(this.turn))>=3){
+                    this.game.state = new EndGameState(this.game, this.turn);
                 }
-                return true;
             }
+            return true;
         }
 
         return false;
@@ -84,5 +85,13 @@ export class PickCardsState extends GameState{
             return true;
         }
         return false;
+    }
+}
+
+export class EndGameState extends GameState{
+    public readonly winner:Side|undefined;
+    constructor(game:Game, winner?:Side) {
+        super(game);
+        this.winner=winner;
     }
 }

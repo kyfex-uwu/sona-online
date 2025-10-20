@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, PickCardsState, TurnState} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
@@ -114,31 +114,41 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     }
 }
 
+export interface Decrementable{
+    readonly __isDecrementableInterface:boolean;
+    decrementTurn():void;
+}
+export const isDecrementable = (state:VisualGameState<any>) => (state as unknown as Decrementable).__isDecrementableInterface !== undefined;
+
 /**
  * During this state, the player can place a card, draw a card, attack, do a card action, or pass
  *
  * If the player click on a placed card, should swap to {@link VAttackingState}
  */
-export class VTurnState extends VisualGameState<TurnState>{
+export class VTurnState extends VisualGameState<TurnState> implements Decrementable{
     public readonly currTurn;
     constructor(currTurn:Side, game:VisualGame) {
         super(game);
         this.currTurn=currTurn;
 
     }
+    private initedAlready=false;
     init() {
         super.init();
         this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
             StateFeatures.FIELDS_PLACEABLE,
             StateFeatures.DECK_DRAWABLE);
 
-        if(this.game.getGame().miscData.isFirstTurn && this.currTurn === this.game.getMySide()) {
-            sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
-            network.sendToServer(new DrawAction({}));
+        if(!this.initedAlready) {
+            if (this.game.getGame().miscData.isFirstTurn && this.currTurn === this.game.getMySide()) {
+                sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
+                network.sendToServer(new DrawAction({}));
+            }
+            if (!sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(card => card !== undefined)) {
+                //something something crisis mode
+            }
         }
-        if(!sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
-
-        }
+        this.initedAlready=true;
     }
 
     visualTick(): void {
@@ -162,6 +172,7 @@ export class VTurnState extends VisualGameState<TurnState>{
             this.features.clear();
         }
     }
+    readonly __isDecrementableInterface=true;
     decrementTurn(){
         const state = this.game.getGame().state;
         if(state instanceof TurnState) {
@@ -187,7 +198,7 @@ export interface Cancellable{
 export const isCancellable = (inst:any) => inst.isCancellable instanceof Function && inst.cancel instanceof Function;
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
-export class VAttackingState extends VisualGameState<TurnState> implements Cancellable{
+export class VAttackingState extends VisualGameState<TurnState> implements Cancellable, Decrementable{
     public cardIndex;
     public readonly parentState;
     public readonly attackData:{
@@ -218,6 +229,11 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     canSelectHandCard(card: VisualCard): boolean {
         return false;
     }
+
+    readonly __isDecrementableInterface=true;
+    decrementTurn() {
+        this.parentState.decrementTurn();
+    }
 }
 
 export enum EndType{
@@ -226,7 +242,7 @@ export enum EndType{
     BOTH,
     NONE
 }
-export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable {
+export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable, Decrementable {
     public readonly cards;
     private readonly parentState;
     private listener?:number;
@@ -242,35 +258,40 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
         this.endType=endType;
         this.onFinish=onFinish;
     }
+    private initedAlready=false;
     init() {
         super.init();
 
-        this.listener = clickListener(()=> {
-            const intersects = this.game.raycaster.intersectObjects(this.cards
-                .map(card => card.model).filter(model => model !== undefined));
-            if (intersects[0] !== undefined) {
-                this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard);
+        if(!this.initedAlready) {
+            this.listener = clickListener(() => {
+                const intersects = this.game.raycaster.intersectObjects(this.cards
+                    .map(card => card.model).filter(model => model !== undefined));
+                if (intersects[0] !== undefined) {
+                    this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard);
+                }
+
+                return false;
+            });
+
+            for (let i = 0; i < this.cards.length; i++) {
+                this.cards[i] = new VisualCardClone(this.cards[i]!);
+                this.game.addElement(this.cards[i]!);
             }
 
-            return false;
-        });
+            let index = 0;
+            for (const fakeCard of this.cards) {
+                fakeCard.flipFaceup();
 
-        for(let i=0;i<this.cards.length;i++){
-            this.cards[i] = new VisualCardClone(this.cards[i]!);
-            this.game.addElement(this.cards[i]!);
+                let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
+                    .add(new Vector3((index - (this.cards.length - 1) / 2) * 100, 0, 0));
+                fakeCard.position.copy(pos);
+                fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0)));
+
+                index++;
+            }
         }
 
-        let index=0;
-        for(const fakeCard of this.cards){
-            fakeCard.flipFaceup();
-
-            let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
-                .add(new Vector3((index-(this.cards.length-1)/2)*100,0,0));
-            fakeCard.position.copy(pos);
-            fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0)));
-
-            index++;
-        }
+        this.initedAlready=true;
     }
     swapAway() {
         super.swapAway();
@@ -283,7 +304,11 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
     isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
     cancel(){
+        let decrement=false;
+        if(this.game.getGame().state instanceof PickCardsState)
+            decrement=true;
         this.game.setState(this.parentState[0], this.parentState[1]);
+        if(decrement && isDecrementable(this.parentState[0])) (this.parentState[0] as unknown as Decrementable).decrementTurn();
 
         for(const card of this.cards){
             card.position = new Vector3(0,-50,0);
@@ -293,6 +318,13 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 card.removeFromGame();
             }
         });
+    }
+
+    readonly __isDecrementableInterface=true;
+    decrementTurn() {
+        if(isDecrementable(this.parentState[0]))
+            (this.parentState[0] as unknown as Decrementable).decrementTurn();
+
     }
 }
 //server side picking cards state?

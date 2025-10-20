@@ -5,7 +5,7 @@ import {Side} from "../../GameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
-import {StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
+import {type Decrementable, isDecrementable, StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
@@ -51,8 +51,8 @@ export default class FieldMagnet extends CardMagnet{
                             side:this.game.getMySide(),
                             faceUp: (state instanceof VTurnState)
                         })).onReply(successOrFail(()=>{
-                            if(state instanceof VTurnState)
-                                state.decrementTurn();
+                            if(isDecrementable(state))
+                                (state as unknown as Decrementable).decrementTurn();
                         },()=>{
                             card.removeFromHolder();
                             this.game.selectedCard = card;
@@ -65,7 +65,7 @@ export default class FieldMagnet extends CardMagnet{
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === this.game.getMySide() ||
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
                     if(state instanceof VTurnState && !this.game.getGame().miscData.isFirstTurn){
-                        if(this.card === undefined) return false;
+                        if(this.card === undefined || this.card.logicalCard.hasAttacked) return false;
                         this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
                     }

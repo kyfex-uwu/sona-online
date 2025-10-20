@@ -26,7 +26,7 @@ import {
 import Game from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {other, Side} from "../GameElement.js";
-import {shuffled, sideTernary} from "../consts.js";
+import {shuffled, sideTernary, wait} from "../consts.js";
 import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
@@ -103,7 +103,9 @@ network.sendToClients = (event) => {
         user.send(event);
     }
 }
-network.receiveFromClient= (packed, client) => {
+network.receiveFromClient= async (packed, client) => {
+    await wait(50);
+
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
