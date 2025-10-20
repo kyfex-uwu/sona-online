@@ -273,24 +273,47 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 return false;
             });
 
-            let width=this.cards.length;
-            let height=1;
+            let height=3;
             let scale=1;
+
+            const cardsLength = this.cards.length;
+            if(cardsLength<=18){
+                if(cardsLength%3===0 && cardsLength>6){
+                    height=3;
+                }else if(cardsLength%2===0 && cardsLength>4){
+                    height=2;
+                }else{
+                    height=Math.ceil(cardsLength/3);
+                }
+            }else{
+                //scale=1: 3x6
+                //card dims are 5/7, 6/8 with padding
+                //screen height = 3/8 = 9/24
+                //screen width = 4/6 = 2/3 = 16/24
+                //ratio: 9/16 effectively, if the cards are square
+
+                scale = Math.sqrt(cardsLength/(16*9))*8;
+                height = Math.ceil(cardsLength/16*scale);
+            }
+
             for (let i = 0; i < this.cards.length; i++) {
                 this.cards[i] = new VisualCardClone(this.cards[i]!);
                 this.game.addElement(this.cards[i]!);
             }
+            let width = Math.ceil(cardsLength/height);
+            height = Math.ceil(cardsLength/width);
+            for(let y=0;y<height;y++){
+                if(y===height-1) width=cardsLength-(height-1)*width;
+                for(let x=0;x<width;x++){
+                    const fakeCard = this.cards[y*width+x];
+                    if(fakeCard === undefined) break;
 
-            let index = 0;
-            for (const fakeCard of this.cards) {
-                fakeCard.flipFaceup();
-
-                let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
-                    .add(new Vector3((index - (this.cards.length - 1) / 2) * 100, 0, 0));
-                fakeCard.position.copy(pos);
-                fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0)));
-
-                index++;
+                    fakeCard.flipFaceup();
+                    let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
+                        .add(new Vector3((x-(width-1)/2)*100, (y-(height-1)/2)*133, 0));
+                    fakeCard.position.copy(pos);
+                    fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0)));
+                }
             }
         }
 

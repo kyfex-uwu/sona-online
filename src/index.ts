@@ -38,10 +38,8 @@ function windowResize(){
     const fov = 50;
     const planeAspectRatio = 4/3;
     if (camera.aspect > planeAspectRatio) {
-        // window too large
         camera.fov = fov;
     } else {
-        // window too narrow
         const cameraHeight = Math.tan((fov / 2)/360*2*Math.PI);
         const ratio = camera.aspect / planeAspectRatio;
         const newCameraHeight = cameraHeight / ratio;
