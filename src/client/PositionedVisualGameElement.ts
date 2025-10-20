@@ -1,5 +1,5 @@
 import VisualGame from "./VisualGame.js";
-import type {Quaternion, Vector3} from "three";
+import {Vector3, type Quaternion} from "three";
 import type {Side} from "../GameElement.js";
 import {type SidedVisualGameElement, VisualGameElement} from "./VisualGameElement.js";
 
@@ -8,8 +8,10 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
     private readonly side:Side;
     public position:Vector3;
     public rotation:Quaternion;
+    public scale: Vector3 = new Vector3(1,1,1);
     protected realPosition:Vector3;
     protected realRotation:Quaternion;
+    protected realScale:Vector3 = new Vector3(1,1,1);
 
     /**
      * Creates a positioned game element
@@ -33,9 +35,10 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
      * @param targetLocation Where this element should be
      * @param targetRotation How this element should be rotated
      */
-    visualTick(targetLocation=this.position, targetRotation=this.rotation):void{
+    visualTick(targetLocation=this.position, targetRotation=this.rotation, targetScale=this.scale):void{
         this.realPosition.lerp(targetLocation,0.2);
         this.realRotation.slerp(targetRotation, 0.1);
+        this.realScale.lerp(targetScale, 0.1);
     }
 
     getSide(): Side { return this.side; }
@@ -47,5 +50,8 @@ export abstract class PositionedVisualGameElement extends VisualGameElement impl
     //Sets the real rotation of this element (not the shown, smoothed rotation)
     setRealRotation(rot:Quaternion){
         this.realRotation=rot;
+    }
+    setRealScale(scale:Vector3){
+        this.realScale=scale;
     }
 }

@@ -273,6 +273,11 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 return false;
             });
 
+            for (let i = 0; i < this.cards.length; i++) {
+                this.cards[i] = new VisualCardClone(this.cards[i]!);
+                this.game.addElement(this.cards[i]!);
+            }
+
             let height=3;
             let scale=1;
 
@@ -296,10 +301,6 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 height = Math.ceil(cardsLength/16*scale);
             }
 
-            for (let i = 0; i < this.cards.length; i++) {
-                this.cards[i] = new VisualCardClone(this.cards[i]!);
-                this.game.addElement(this.cards[i]!);
-            }
             let width = Math.ceil(cardsLength/height);
             height = Math.ceil(cardsLength/width);
             for(let y=0;y<height;y++){
@@ -310,9 +311,10 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
                     fakeCard.flipFaceup();
                     let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
-                        .add(new Vector3((x-(width-1)/2)*100, (y-(height-1)/2)*133, 0));
+                        .add(new Vector3((x-(width-1)/2)*100*scale, (y-(height-1)/2)*133*scale, 0));
                     fakeCard.position.copy(pos);
                     fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0)));
+                    fakeCard.scale = new Vector3(scale, scale, scale);
                 }
             }
         }

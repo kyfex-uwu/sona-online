@@ -216,6 +216,7 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         this.model.position.copy(this.realPosition);
         this.model.quaternion.copy(this.realRotation);
+        this.model.scale.copy(this.realScale);
         this.flipGroup.quaternion.slerp(this.flipRotation,0.1);
         this.flipGroup.position.lerp(new Vector3(0,5*this.flipTimer,0),0.1);
         this.flipTimer=Math.max(0,this.flipTimer-1);
