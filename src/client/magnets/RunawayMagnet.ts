@@ -92,5 +92,9 @@ export default class RunawayMagnet extends CardMagnet{
         this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide());
     }
+
+    getCards(){
+        return this.cards.map(data => data.card);
+    }
 }
 updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;

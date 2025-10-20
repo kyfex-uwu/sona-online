@@ -126,6 +126,8 @@ export const CardActionOptions = {
 
     GREMLIN_CANCEL:"og-009_cancel" as CardActionOption<{}>,
     GREMLIN_SCARE:"og-009_scare" as CardActionOption<{id:number}>,
+
+    WORICK_RESCUE:"og-038_rescue" as CardActionOption<{ id: number }>,
 };
 {
     const options:{[key:string]:true} = {};

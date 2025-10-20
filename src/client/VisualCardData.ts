@@ -4,7 +4,7 @@ import {game as visualGame} from "../index.js";
 import {EndType, VPickCardsState, VTurnState} from "./VisualGameStates.js";
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
-import {network} from "../networking/Server.js";
+import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, CardActionOptions, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import {Stat} from "../Card.js";
 import type {PickCardsState} from "../GameStates.js";
@@ -15,7 +15,7 @@ export const visualCardClientActions:{[k:string]:(card:VisualCard)=>boolean} = {
 
 function lastAction(callback:(card:VisualCard)=>boolean){
     return (card:VisualCard)=> {
-        if (card.game.state instanceof VTurnState && card.game.state.getActionsLeft() === 1) {
+        if (visualGame.state instanceof VTurnState && visualGame.state.getActionsLeft() === 1) {
             return callback(card);
         }
         return false;
@@ -23,13 +23,36 @@ function lastAction(callback:(card:VisualCard)=>boolean){
 }
 
 visualCardClientActions["og-001"] = lastAction((card)=>{
-    card.game.setState(new VPickCardsState(card.game, [card.game.state, card.game.getGame().state],
-            sideTernary(card.getSide(), card.game.fieldsA, card.game.fieldsB).map(field => field.getCard())
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+            sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
             .filter(card => card !== undefined)
             .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (card)=>{
 
             }, EndType.BOTH),
-        card.game.getGame().state);
+        visualGame.getGame().state);
+    return true;
+});
+visualCardClientActions["og-038"] = lastAction((card)=>{
+    const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
+        .filter(card => card?.logicalCard.cardData.level === 1);
+    if(cards.length===0) return false;
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+            cards, (picked)=>{
+                    visualGame.frozen=true;
+                    network.sendToServer(new CardAction({
+                        cardId:card.logicalCard.id,
+                        actionName:CardActionOptions.WORICK_RESCUE,
+                        cardData:{
+                            id:picked.logicalCard.id
+                        }
+                    })).onReply(successOrFail(()=>{
+                        sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(picked);
+                        (visualGame.state as VPickCardsState).cancel();
+                    },()=>{},()=>{
+                        visualGame.frozen=false;
+                    }));
+            }, EndType.BOTH),
+        visualGame.getGame().state);
     return true;
 });
 

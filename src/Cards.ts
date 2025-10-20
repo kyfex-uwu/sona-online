@@ -146,10 +146,7 @@ setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE)//todo
     }));
 setCard(new CardData("og-036", [7,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE));
-setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID)//todo
-    .with(CardActionType.LAST_ACTION, ({self, game})=>{
-
-    }));
+setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID));
 setCard(new CardData("og-039", [5,7,undefined], 2, Species.FELINE));
 setCard(new CardData("og-040", [undefined,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN)//todo
