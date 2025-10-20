@@ -1,5 +1,4 @@
 import {Side} from "./GameElement.js";
-import Game from "./Game.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{

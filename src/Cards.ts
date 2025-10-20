@@ -1,8 +1,6 @@
 import CardData, {CardActionType, Species} from "./CardData.js";
 import {shuffled, sideTernary} from "./consts.js";
-import {other} from "./GameElement.js";
 import {PickCardsState, TurnState} from "./GameStates.js";
-import type VisualCard from "./client/VisualCard.js";
 import type Card from "./Card.js";
 
 const cards:{[k:string]:CardData} = {};

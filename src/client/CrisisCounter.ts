@@ -1,12 +1,9 @@
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
-import type {SidedVisualGameElement} from "./VisualGameElement.js";
 import type VisualGame from "./VisualGame.js";
 import type {Side} from "../GameElement.js";
 import {Euler, Quaternion, Vector3} from "three";
 import CardMagnet from "./magnets/CardMagnet.js";
-import type VisualCard from "./VisualCard.js";
 import {SuperficialVisualCard} from "./SuperficialVisualCard.js";
-import {camera} from "./clientConsts.js";
 
 export class CrisisCounter extends PositionedVisualGameElement{
     private readonly counterCard;
@@ -15,8 +12,9 @@ export class CrisisCounter extends PositionedVisualGameElement{
     constructor(game:VisualGame, side:Side, position:Vector3, rotation?:Quaternion) {
         super(game, side, position, rotation??new Quaternion());
 
-        game.addElement(this.counterCard=new SuperficialVisualCard(game, "crisis_counter.jpg", position, rotation));
-        game.addElement(this.coverCard=new SuperficialVisualCard(game, "card_shape.jpg", position, rotation));
+        game.addElement(this.counterCard=new SuperficialVisualCard(game, "crisis_counter.jpg", this.position.clone(), this.rotation));
+        game.addElement(this.coverCard=new SuperficialVisualCard(game, "card_shape.jpg", this.position.clone(),
+            this.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,-Math.PI/2,0)))));
         this.coverCard.flipFacedown();
     }
     tick(){
@@ -25,6 +23,6 @@ export class CrisisCounter extends PositionedVisualGameElement{
         this.lastCrisisCount=crisisCount;
 
         this.coverCard.position = this.position.clone().add(CardMagnet.offs)
-            .add(new Vector3(0,0,1).multiplyScalar(23*crisisCount).add(new Vector3(0,0,10)).applyQuaternion(this.rotation));
+            .add(new Vector3(1,0,0).multiplyScalar(23*crisisCount).add(new Vector3(-2,0,7)).applyQuaternion(this.rotation));
     }
 }

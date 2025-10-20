@@ -1,7 +1,8 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
-    CardAction, CardActionOptions,
+    CardAction,
+    CardActionOptions,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
@@ -10,7 +11,8 @@ import {
     PassAction,
     PlaceAction,
     RequestSyncEvent,
-    ScareAction, StringReprSyncEvent,
+    ScareAction,
+    StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
 import {game} from "../index.js";
@@ -20,14 +22,12 @@ import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
-import {wait} from "../consts.js";
+import {sideTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
-import {sideTernary} from "../consts.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
-import {CardActionType} from "../CardData.js";
 
 const log = (data: any) => {
     //@ts-ignore
@@ -76,10 +76,10 @@ network.receiveFromServer = async (packed) => {
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
         if(game.getMySide() === Side.A){
             game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1);
-            game.handB.position.add(new Vector3(0,100,0));
+            game.handB.position.add(new Vector3(0,100,60));
         }else{
             game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(1.7,0, 0)),1);
-            game.handA.position.add(new Vector3(0,100,0));
+            game.handA.position.add(new Vector3(0,100,-60));
         }
 
         const myDeck = sideTernary(game.getMySide(), game.deckA, game.deckB);

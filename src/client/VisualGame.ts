@@ -184,11 +184,11 @@ export default class VisualGame {
                     button(p5, p5.width/2+scale*0.1, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Finish", () => {
                         const toCall = (this.state as unknown as VPickCardsState).onFinish;
                         if(toCall) toCall();
-                    }, scale, this.finishButtonId, !this.frozen);
+                    }, scale, this.finishButtonId, this.frozen);
                 }
                 button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Cancel", () => {
                     (this.state as unknown as Cancellable).cancel();//trust
-                }, scale, this.passButtonId, !this.frozen);
+                }, scale, this.passButtonId, this.frozen);
             }
             if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
                 button(p5, x, p5.height - height - scale * 0.1, width, height, "Cancel", () => {

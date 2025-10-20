@@ -1,7 +1,6 @@
 import VisualCard from "./VisualCard.js";
 import {type Quaternion, Vector3} from "three";
 import type VisualGame from "./VisualGame.js";
-import type Card from "../Card.js";
 
 
 export class SuperficialVisualCard extends VisualCard{

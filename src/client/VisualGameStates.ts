@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, PickCardsState, TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
@@ -181,7 +181,7 @@ export class VTurnState extends VisualGameState<TurnState>{
     }
 }
 export interface Cancellable{
-    isCancellable():void;
+    isCancellable():boolean;
     cancel():void;
 }
 export const isCancellable = (inst:any) => inst.isCancellable instanceof Function && inst.cancel instanceof Function;
@@ -211,7 +211,7 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
     }
 
-    isCancellable(){}
+    isCancellable(){ return true; }
     cancel(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
