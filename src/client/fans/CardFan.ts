@@ -67,21 +67,27 @@ export default class CardFan extends PositionedVisualGameElement implements Card
     }
 
     addCard(card:VisualCard, index:number=0){
-        this.cards.splice(index,0,card);
         card.setHolder(this);
+        this.cards.splice(index,0,card);
 
         card.createModel().then(()=>{
-            this.recalculateCardPositions();
             card.setRealPosition(this.group.worldToLocal(card.model?.position!));
             card.setRealRotation(this.group.quaternion.clone().premultiply(card.model?.getWorldQuaternion(new Quaternion()).invert()!));
+
             this.group.add(card.model!);
+            this.recalculateCardPositions();
         });
     }
     removeCard(card:VisualCard){
         if(this.cards.indexOf(card)>=0) this.cards.splice(this.cards.indexOf(card),1);
         this.recalculateCardPositions();
 
-        this.unchildCard(card);
+        card.rotation = new Quaternion();
+        card.createModel().then(()=> {
+            card.setRealPosition(card.model.getWorldPosition(new Vector3())!);
+            card.setRealRotation(card.model.getWorldQuaternion(new Quaternion())!);
+            this.game?.scene.add(card.model);
+        });
     }
 
     //Recalculates where each card should be in this hand, and moves them to that position
@@ -94,12 +100,6 @@ export default class CardFan extends PositionedVisualGameElement implements Card
             card.rotation.slerp(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)),1);
             pos++;
         }
-    }
-    unchildCard(card:VisualCard){
-        card.rotation = new Quaternion();
-        card.setRealPosition(card.model?.getWorldPosition(new Vector3())!);
-        card.setRealRotation(card.model?.getWorldQuaternion(new Quaternion())!);
-        this.game?.scene.add(card.model!);
     }
 
     tick() {}

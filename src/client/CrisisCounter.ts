@@ -24,7 +24,7 @@ export class CrisisCounter extends PositionedVisualGameElement{
         if(this.lastCrisisCount === crisisCount) return;
         this.lastCrisisCount=crisisCount;
 
-        this.coverCard.position = this.position.add(CardMagnet.offs)
+        this.coverCard.position = this.position.clone().add(CardMagnet.offs)
             .add(new Vector3(0,0,1).multiplyScalar(23*crisisCount).add(new Vector3(0,0,10)).applyQuaternion(this.rotation));
     }
 }

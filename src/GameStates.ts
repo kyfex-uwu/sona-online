@@ -46,8 +46,10 @@ export class TurnState extends GameState{
 
             state.actionsLeft--;
             if(state.actionsLeft<=0){
-                if(!suppressChanges)
+                if(!suppressChanges) {
+                    // if(state.crisis && sideTernary())
                     this.game.state = new TurnState(this.game, other(state.turn));
+                }
                 return true;
             }
         }
