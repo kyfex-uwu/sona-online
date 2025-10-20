@@ -29,7 +29,7 @@ import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary, wait} from "../consts.js";
 import Card, {getVictim} from "../Card.js";
 import cards from "../Cards.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, PickCardsState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {CardActionType} from "../CardData.js";
 
@@ -390,10 +390,13 @@ network.receiveFromClient= async (packed, client) => {
                 case CardActionOptions.BROWNIE_DRAW: {
                     const id = (event as CardAction<{ id: number }>).data.cardData.id;
                     const card = event.game.cards.values().find(card => card.id === id);
-                    if (card && event.game.player(card.side) === event.sender &&
-                            card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)){
+                    if (event.game.state instanceof PickCardsState &&//player is picking cards
+                        card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
+                            card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                            event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
                         findAndRemove(event.game, card);
                         sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+                        event.game.state = event.game.state.parentState;//this might be wrong perchance
 
                         for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                             if(user !== event.sender){
