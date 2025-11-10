@@ -29,10 +29,12 @@ import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 
+window.showNetworkLogs=true;
 const log = (data: any) => {
     //@ts-ignore
     if(window.showNetworkLogs)
-        console.log(...data);
+        if(typeof data === "string") console.log(data);
+        else console.log(...data);
 }
 
 export function frontendInit(){

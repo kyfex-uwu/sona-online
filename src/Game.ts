@@ -1,24 +1,27 @@
-import Card from "./Card.js";
+import Card, {type MiscDataString} from "./Card.js";
 import {Side} from "./GameElement.js";
-import {Event} from "./networking/Events.js";
+import {type CardActionOption, Event} from "./networking/Events.js";
 import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/BackendServer.js";
 import {sideTernary} from "./consts.js";
 
-//The current game turn
-export enum CurrentTurn{
-    A,
-    B,
-    NEITHER,
-}
 //Data that needs to be stored in the game but shouldn't be part of the main properties
 export type MiscData = {
     playerAStartRequest?:"first"|"second"|"nopref",
     playerBStartRequest?:"first"|"second"|"nopref",
     isFirstTurn:boolean,//if this is the first turn of the game (used to prevent first turn attacking)
     canPreDraw:boolean,//if this is the draw happening at the beginning of the first turn
+};
+
+export type GameMiscDataString<T> = {};
+export const GameMiscDataStrings = {
+    PLAYER_A_STARTREQ: "playerAStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
+    PLAYER_B_STARTREQ: "playerAStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
+    IS_FIRST_TURN:"isFirstTurn" as GameMiscDataString<boolean>,
+    CAN_PREDRAW:"canPreDraw" as GameMiscDataString<boolean>,
+    NEXT_ACTION_SHOULD_BE:"nextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>
 };
 
 //A logical game
@@ -48,10 +51,13 @@ export default class Game{
         oldState.swapAway();
     }
 
-    public miscData:MiscData={
-        isFirstTurn:true,
-        canPreDraw:true,
+    private miscData: { [k: string]: any } = {
+        [GameMiscDataStrings.IS_FIRST_TURN as string]:true,
+        [GameMiscDataStrings.CAN_PREDRAW as string]:true,
     };
+    public getMiscData<T>(key:GameMiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
+    public setMiscData<T>(key:GameMiscDataString<T>, val: T){ this.miscData[key as string]=val; }
+
     private _crisises:[number,number]=[0,0];
     public getCrisis(side:Side){
         return this._crisises[side];

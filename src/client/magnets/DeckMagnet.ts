@@ -13,7 +13,7 @@ import type {CardWithRot} from "./RunawayMagnet.js";
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<CardWithRot> = [];
     //Returns a snapshot of the current cards. DOES NOT return the actual data structure, this will not update
-    public getCards(){ return [...this.cards];}
+    public getCards(){ return this.cards.map(data=>data.card);}
     /**
      * Creates a deck magnet
      * @param side Which side this element belongs to

@@ -1,7 +1,7 @@
 import CardData, {CardActionType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import {EndType, VAttackingState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
@@ -15,7 +15,7 @@ export const visualCardClientActions:{[k:string]:(card:VisualCard)=>boolean} = {
 
 function lastAction(callback:(card:VisualCard)=>boolean){
     return (card:VisualCard)=> {
-        if (visualGame.state instanceof VTurnState && visualGame.state.getActionsLeft() === 1) {
+        if (visualGame.state instanceof VAttackingState && visualGame.state.parentState.getActionsLeft() === 1) {
             return callback(card);
         }
         return false;
@@ -33,6 +33,8 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     return true;
 });
 visualCardClientActions["og-038"] = lastAction((card)=>{
+    console.log("MRO")
+
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
     if(cards.length===0) return false;
@@ -83,7 +85,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 
         const deck = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB);
-        const toRemove =deck.getCards().find(cwr => cwr.card.logicalCard.id === card.logicalCard.id)?.card
+        const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);
         if(toRemove) {
             deck.removeCard(toRemove);
             toRemove.setRealPosition(card.position.clone());
@@ -123,4 +125,14 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
                 network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_CANCEL, cardData:{}}));
             }), visualGame.getGame().state);
     }
+});
+
+wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state,game.state],
+        sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+        (card)=>{
+
+        },EndType.NONE,()=>{}), (game.state as PickCardsState).parentState);
 });

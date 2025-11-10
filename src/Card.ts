@@ -25,6 +25,7 @@ export function getAttacker(stat:Stat){
 export type MiscDataString<T> = {};
 export const MiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
+    DCW_PICKED_LEVEL:"og-032_level" as MiscDataString<1|2|3|undefined>,
 };
 
 //A *logical* card
@@ -34,7 +35,7 @@ export default class Card implements GameElement{
     public readonly id:number;
 
     private miscData: { [k: string]: any } = {};
-    public getMiscData<T>(key:MiscDataString<T>){ return this.miscData[key as string] as T; }
+    public getMiscData<T>(key:MiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
     public setMiscData<T>(key:MiscDataString<T>, val: T){ this.miscData[key as string]=val; }
     public hasAttacked=false;
 

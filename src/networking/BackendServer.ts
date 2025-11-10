@@ -23,7 +23,7 @@ import {
     StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
-import Game from "../Game.js";
+import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary, wait} from "../consts.js";
@@ -181,28 +181,28 @@ function parseEvent(event:Event<any>, client:Client){
         }
     }else if(event instanceof StartRequestEvent){
         if(event.game!==undefined && event.game.state instanceof BeforeGameState){
-            event.game.miscData[(event.sender === event.game.player(Side.A))?
-                "playerAStartRequest" :
-                "playerBStartRequest"] = event.data.which;
+            event.game.setMiscData((event.sender === event.game.player(Side.A))?
+                GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ, event.data.which);
 
-            if(event.game.miscData.playerAStartRequest !== undefined &&
-                event.game.miscData.playerBStartRequest !== undefined){
+            const playerAStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_A_STARTREQ);
+            const playerBStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_B_STARTREQ);
+            if(playerAStartReq !== undefined &&
+                playerBStartReq !== undefined){
                 let startingSide: Side;
                 let flippedCoin: boolean;
 
-                if(event.game.miscData.playerAStartRequest ===
-                    event.game.miscData.playerBStartRequest){
+                if(playerAStartReq === playerBStartReq){
                     flippedCoin=true;
                     startingSide = Math.random()<0.5 ? Side.A : Side.B;
                 }else{
                     flippedCoin=false;
-                    if(event.game.miscData.playerAStartRequest === "nopref"){
-                        startingSide = event.game.miscData.playerBStartRequest === "first" ? Side.B : Side.A;
-                    }else if(event.game.miscData.playerBStartRequest === "nopref"){
-                        startingSide = event.game.miscData.playerAStartRequest === "first" ? Side.A : Side.B;
+                    if(playerAStartReq === "nopref"){
+                        startingSide = playerBStartReq === "first" ? Side.B : Side.A;
+                    }else if(playerBStartReq === "nopref"){
+                        startingSide = playerAStartReq === "first" ? Side.A : Side.B;
                     }else{
                         //first and second
-                        startingSide = event.game.miscData.playerBStartRequest === "first" ? Side.B : Side.A;
+                        startingSide = playerBStartReq === "first" ? Side.B : Side.A;
                     }
                 }
 
@@ -241,7 +241,7 @@ function parseEvent(event:Event<any>, client:Client){
                     event.game.player(card.side) === event.sender &&//card is the player's
                     sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
                         .some(other => (other?.cardData.level??0) >= card.cardData.level-1) && //placed card's level is at most 1 above all other cards
-                    !event.game.miscData.canPreDraw))){//not predraw
+                    !event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)))){//not predraw
                 rejectEvent(event);
                 return;
             }
@@ -291,7 +291,7 @@ function parseEvent(event:Event<any>, client:Client){
                     rejectEvent(event);
                     return;
                 }
-                if(event.game.miscData.canPreDraw){
+                if(event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
                     const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
                     if(card !== undefined){//bro it better not be
                         sideTernary(side, event.game.handA, event.game.handB).push(card);
@@ -302,7 +302,7 @@ function parseEvent(event:Event<any>, client:Client){
                         }
                     }
 
-                    if(event.game.miscData.canPreDraw) event.game.miscData.canPreDraw=false;
+                    event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
                     acceptEvent(event);
                     return;
                 }
@@ -438,7 +438,18 @@ function parseEvent(event:Event<any>, client:Client){
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
                             .find(card => card.id === event.data.id &&
                                 card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined)?.cardData.name;
-                        //should remember that the player clarified cards with the purpose of seeing them with brownie, so the next card they place should be brownie
+                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW);
+                    }
+                    break;
+                case ClarificationJustification.AMBER:
+                    if(event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&
+                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                            .find(card =>card !== undefined && card.cardData.name === "og-018")) {
+
+                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
+                            .find((card, i) => card.id === event.data.id && (i === 0 || i === 1))?.cardData.name;
+                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.AMBER_PICK);
                     }
                     break;
             }

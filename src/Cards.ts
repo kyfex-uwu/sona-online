@@ -133,7 +133,11 @@ setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES)//todo
     }));
 setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
-
+        game.state = new PickCardsState(game, game.state as TurnState,
+            sideTernary(self.side, game.deckA, game.deckB), (picked)=>{
+            self.setMiscData(MiscDataStrings.DCW_PICKED_LEVEL, picked.cardData.level);
+            return true;
+        });
     }));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE).setFree());
 setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));

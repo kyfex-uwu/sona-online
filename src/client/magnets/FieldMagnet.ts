@@ -11,6 +11,7 @@ import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
 import {CardActionType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
+import {GameMiscDataStrings} from "../../Game.js";
 
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
@@ -64,7 +65,7 @@ export default class FieldMagnet extends CardMagnet{
                     }
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === this.game.getMySide() ||
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
-                    if(state instanceof VTurnState && !this.game.getGame().miscData.isFirstTurn){
+                    if(state instanceof VTurnState && !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)){
                         if(this.card === undefined || this.card.logicalCard.hasAttacked) return false;
                         this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
@@ -89,7 +90,8 @@ export default class FieldMagnet extends CardMagnet{
                                 } else if (this.card.logicalCard.cardData.stat(Stat.YELLOW) !== undefined &&
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
-                                } else if(intersects[0].object === this.card.model){
+                                } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
+                                        console.log("mroww", visualCardClientActions[this.card.logicalCard.cardData.name],this.card.logicalCard.cardData.name)
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         if(visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card)) {
                                             state.cancel();

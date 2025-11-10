@@ -46,7 +46,8 @@ export abstract class Event<T extends SerializableEventData>{
 
 //--
 export enum ClarificationJustification{
-    BROWNIE
+    BROWNIE,
+    AMBER,
 }
 //Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
@@ -128,6 +129,8 @@ export const CardActionOptions = {
     GREMLIN_SCARE:"og-009_scare" as CardActionOption<{id:number}>,
 
     WORICK_RESCUE:"og-038_rescue" as CardActionOption<{ id: number }>,
+
+    AMBER_PICK:"og-018_pick" as CardActionOption<1 | 2>,
 };
 {
     const options:{[key:string]:true} = {};

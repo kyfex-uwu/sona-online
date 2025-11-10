@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, PickCardsState, TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, PickCardsState, TurnState, VDCWGuess} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
@@ -10,6 +10,7 @@ import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
 import {Euler, Group, Quaternion, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
+import {GameMiscDataStrings} from "../Game.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -25,6 +26,7 @@ export abstract class VisualGameState<T extends GameState>{
     public readonly features:Set<StateFeatures> = new Set();
     constructor(game:VisualGame) {
         this.game=game;
+        console.log("creating "+this.constructor.name)
     }
     visualTick(){};
     init(){}
@@ -140,7 +142,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready) {
-            if (this.game.getGame().miscData.isFirstTurn && this.currTurn === this.game.getMySide()) {
+            if (this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN) && this.currTurn === this.game.getMySide()) {
                 sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
                 network.sendToServer(new DrawAction({}));
             }
@@ -262,11 +264,14 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     init() {
         super.init();
 
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+
         if(!this.initedAlready) {
             this.listener = clickListener(() => {
                 const intersects = this.game.raycaster.intersectObjects(this.cards
                     .map(card => card.model).filter(model => model !== undefined));
                 if (intersects[0] !== undefined) {
+                    console.log(intersects[0], intersects[0].object?.parent?.parent?.parent)
                     this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard);
                 }
 
@@ -276,6 +281,9 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
             for (let i = 0; i < this.cards.length; i++) {
                 this.cards[i] = new VisualCardClone(this.cards[i]!);
                 this.game.addElement(this.cards[i]!);
+                this.cards[i]!.createModel().then(()=>{
+                    camera.add(this.cards[i]!.model);
+                });
             }
 
             let height=3;
@@ -285,18 +293,18 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
             if(cardsLength<=18){
                 if(cardsLength%3===0 && cardsLength>6){
                     height=3;
-                }else if(cardsLength%2===0 && cardsLength>4){
+                }else if(cardsLength%2===0 && cardsLength>4 && cardsLength/2<=6){
                     height=2;
                 }else{
-                    height=Math.ceil(cardsLength/3);
+                    height=Math.ceil(cardsLength/6);
                 }
-            }else{
+            }else{//fun fact! i think its impossible for this to be run
                 //scale=1: 3x6
                 //card dims are 5/7, 6/8 with padding
                 //screen height = 3/8 = 9/24
                 //screen width = 4/6 = 2/3 = 16/24
                 //ratio: 9/16 effectively, if the cards are square
-
+                console.log("gorp")
                 scale = Math.sqrt(cardsLength/(16*9))*8;
                 height = Math.ceil(cardsLength/16*scale);
             }
@@ -310,10 +318,9 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                     if(fakeCard === undefined) break;
 
                     fakeCard.flipFaceup();
-                    let pos = camera.getWorldDirection(new Vector3()).multiplyScalar(400).add(camera.position)
-                        .add(new Vector3((x-(width-1)/2)*100*scale, (y-(height-1)/2)*133*scale, 0));
+                    let pos = new Vector3((x-(width-1)/2)*85*scale, -(y-(height-1)/2)*119*scale, -400);
                     fakeCard.position.copy(pos);
-                    fakeCard.rotation = camera.quaternion.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0)));
+                    fakeCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
                     fakeCard.scale = new Vector3(scale, scale, scale);
                 }
             }
@@ -324,6 +331,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     swapAway() {
         super.swapAway();
         removeClickListener(this.listener!);
+        this.removeCards();
     }
 
     canSelectHandCard(card: VisualCard): boolean {
@@ -338,8 +346,12 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
         this.game.setState(this.parentState[0], this.parentState[1]);
         if(decrement && isDecrementable(this.parentState[0])) (this.parentState[0] as unknown as Decrementable).decrementTurn();
 
+        this.removeCards()
+    }
+
+    removeCards(){
         for(const card of this.cards){
-            card.position = new Vector3(0,-50,0);
+            card.position = new Vector3(0,0,-1500);
         }
         wait(1000).then(()=>{
             for(const card of this.cards){
@@ -356,3 +368,22 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     }
 }
 //server side picking cards state?
+
+//--
+
+export class VDCWPicked extends VisualGameState<VDCWGuess>{
+    private readonly card;
+    private readonly parentState;
+    constructor(game:VisualGame, card:VisualCardClone, parentState:VTurnState) {
+        super(game);
+        this.card=card;
+        this.parentState=parentState;
+    }
+}
+export class VDCWGuesser extends VisualGameState<VDCWGuess>{
+    private readonly parentState;
+    constructor(game:VisualGame, parentState:VTurnState) {
+        super(game);
+        this.parentState=parentState;
+    }
+}

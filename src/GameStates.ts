@@ -1,4 +1,4 @@
-import type Game from "./Game.js";
+import Game, {GameMiscDataStrings} from "./Game.js";
 import {other, type Side} from "./GameElement.js";
 import {sideTernary} from "./consts.js";
 import type Card from "./Card.js";
@@ -33,7 +33,7 @@ export class TurnState extends GameState{
     }
     swapAway() {
         super.swapAway();
-        this.game.miscData.isFirstTurn=false;
+        this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
     }
 
     /**
@@ -99,5 +99,15 @@ export class EndGameState extends GameState{
 export class InterruptScareActionsState extends GameState{
     constructor(game:Game, validCards:Card[], ) {
         super(game);
+    }
+}
+
+//--
+
+export class VDCWGuess extends GameState{
+    public readonly level;
+    constructor(game:Game, level:undefined|1|2|3) {
+        super(game);
+        this.level=level;
     }
 }

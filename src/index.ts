@@ -13,7 +13,8 @@ import type CardData from "./CardData.js";
 // Init scene.
 const scene = new Scene();
 scene.background = new Color("#111111");
-scene.add(new AmbientLight(new Color(0xffffff), 3))
+scene.add(new AmbientLight(new Color(0xffffff), 3));
+scene.add(camera);
 
 modelLoader.load("/assets/board.glb", model => {
     (model.scene.children[0] as Mesh).material = new MeshBasicMaterial({
@@ -62,7 +63,7 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [
-                "og-038"
+                "og-032"
             ];
             const alreadyAdded:{[k:string]:true} = {};
             for(const card of toReturn) alreadyAdded[card]=true;
