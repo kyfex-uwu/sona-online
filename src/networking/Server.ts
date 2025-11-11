@@ -2,6 +2,27 @@ import {AcceptEvent, Event, RejectEvent, type SerializableEventData, type Serial
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 
+class FlagData{
+    type:"number"|"boolean";
+    val;
+
+    constructor(type:"number"|"boolean", defaultVal:any) {
+        this.type=type;
+        this.val=defaultVal;
+    }
+
+}
+type flagName<T>={}
+export const flagNames={
+    CHILI_MAMA_ALL_CANINES:"CHILI_MAMA_ALL_CANINES" as flagName<boolean>
+}
+export const flags = {
+    [flagNames.CHILI_MAMA_ALL_CANINES as string]:new FlagData("boolean", false),
+};
+export function getFlag<T>(name:flagName<T>){
+    return flags[name as string]!.val as T;
+}
+
 export const eventReplyIds:{[k:string]:{[k:string]:Replyable<any>}} = {}
 export class Replyable<T extends SerializableEventData>{
     public _callback?: (event: Event<any>) => void;

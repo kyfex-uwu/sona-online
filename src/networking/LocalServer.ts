@@ -29,6 +29,7 @@ import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 
+//@ts-ignore
 window.showNetworkLogs=true;
 const log = (data: any) => {
     //@ts-ignore
@@ -52,6 +53,27 @@ websocketReady.then(() => {
         else network.receiveFromServer(parsed);
     }
 })
+
+function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
+    const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
+    if(oldVCard !== undefined){
+        const newCard = cardDataName !== undefined ?
+            new Card(cards[cardDataName!]!, oldVCard.logicalCard.side, oldVCard.logicalCard.id) :
+            oldVCard.logicalCard;
+        const oldCard = oldVCard.logicalCard;
+        if(!oldCard.getFaceUp()) newCard.flipFacedown();
+
+        if(cardDataName !== undefined){
+            game.getGame().cards.delete(oldVCard.logicalCard);
+            oldVCard.repopulate(newCard);
+        }
+
+        if(faceUp !== undefined && faceUp !== oldCard.getFaceUp())
+            oldVCard[faceUp ? "flipFaceup" : "flipFacedown"]();
+
+        game.getGame().cards.add(newCard);
+    }
+}
 
 network.sendToServer = (event) => {
     websocketReady.then(()=>{
@@ -100,6 +122,11 @@ network.receiveFromServer = async (packed) => {
 
         await wait(500);
     }else if (event instanceof ClarifyCardEvent){
+        if(event.data.cardDataName !== undefined) clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
+        if(event.data.multipleCardData !== undefined)
+            for(const id in event.data.multipleCardData)
+                clarifyCard(parseInt(id), ...event.data.multipleCardData[id]!);
+
         const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
             const newCard = event.data.cardDataName !== undefined ?

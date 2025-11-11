@@ -1,5 +1,7 @@
 import {type GameElement, Side} from "./GameElement.js";
 import type CardData from "./CardData.js";
+import {verifyNoDuplicateStrVals} from "./consts.js";
+import {GameMiscDataStrings} from "./Game.js";
 
 //Which stat on a card
 export enum Stat{
@@ -26,7 +28,9 @@ export type MiscDataString<T> = {};
 export const MiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
     DCW_PICKED_LEVEL:"og-032_level" as MiscDataString<1|2|3|undefined>,
+    LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
 };
+verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
 
 //A *logical* card
 export default class Card implements GameElement{

@@ -1,7 +1,14 @@
 import Card, {Stat} from "./Card.js";
 import type Game from "./Game.js";
+import type {Event} from "./networking/Events.js";
 
 let globalID=0;
+
+export enum InterruptScareResult{
+    PASSTHROUGH,
+    STOP,
+    FAIL,
+}
 
 export class CardActionType<P extends {[k:string]:any}, R>{
     private static nextId=0;
@@ -21,7 +28,7 @@ export class CardActionType<P extends {[k:string]:any}, R>{
     public static readonly INTERRUPT_CRISIS = new CardActionType<
         {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardActionType<
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, boolean>();//return false to cancel the scare
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:Event<any>}, InterruptScareResult>();
 
     public static readonly TURN_START = new CardActionType<
         {self:Card,game:Game}, void>();

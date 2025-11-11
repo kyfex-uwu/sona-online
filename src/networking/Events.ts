@@ -3,6 +3,7 @@ import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import {network} from "./Server.js";
+import {verifyNoDuplicateStrVals} from "../consts.js";
 
 //Generates an event id
 const eventIdGenerator = ()=>new Array(16).fill(0).map(_=>Math.floor(Math.random()*36).toString(36)).join("");
@@ -48,12 +49,14 @@ export abstract class Event<T extends SerializableEventData>{
 export enum ClarificationJustification{
     BROWNIE,
     AMBER,
+    FURMAKER,
 }
 //Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
     id:number,
     cardDataName?:string,
     faceUp?:boolean,
+    multipleCardData?:{[id:number]:[string, boolean?]},
     justification?:ClarificationJustification
 }>{}
 
@@ -131,14 +134,10 @@ export const CardActionOptions = {
     WORICK_RESCUE:"og-038_rescue" as CardActionOption<{ id: number }>,
 
     AMBER_PICK:"og-018_pick" as CardActionOption<1 | 2>,
+
+    FURMAKER_PICK:"og-041_pick" as CardActionOption<number>,
 };
-{
-    const options:{[key:string]:true} = {};
-    for (const option of Object.values(CardActionOptions)) {
-        if(options[option as string]) console.error(`Duplicate card action option: ${option}`);
-        options[option as string]=true;
-    }
-}
+verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{

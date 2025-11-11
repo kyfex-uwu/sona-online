@@ -251,7 +251,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     private readonly onPick;
     public readonly endType;
     public readonly onFinish;
-    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCard)=>void,
+    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCardClone)=>void,
                 endType:EndType, onFinish?:()=>void) {
         super(game);
         this.cards=cards;
@@ -272,7 +272,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                     .map(card => card.model).filter(model => model !== undefined));
                 if (intersects[0] !== undefined) {
                     console.log(intersects[0], intersects[0].object?.parent?.parent?.parent)
-                    this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard);
+                    this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card);
                 }
 
                 return false;

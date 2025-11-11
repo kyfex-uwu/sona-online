@@ -29,3 +29,11 @@ export async function wait(ms:number){
     setTimeout(resolve, ms);
     await p;
 }
+
+export function verifyNoDuplicateStrVals(miscDataStrings: { [k: string]: any }, toThrow:string){
+    const checker = new Set();
+    for(const key in miscDataStrings){
+        if(checker.has(miscDataStrings[key])) throw toThrow;
+        checker.add(miscDataStrings[key]!);
+    }
+}

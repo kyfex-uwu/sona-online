@@ -27,7 +27,7 @@ import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary, wait} from "../consts.js";
-import Card, {getVictim} from "../Card.js";
+import Card, {getVictim, Stat} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, PickCardsState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
@@ -96,6 +96,30 @@ function findAndRemove(game:Game, card:Card){
             }
         }
     }
+}
+
+/**
+ * Calls any/all interrupt scares
+ * @param event The event this scare comes from
+ * @param game The game this scare is happening in
+ * @param scarer The card that is doing the scaring
+ * @param scared The card being scared
+ * @param scareType The scare type
+ * @return if the scare should continue
+ */
+function scareInterrupt(event:Event<any>, game:Game, scarer:Card, scared:Card, scareType:Stat|"card"){
+    if(event.interruptScareBypass !== bypassInterruptScareMarker){
+        for(const card of sideTernary(scarer.side, game.fieldsA, game.fieldsB)) {
+            if(card===undefined) continue;
+            const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
+            if (interruptAction !== undefined) {
+                if (!interruptAction({ self: card, scared, scarer, game, stat: scareType, origEvent:event })) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 const bypassInterruptScareMarker = {};
@@ -350,10 +374,19 @@ function parseEvent(event:Event<any>, client:Client){
                 return;
             }
 
-            if(event.interruptScareBypass !== bypassInterruptScareMarker){
-                const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
-                // if(interruptAction !== undefined) interruptAction({self:scared, scarer, game:event.game, stat:event.data.attackingWith});
-            }
+            if(!scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith))
+                return;
+            // if(event.interruptScareBypass !== bypassInterruptScareMarker){
+            //     for(const card of sideTernary(scarer.side, event.game.fieldsA, event.game.fieldsB)) {
+            //         if(card===undefined) continue;
+            //         const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
+            //         if (interruptAction !== undefined) {
+            //             if (!interruptAction({ self: card, scared, scarer, game: event.game, stat: event.data.attackingWith })) {
+            //
+            //             }
+            //         }
+            //     }
+            // }
 
             const toSend = new ScareAction({
                 scaredPos:event.data.scaredPos,
@@ -450,6 +483,21 @@ function parseEvent(event:Event<any>, client:Client){
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
                             .find((card, i) => card.id === event.data.id && (i === 0 || i === 1))?.cardData.name;
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.AMBER_PICK);
+                    }
+                    break;
+                case ClarificationJustification.FURMAKER:
+                    if(event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&
+                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                            .find(card =>card !== undefined && card.cardData.name === "og-041")) {
+                        shouldClarify=undefined;
+                        network.replyToClient(event, new ClarifyCardEvent({
+                            id:event.data.id,
+                            multipleCardData:Object.fromEntries(sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB).map(card=>{
+                                return ["id", [card.cardData.name]];
+                            }))
+                        }))
+                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
                     }
                     break;
             }

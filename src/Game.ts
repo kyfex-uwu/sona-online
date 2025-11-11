@@ -5,24 +5,18 @@ import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/BackendServer.js";
-import {sideTernary} from "./consts.js";
-
-//Data that needs to be stored in the game but shouldn't be part of the main properties
-export type MiscData = {
-    playerAStartRequest?:"first"|"second"|"nopref",
-    playerBStartRequest?:"first"|"second"|"nopref",
-    isFirstTurn:boolean,//if this is the first turn of the game (used to prevent first turn attacking)
-    canPreDraw:boolean,//if this is the draw happening at the beginning of the first turn
-};
+import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
 
 export type GameMiscDataString<T> = {};
+//Data that needs to be stored in the game but shouldn't be part of the main properties
 export const GameMiscDataStrings = {
     PLAYER_A_STARTREQ: "playerAStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
-    PLAYER_B_STARTREQ: "playerAStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
+    PLAYER_B_STARTREQ: "playerBStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
     IS_FIRST_TURN:"isFirstTurn" as GameMiscDataString<boolean>,
     CAN_PREDRAW:"canPreDraw" as GameMiscDataString<boolean>,
     NEXT_ACTION_SHOULD_BE:"nextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>
 };
+verifyNoDuplicateStrVals(GameMiscDataStrings, "GameMiscDataStrings has a duplicate");
 
 //A logical game
 export default class Game{
