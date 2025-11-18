@@ -1,29 +1,31 @@
 import CardData, {CardActionType, InterruptScareResult, Species} from "./CardData.js";
 import {shuffled, sideTernary} from "./consts.js";
-import {PickCardsState, TurnState} from "./GameStates.js";
+import {TurnState} from "./GameStates.js";
 import Card, {getVictim, MiscDataStrings} from "./Card.js";
 import {flagNames, flags, getFlag} from "./networking/Server.js";
+import {GameMiscDataStrings} from "./Game.js";
+import {CardActionOptions} from "./networking/CardActionOption.js";
 
 const cards:{[k:string]:CardData} = {};
 
 const setCard = (data:CardData) => cards[data.name] = data;
 
-setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
-    .with(CardActionType.LAST_ACTION, ({self, game})=>{
-        //todo: remove this
-        if(game.state instanceof TurnState) {
-            const takeFrom = sideTernary(self.side, game.fieldsA, game.fieldsB);
-            game.state = new PickCardsState(game, game.state, takeFrom
-                    .filter(c => c !== undefined && c.cardData.species === Species.CANINE) as Card[],
-                (picked) => {
-                    takeFrom.splice(takeFrom.indexOf(picked),1);
-                    sideTernary(self.side, game.handA, game.handB).push(picked);
-                    shuffled(takeFrom);
-                    game.state = (game.state as PickCardsState).parentState;
-                    return true;
-                });
-        }
-    }));
+setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE));//todo
+    // .with(CardActionType.LAST_ACTION, ({self, game})=>{
+    //     //todo: remove this
+    //     if(game.state instanceof TurnState) {
+    //         const takeFrom = sideTernary(self.side, game.fieldsA, game.fieldsB);
+    //         game.state = new PickCardsState(game, game.state, takeFrom
+    //                 .filter(c => c !== undefined && c.cardData.species === Species.CANINE) as Card[],
+    //             (picked) => {
+    //                 takeFrom.splice(takeFrom.indexOf(picked),1);
+    //                 sideTernary(self.side, game.handA, game.handB).push(picked);
+    //                 shuffled(takeFrom);
+    //                 game.state = (game.state as PickCardsState).parentState;
+    //                 return true;
+    //             });
+    //     }
+    // }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
     .with(CardActionType.GET_STATS, ({self, game})=>{
@@ -33,19 +35,7 @@ setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
 setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE));
 setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)//done only here
     .with(CardActionType.PLACED, ({self, game})=>{
-        if(game.state instanceof TurnState) {
-            const takeFrom = sideTernary(self.side, game.deckA, game.deckB);
-            game.state = new PickCardsState(game, game.state, takeFrom
-                    .filter(c => (c.cardData.getAction(CardActionType.IS_FREE) || (() => {
-                    }))({self: c, game: game})),
-                (picked) => {
-                    takeFrom.splice(takeFrom.indexOf(picked),1);
-                    sideTernary(self.side, game.handA, game.handB).push(picked);
-                    shuffled(takeFrom);
-                    game.state = (game.state as PickCardsState).parentState;
-                    return true;
-                });
-        }
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW)
     }));
 setCard(new CardData("og-006", [undefined,2,1], 1, Species.FELINE).setFree());
 setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
@@ -115,7 +105,7 @@ setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE)//DONE
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE));
 setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
-
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.YASHI_REORDER);
     }));
 setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE)//todo
     .with(CardActionType.LAST_ACTION, ({self, game})=>{
@@ -146,11 +136,7 @@ setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES)//todo
     }));
 setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.state = new PickCardsState(game, game.state as TurnState,
-            sideTernary(self.side, game.deckA, game.deckB), (picked)=>{
-            self.setMiscData(MiscDataStrings.DCW_PICKED_LEVEL, picked.cardData.level);
-            return true;
-        });
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.DCW_GUESS);
     }));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE).setFree());
 setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));

@@ -4,6 +4,7 @@ import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import {network} from "./Server.js";
 import {verifyNoDuplicateStrVals} from "../consts.js";
+import {type CardActionOption, CardActionOptions} from "./CardActionOption.js";
 
 //Generates an event id
 const eventIdGenerator = ()=>new Array(16).fill(0).map(_=>Math.floor(Math.random()*36).toString(36)).join("");
@@ -120,24 +121,6 @@ export class ScareAction extends ActionEvent<{
     failed?:boolean,
     scaredSide:Side,
 }>{}
-
-export type CardActionOption<T> = {};
-export const CardActionOptions = {
-    BOTTOM_DRAW: "og-025_bottom_draw" as CardActionOption<{side:Side}>,
-
-    K9_ALPHA: "og-001_alpha" as CardActionOption<{ canineFields: [boolean, boolean, boolean] }>,
-    BROWNIE_DRAW: "og-005_draw" as CardActionOption<{id:number}>,
-
-    GREMLIN_CANCEL:"og-009_cancel" as CardActionOption<{}>,
-    GREMLIN_SCARE:"og-009_scare" as CardActionOption<{id:number}>,
-
-    WORICK_RESCUE:"og-038_rescue" as CardActionOption<{ id: number }>,
-
-    AMBER_PICK:"og-018_pick" as CardActionOption<1 | 2>,
-
-    FURMAKER_PICK:"og-041_pick" as CardActionOption<number>,
-};
-verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{

@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, PickCardsState, TurnState, VDCWGuess} from "../GameStates.js";
+import {BeforeGameState, GameState, TurnState, VDCWGuess} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {network} from "../networking/Server.js";
@@ -319,6 +319,8 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
                     fakeCard.flipFaceup();
                     let pos = new Vector3((x-(width-1)/2)*85*scale, -(y-(height-1)/2)*119*scale, -400);
+                    console.log((x-(width-1)/2), -(y-(height-1)/2), x, y, width, height)
+                    console.log(fakeCard.logicalCard.cardData.name)
                     fakeCard.position.copy(pos);
                     fakeCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
                     fakeCard.scale = new Vector3(scale, scale, scale);
@@ -339,12 +341,11 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     }
 
     isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
-    cancel(){
-        let decrement=false;
-        if(this.game.getGame().state instanceof PickCardsState)
-            decrement=true;
+    cancel(){//todo: make sure this doesnt break stuff
+        // let decrement=false;
         this.game.setState(this.parentState[0], this.parentState[1]);
-        if(decrement && isDecrementable(this.parentState[0])) (this.parentState[0] as unknown as Decrementable).decrementTurn();
+        // if(decrement && isDecrementable(this.parentState[0]))
+        //     (this.parentState[0] as unknown as Decrementable).decrementTurn();
 
         this.removeCards()
     }

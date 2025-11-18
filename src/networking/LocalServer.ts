@@ -2,7 +2,6 @@ import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
     CardAction,
-    CardActionOptions,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
@@ -28,6 +27,7 @@ import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
 import {TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
+import {CardActionOptions} from "./CardActionOption.js";
 
 //@ts-ignore
 window.showNetworkLogs=true;

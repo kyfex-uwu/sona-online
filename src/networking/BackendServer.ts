@@ -1,9 +1,8 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
-    AcceptEvent,
+    AcceptEvent, ActionEvent,
     CardAction,
-    CardActionOptions,
     cardsTransform,
     ClarificationJustification,
     ClarifyCardEvent,
@@ -29,9 +28,10 @@ import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary, wait} from "../consts.js";
 import Card, {getVictim, Stat} from "../Card.js";
 import cards from "../Cards.js";
-import {BeforeGameState, PickCardsState, TurnState} from "../GameStates.js";
+import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {CardActionType} from "../CardData.js";
+import {type BROWNIE_DRAW, CardActionOptions, type YASHI_REORDER} from "./CardActionOption.js";
 
 export type Client ={send:(v:Event<any>)=>void};
 const usersFromGameIDs:{[k:string]:Array<Client>}={};
@@ -126,6 +126,19 @@ const bypassInterruptScareMarker = {};
 
 function parseEvent(event:Event<any>, client:Client){
     //todo: verify things are in array bounds!!!!
+
+    if(event.game !== undefined){
+        const nextEvent = event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE);
+        if(nextEvent !== undefined){
+            if(event instanceof ActionEvent &&
+                //?? what
+                (!(event instanceof CardAction) || event.data.actionName !== nextEvent)){
+                rejectEvent(event);
+                return;
+            }
+        }
+    }
+
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
             return;
@@ -411,26 +424,32 @@ function parseEvent(event:Event<any>, client:Client){
         if(event.game !== undefined) {
             switch(event.data.actionName){
                 case CardActionOptions.BROWNIE_DRAW: {
-                    const id = (event as CardAction<{ id: number }>).data.cardData.id;
+                    const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
                     const card = event.game.cards.values().find(card => card.id === id);
-                    if (event.game.state instanceof PickCardsState &&//player is picking cards
-                        card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
-                        card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
-                        event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
-                        findAndRemove(event.game, card);
-                        sideTernary(card.side, event.game.handA, event.game.handB).push(card);
-                        event.game.state = event.game.state.parentState;//this might be wrong perchance
 
-                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                            if(user !== event.sender){
-                                user.send(new CardAction({
-                                    cardId: -1,
-                                    actionName:CardActionOptions.BROWNIE_DRAW,
-                                    cardData:{id:card.id},
-                                }))
-                            }
-                        }
-                    }
+                    //
+                    // if (event.game.state instanceof PickCardsState &&//player is picking cards
+                    //     card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
+                    //     card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                    //     event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
+                    //     findAndRemove(event.game, card);
+                    //     sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+                    //     event.game.state = event.game.state.parentState;//this might be wrong perchance
+                    //
+                    //     for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                    //         if(user !== event.sender){
+                    //             user.send(new CardAction({
+                    //                 cardId: -1,
+                    //                 actionName:CardActionOptions.BROWNIE_DRAW,
+                    //                 cardData:{id:card.id},
+                    //             }))
+                    //         }
+                    //     }
+                    // }
+                }break;
+                case CardActionOptions.YASHI_REORDER:{
+                    const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
+                    //TODO
                 }break;
             }
         }

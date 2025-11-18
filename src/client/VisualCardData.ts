@@ -5,9 +5,10 @@ import {EndType, VAttackingState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, CardActionOptions, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import {Stat} from "../Card.js";
-import type {PickCardsState} from "../GameStates.js";
+import {CardActionOptions} from "../networking/CardActionOption.js";
+import type {TurnState} from "../GameStates.js";
 
 export function loadFrontendWrappers(){}
 
@@ -98,8 +99,10 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         }));
     }
 
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as PickCardsState).parentState], visualGame.elements.filter(element =>
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
+
+        console.log(card)
         const state = visualGame.state as VPickCardsState;
         state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 
@@ -141,11 +144,27 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
                     id:card.logicalCard.id,
                 }}));
             }, EndType.CANCEL, ()=>{
-                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_CANCEL, cardData:{}}));
+                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}));
             }), visualGame.getGame().state);
     }
 });
+wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
 
+    let toSend:[number?,number?,number?] = [];
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, game.state],
+        sideTernary(self.side, visualGame.deckA.getCards(), visualGame.deckB.getCards()),
+        (picked)=>{
+            toSend.push(picked.logicalCard.id);
+            return toSend.length >= 3;
+    }, EndType.FINISH, ()=>{
+        network.sendToServer(new CardAction({
+            cardId:self.id,
+            actionName:CardActionOptions.YASHI_REORDER,
+            cardData:toSend,
+        }));
+    }), game.state);
+})
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
@@ -153,5 +172,5 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
         sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
         (card)=>{
 
-        },EndType.NONE,()=>{}), (game.state as PickCardsState).parentState);
+        },EndType.NONE,()=>{}), (game.state as TurnState));
 });
