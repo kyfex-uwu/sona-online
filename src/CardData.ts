@@ -61,7 +61,7 @@ export default class CardData{
     public readonly imagePath: string;
     public readonly stats: [number|undefined,number|undefined,number|undefined];
     public readonly id:number;
-    public readonly level:number;
+    public readonly level:1|2|3;
     public readonly name:string;
     public readonly species;
 
@@ -77,7 +77,7 @@ export default class CardData{
      */
     constructor(name:string,
                 stats:[number|undefined,number|undefined,number|undefined],
-                level:number,
+                level:1|2|3,
                 species:Species,
                 imagePath:string=name+".jpg") {
         this.imagePath=imagePath;

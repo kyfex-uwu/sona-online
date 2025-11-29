@@ -116,6 +116,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     }
 }
 
+//i think this is deprecated? todo
 export interface Decrementable{
     readonly __isDecrementableInterface:boolean;
     decrementTurn():void;
@@ -281,6 +282,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
             for (let i = 0; i < this.cards.length; i++) {
                 this.cards[i] = new VisualCardClone(this.cards[i]!);
                 this.game.addElement(this.cards[i]!);
+                this.cards[i]!.populate(this.cards[i]!.logicalCard);
                 this.cards[i]!.createModel().then(()=>{
                     camera.add(this.cards[i]!.model);
                 });
@@ -311,16 +313,18 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
             let width = Math.ceil(cardsLength/height);
             height = Math.ceil(cardsLength/width);
+            let currCard=0;
             for(let y=0;y<height;y++){
                 if(y===height-1) width=cardsLength-(height-1)*width;
                 for(let x=0;x<width;x++){
-                    const fakeCard = this.cards[y*width+x];
+                    const fakeCard = this.cards[currCard];
+                    currCard++;
                     if(fakeCard === undefined) break;
 
                     fakeCard.flipFaceup();
                     let pos = new Vector3((x-(width-1)/2)*85*scale, -(y-(height-1)/2)*119*scale, -400);
-                    console.log((x-(width-1)/2), -(y-(height-1)/2), x, y, width, height)
-                    console.log(fakeCard.logicalCard.cardData.name)
+                    // console.log((x-(width-1)/2), -(y-(height-1)/2), x, y, width, height)
+                    // console.log(fakeCard.logicalCard.cardData.name)
                     fakeCard.position.copy(pos);
                     fakeCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
                     fakeCard.scale = new Vector3(scale, scale, scale);
@@ -347,7 +351,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
         // if(decrement && isDecrementable(this.parentState[0]))
         //     (this.parentState[0] as unknown as Decrementable).decrementTurn();
 
-        this.removeCards()
+        this.removeCards();
     }
 
     removeCards(){

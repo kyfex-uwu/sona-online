@@ -6,7 +6,7 @@ import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
-import {Stat} from "../Card.js";
+import {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import type {TurnState} from "../GameStates.js";
 
@@ -170,9 +170,11 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state,game.state],
+    const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
         sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
         (card)=>{
-
-        },EndType.NONE,()=>{}), (game.state as TurnState));
+            self.setMiscData(MiscDataStrings.DCW_PICKED_LEVEL, card.logicalCard.cardData.level);
+            state.cancel();
+        },EndType.NONE,()=>{});
+    visualGame.setState(state, (game.state as TurnState));
 });
