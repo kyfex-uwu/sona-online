@@ -60,7 +60,7 @@ visualCardClientActions["og-041"] = (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0) return false;
 
     network.sendToServer(new ClarifyCardEvent({
-        id:-1,
+        id:card.logicalCard.id,
         justification:ClarificationJustification.FURMAKER,
     }));
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
@@ -115,7 +115,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
             toRemove.flipFaceup();
             sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(toRemove);
             network.sendToServer(new CardAction({
-                cardId:toRemove.logicalCard.id,
+                cardId:self.id,
                 actionName: CardActionOptions.BROWNIE_DRAW,
                 cardData: {
                     id:toRemove.logicalCard.id
@@ -135,16 +135,18 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
             ((card.cardData.stat(Stat.RED)??99)<2 || (card.cardData.stat(Stat.BLUE)??99)<2 || (card.cardData.stat(Stat.YELLOW)??99)<2))) {
 
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
-            visualGame.elements.filter(element => VisualCard.getExactVisualCard(element) &&
-                (((element as VisualCard).logicalCard.cardData.stat(Stat.RED)??99)<2||
-                    ((element as VisualCard).logicalCard.cardData.stat(Stat.BLUE)??99)<2||
-                    ((element as VisualCard).logicalCard.cardData.stat(Stat.YELLOW)??99)<2)) as VisualCard[],
+            sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA).map(field=>field.getCard())
+                .filter(card => card !== undefined &&
+                        ((card.logicalCard.cardData.stat(Stat.RED)??99)<2||
+                        (card.logicalCard.cardData.stat(Stat.BLUE)??99)<2||
+                        ((card.logicalCard.cardData.stat(Stat.YELLOW)??99)<2))) as VisualCard[],
             (card) => {
-                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
-                    id:card.logicalCard.id,
+                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
+                    position:(sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)
+                        .findIndex(field => field.getCard()?.logicalCard === card.logicalCard)+1) as 1|2|3
                 }}));
             }, EndType.CANCEL, ()=>{
-                network.sendToServer(new CardAction({cardId:-1, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}));
+                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}));
             }), visualGame.getGame().state);
     }
 });

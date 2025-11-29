@@ -5,9 +5,9 @@ import {GameMiscDataStrings} from "./Game.js";
 
 //Which stat on a card
 export enum Stat{
-    RED,
-    BLUE,
-    YELLOW
+    RED=0,
+    BLUE=1,
+    YELLOW=2
 }
 export function getVictim(stat:Stat){
     switch(stat){
@@ -29,6 +29,7 @@ export const MiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
     DCW_PICKED_LEVEL:"og-032_level" as MiscDataString<1|2|3|undefined>,
     LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
+    K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>
 };
 verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
 

@@ -1,9 +1,9 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import * as Events from "./Events.js";
 import {
-    AcceptEvent, ActionEvent,
-    CardAction,
-    cardsTransform,
+    AcceptEvent,
+    ActionEvent,
+    CardAction, cardsTransform,
     ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
@@ -15,23 +15,26 @@ import {
     GameStartEventWatcher,
     PassAction,
     PlaceAction,
-    RejectEvent,
-    RequestSyncEvent,
+    RejectEvent, RequestSyncEvent,
     ScareAction,
-    StartRequestEvent,
-    StringReprSyncEvent,
-    SyncEvent
+    StartRequestEvent, StringReprSyncEvent, SyncEvent
 } from "./Events.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
-import {other, Side} from "../GameElement.js";
+import {Side} from "../GameElement.js";
 import {shuffled, sideTernary, wait} from "../consts.js";
-import Card, {getVictim, Stat} from "../Card.js";
+import Card, {getVictim, MiscDataStrings, Stat} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
-import {CardActionType} from "../CardData.js";
-import {type BROWNIE_DRAW, CardActionOptions, type YASHI_REORDER} from "./CardActionOption.js";
+import {CardActionType, InterruptScareResult, Species} from "../CardData.js";
+import {
+    type BROWNIE_DRAW,
+    CardActionOptions,
+    type GREMLIN_SCARE,
+    type K9_ALPHA,
+    type YASHI_REORDER
+} from "./CardActionOption.js";
 
 export type Client ={send:(v:Event<any>)=>void};
 const usersFromGameIDs:{[k:string]:Array<Client>}={};
@@ -42,6 +45,9 @@ export function backendInit(){
     loadBackendWrappers();
     console.log("Backend initialized");
 }
+
+//--
+
 function rejectEvent(event:Event<any>){
     network.replyToClient(event, new RejectEvent({}, undefined, undefined, event.id));
 }
@@ -99,32 +105,48 @@ function findAndRemove(game:Game, card:Card){
 }
 
 /**
- * Calls any/all interrupt scares
+ * Verifies that the card at `event.data.cardId` actually exists in that player's fields
+ * verifies:
+ *  - game exists
+ *  - some field on the sender's side has an id that matches
+ * @param event The CardAction to check
+ * @return the card found, if there is any
+ */
+function verifyFieldCard(event:CardAction<any>){
+    return (event.game === undefined ? undefined :
+        (event.sender === event.game.player(Side.A) ? event.game.fieldsA : event.game.fieldsB)
+            .find(card => card?.id === event.data.cardId));
+}
+
+/**
+ * Calls any/all interrupt scares. This should be called whenever you're trying to scare a card AND the attempt would
+ * succeed (the stats work, or it's a special attack)
  * @param event The event this scare comes from
  * @param game The game this scare is happening in
  * @param scarer The card that is doing the scaring
  * @param scared The card being scared
  * @param scareType The scare type
- * @return if the scare should continue
+ * @param onPass The function to run if/when the scare passes
  */
-function scareInterrupt(event:Event<any>, game:Game, scarer:Card, scared:Card, scareType:Stat|"card"){
+function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
     if(event.interruptScareBypass !== bypassInterruptScareMarker){
         for(const card of sideTernary(scarer.side, game.fieldsA, game.fieldsB)) {
             if(card===undefined) continue;
-            const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
-            if (interruptAction !== undefined) {
-                if (!interruptAction({ self: card, scared, scarer, game, stat: scareType, origEvent:event })) {
-                    return false;
-                }
+
+            const result = scared.cardData.callAction(CardActionType.INTERRUPT_SCARE,
+                { self: card, scared, scarer, game, stat: scareType, origEvent:event, next:onPass });
+            switch(result){
+                case InterruptScareResult.FAIL_SCARE: onPass(false); break;
+                case InterruptScareResult.PREVENT_SCARE: return;
             }
         }
     }
-    return true;
+    onPass(true);
 }
 
-const bypassInterruptScareMarker = {};
+const bypassInterruptScareMarker = {};//todo: is this needed?
 
-function parseEvent(event:Event<any>, client:Client){
+function parseEvent(event:Event<any>){
     //todo: verify things are in array bounds!!!!
 
     if(event.game !== undefined){
@@ -368,88 +390,162 @@ function parseEvent(event:Event<any>, client:Client){
         }
     }else if (event instanceof ScareAction){
         if(event.game !== undefined){
-            let side:Side|undefined=undefined;//the side of the player scaring
-            if(event.sender === event.game.player(Side.A)){
-                side = Side.A;
-            }else if(event.sender === event.game.player(Side.B)){
-                side = Side.B;
-            }
-            if(side===undefined) return rejectEvent(event);
+            // let side:Side|undefined=undefined;//the side of the player scaring
+            // if(event.sender === event.game.player(Side.A)){
+            //     side = Side.A;
+            // }else if(event.sender === event.game.player(Side.B)){
+            //     side = Side.B;
+            // }
+            // if(side===undefined) return rejectEvent(event);
 
-            const scarer = sideTernary(side, event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos-1];
-            const scared = sideTernary(side, event.game.fieldsB, event.game.fieldsA)[event.data.scaredPos-1];
+            if(event.sender !== event.game.player(event.data.scaredPos[1]))
+                rejectEvent(event);
+
+            const scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
+            const scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
             if(!(event.game.state instanceof TurnState &&
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                 scarer !==undefined && scared!==undefined&&//the cards exist
                 !scarer.hasAttacked&&//if the card hasnt scared yet
+                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
                 scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
+                console.log("mro", event.game.state instanceof TurnState&&
+                    event.sender === event.game.player(event.game.state.turn) ,//if its the player's turn
+                    scarer !==undefined , scared!==undefined, scarer?.hasAttacked, event.data.attackingWith !== "card",
+                    scarer?.cardData.stat(event.data.attackingWith as Stat), scared?.cardData.stat(getVictim(event.data.attackingWith as Stat)))
                 rejectEvent(event);
                 return;
             }
+            console.log("???")
 
-            if(!scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith))
-                return;
-            // if(event.interruptScareBypass !== bypassInterruptScareMarker){
-            //     for(const card of sideTernary(scarer.side, event.game.fieldsA, event.game.fieldsB)) {
-            //         if(card===undefined) continue;
-            //         const interruptAction = scared.cardData.getAction(CardActionType.INTERRUPT_SCARE);
-            //         if (interruptAction !== undefined) {
-            //             if (!interruptAction({ self: card, scared, scarer, game: event.game, stat: event.data.attackingWith })) {
-            //
-            //             }
-            //         }
-            //     }
-            // }
+            const game = event.game;
+            scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, ()=>{
+                if(event.data.attackingWith==="card") return;
 
-            const toSend = new ScareAction({
-                scaredPos:event.data.scaredPos,
-                scarerPos:event.data.scarerPos,
-                scaredSide:other(side),
-                attackingWith:event.data.attackingWith,
-                failed:!(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
+                const toSend = new ScareAction({
+                    scaredPos:event.data.scaredPos,
+                    scarerPos:event.data.scarerPos,
+                    attackingWith:event.data.attackingWith,
+                    failed:!(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
+                });
+                scarer.hasAttacked=true;
+                sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]=undefined;
+
+                for(const user of (usersFromGameIDs[game.gameID]||[])){
+                    user.send(toSend);
+                }
+
+                scared.cardData.callAction(CardActionType.AFTER_SCARED,
+                    {self:scared, scarer, game:game, stat:event.data.attackingWith});
+
+                endTurn(game);
             });
-            scarer.hasAttacked=true;
-            sideTernary(scared.side, event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos-1]=undefined;
-
-            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                user.send(toSend);
-            }
-
-            const action = scared.cardData.getAction(CardActionType.AFTER_SCARED);
-            if(action !== undefined) action({self:scared, scarer, game:event.game, stat:event.data.attackingWith});
-
-            endTurn(event.game);
         }
     }else if(event instanceof CardAction){
         if(event.game !== undefined) {
             switch(event.data.actionName){
-                case CardActionOptions.BROWNIE_DRAW: {
+                case CardActionOptions.K9_ALPHA:{//og-001
+                    verifyFieldCard(event);
+                    const data = (event as CardAction<K9_ALPHA>).data.cardData;
+                    const sender = event.game.cards.values().find(card => card.id === event.data.cardId);
+                    const takeFrom = [...(event.sender === event.game.player(Side.A) ? event.game.fieldsA : event.game.fieldsB)];
+
+                    if(!(event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender )||//its the senders turn
+                        sender === undefined || sender!.cardData.name === "og-001" ||//atttacking card is k9
+                        !takeFrom.map(card=>card?.cardData.species === Species.CANINE)//NOT(all cards are canines)
+                            .reduce((a,c)=>a&&c))
+                        return rejectEvent(event);
+
+                    const stat = data.canineFields.map((v,i)=>v?
+                        (takeFrom[i]?.cardData.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
+
+                    const toAttack = (event.sender === event.game.player(Side.A) ? event.game.fieldsB : event.game.fieldsA)[data.attack-1];
+                    if(toAttack !== undefined){
+                        sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
+                        parseEvent(new ScareAction({//todo
+                            scarerPos:[takeFrom.findIndex(card=>card?.id === sender.id) as 1|2|3, sender.side],
+                            scaredPos:[data.attack, event.sender === event.game.player(Side.A) ? Side.B : Side.A],
+                            attackingWith:data.attackWith,
+                        }, event.game, event.sender, event.id));
+                        sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
+                    }
+                }break;
+                case CardActionOptions.BROWNIE_DRAW: {//og-005
                     const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
                     const card = event.game.cards.values().find(card => card.id === id);
 
-                    //
-                    // if (event.game.state instanceof PickCardsState &&//player is picking cards
-                    //     card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
-                    //     card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
-                    //     event.game.player(event.game.state.parentState.turn) === event.sender){//it is the senders turn
-                    //     findAndRemove(event.game, card);
-                    //     sideTernary(card.side, event.game.handA, event.game.handB).push(card);
-                    //     event.game.state = event.game.state.parentState;//this might be wrong perchance
-                    //
-                    //     for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                    //         if(user !== event.sender){
-                    //             user.send(new CardAction({
-                    //                 cardId: -1,
-                    //                 actionName:CardActionOptions.BROWNIE_DRAW,
-                    //                 cardData:{id:card.id},
-                    //             }))
-                    //         }
-                    //     }
-                    // }
+                    if (card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
+                        card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                        event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender){//it is the senders turn
+                        findAndRemove(event.game, card);
+                        sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+
+                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                            if(user !== event.sender){
+                                user.send(new CardAction({
+                                    cardId: -1,
+                                    actionName:CardActionOptions.BROWNIE_DRAW,
+                                    cardData:{id:card.id},
+                                }))
+                            }
+                        }
+                        endTurn(event.game);
+                    }
                 }break;
-                case CardActionOptions.YASHI_REORDER:{
+                case CardActionOptions.YASHI_REORDER:{//og-027
                     const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
                     //TODO
+                }break;
+                case CardActionOptions.GREMLIN_SCARE:{
+                    const actor = verifyFieldCard(event);
+                    const data = (event as CardAction<GREMLIN_SCARE>).data.cardData;
+                    if(!(actor !== undefined && actor.cardData.name === "og-009" &&//card exists and is gremlin
+                        event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
+                        event.game.player(actor.side) === event.sender &&//actor belongs to sender
+                        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE) === CardActionOptions.GREMLIN_SCARE//sender is allowed to scare
+                        ))
+                        return rejectEvent(event);
+
+                    if(data.position === undefined){
+                        return acceptEvent(event);
+                    }else{
+                        const scared = (event.sender === event.game.player(Side.A)?event.game.fieldsB:event.game.fieldsA)[data.position-1];
+                        if(scared === undefined) return rejectEvent(event);
+
+                        const toSend = new ScareAction({
+                            scaredPos:[data.position, event.sender === event.game.player(Side.A)?Side.B:Side.A],
+                            scarerPos:[((event.sender === event.game.player(Side.A)?event.game.fieldsA:event.game.fieldsB).indexOf(actor) +1) as 1|2|3,
+                                event.sender === event.game.player(Side.A)?Side.A:Side.B],
+                            attackingWith:"card",
+                            failed:false,
+                        }, event.game);
+                        scareInterrupt(toSend, toSend.game!, actor, scared, toSend.data.attackingWith, ()=>{
+                            sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[1]-1]!.hasAttacked=true;
+                            sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[1]-1]=undefined;
+
+                            for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
+                                user.send(toSend);
+                            }
+
+                            scared.cardData.callAction(CardActionType.AFTER_SCARED, {
+                                self:sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[0]-1],
+                                scarer:sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[0]-1],
+                                game:event.game!, stat:toSend.data.attackingWith});
+
+                            endTurn(toSend.game!);
+                        });
+
+                        actor.hasAttacked=true;
+                        sideTernary(scared.side, event.game.fieldsA, event.game.fieldsB)[data.position-1]=undefined;
+
+                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                            user.send(toSend);
+                        }
+
+                        const action = scared.cardData.getAction(CardActionType.AFTER_SCARED);
+                        if(action !== undefined) action({self:scared, scarer:actor, game:event.game, stat:"card"});
+                    }
+
                 }break;
             }
         }
@@ -572,7 +668,8 @@ network.receiveFromClient= async (packed, client) => {
         return;
     }
 
-    parseEvent(event, client);
+    //todo: verify shape of event
+    parseEvent(event);
 }
 network.replyToClient = (replyTo, replyWith) => {
     replyTo.sender?.send(replyWith);

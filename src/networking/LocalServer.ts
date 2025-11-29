@@ -152,10 +152,14 @@ network.receiveFromServer = async (packed) => {
                 game.setState(new VTurnState(event.data.starter, game),
                     new TurnState(game.getGame(), event.data.starter, false));
 
-                for(const field of game.fieldsA)
+                for(const field of game.fieldsA) {
                     field.getCard()?.flipFaceup();
-                for(const field of game.fieldsB)
+                    field.startGame();
+                }
+                for(const field of game.fieldsB) {
                     field.getCard()?.flipFaceup();
+                    field.startGame();
+                }
             }
             if(event.data.flippedCoin){
                 let timer=0;
@@ -197,7 +201,7 @@ network.receiveFromServer = async (packed) => {
         }
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
-            const scared = sideTernary(event.data.scaredSide, game.fieldsA, game.fieldsB)[event.data.scaredPos-1]!.getCard();
+            const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
             if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         }
         if(game.state instanceof VTurnState){

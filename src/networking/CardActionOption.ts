@@ -1,10 +1,11 @@
 import {Side} from "../GameElement.js";
 import {verifyNoDuplicateStrVals} from "../consts.js";
+import type {Stat} from "../Card.js";
 
 export type BOTTOM_DRAW={ side: Side };
-export type K9_ALPHA={ canineFields: [boolean, boolean, boolean] };
+export type K9_ALPHA={ canineFields: [boolean, boolean, boolean], attack:1|2|3, attackWith:Stat };
 export type BROWNIE_DRAW={ id: number };
-export type GREMLIN_SCARE={ id?: number };
+export type GREMLIN_SCARE={ position?: 1|2|3 };
 export type WORICK_RESCUE={ id: number };
 export type AMBER_PICK=1 | 2;
 export type FURMAKER_PICK=number;

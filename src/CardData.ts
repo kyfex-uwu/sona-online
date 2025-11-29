@@ -5,9 +5,9 @@ import type {Event} from "./networking/Events.js";
 let globalID=0;
 
 export enum InterruptScareResult{
-    PASSTHROUGH,
-    STOP,
-    FAIL,
+    PASSTHROUGH,//nothing happens (the scare continues as normal)
+    PREVENT_SCARE,//a turn is not consumed and the scare does not happen
+    FAIL_SCARE,//a turn is consumed, but the scare does not happen
 }
 
 export class CardActionType<P extends {[k:string]:any}, R>{
@@ -21,14 +21,16 @@ export class CardActionType<P extends {[k:string]:any}, R>{
         {self:Card,game:Game}, void>();
     public static readonly PLACED = new CardActionType<
         {self:Card,game:Game}, void>();
+    //Called once per scare, on the card that was scared
     public static readonly AFTER_SCARED = new CardActionType<
         {self:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
     public static readonly GET_STATS = new CardActionType<
         {self:Card,game:Game}, [number|undefined,number|undefined,number|undefined]>();
-    public static readonly INTERRUPT_CRISIS = new CardActionType<
+    public static readonly AFTER_CRISIS = new CardActionType<
         {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardActionType<
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:Event<any>}, InterruptScareResult>();
+        //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:Event<any>, next:(succeeded:boolean)=>void}, InterruptScareResult>();
 
     public static readonly TURN_START = new CardActionType<
         {self:Card,game:Game}, void>();
@@ -86,11 +88,7 @@ export default class CardData{
         this.species=species;
     }
     stat(stat:Stat){
-        switch(stat){
-            case Stat.RED: return this.stats[0];
-            case Stat.BLUE: return this.stats[1];
-            case Stat.YELLOW: return this.stats[2];
-        }
+        return this.stats[stat];
     }
 
     with<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, value:(params:P)=>R){
@@ -102,5 +100,10 @@ export default class CardData{
     }
     getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];
+    }
+    callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
+        const action = this.getAction(type);
+        if(action !== undefined)
+            return action(param);
     }
 }

@@ -3,8 +3,7 @@ import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import {network} from "./Server.js";
-import {verifyNoDuplicateStrVals} from "../consts.js";
-import {type CardActionOption, CardActionOptions} from "./CardActionOption.js";
+import {type CardActionOption} from "./CardActionOption.js";
 
 //Generates an event id
 const eventIdGenerator = ()=>new Array(16).fill(0).map(_=>Math.floor(Math.random()*36).toString(36)).join("");
@@ -115,12 +114,27 @@ export class PlaceAction extends ActionEvent<{
 
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation
 export class ScareAction extends ActionEvent<{
-    scarerPos:number,
-    scaredPos:number,
-    attackingWith:Stat,
+    scarerPos:[1|2|3, Side],
+    scaredPos:[1|2|3, Side],
+    attackingWith:Stat|"card",
     failed?:boolean,
-    scaredSide:Side,
 }>{}
+// export const internalCardScareMarker={};
+// export class InternalCardScareAction extends ScareAction{
+//     public readonly valid;
+//     constructor(params:{
+//         scarerPos:1|2|3,
+//         scaredPos:1|2|3,
+//         failed?:boolean,
+//         scaredSide:Side,
+//     }, marker:{}) {
+//         super({
+//             ...params,
+//             attackingWith:Stat.RED,
+//         });
+//         this.valid=marker===internalCardScareMarker;
+//     }
+// }
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{
@@ -134,8 +148,6 @@ export class DiscardEvent extends Event<{which:number}>{}
 
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
-
-export class PickCardEvent extends Event<{whiches:number[]}>{}
 
 export type Card = {
     id:number,

@@ -1,8 +1,8 @@
 import CardData, {CardActionType, InterruptScareResult, Species} from "./CardData.js";
-import {shuffled, sideTernary} from "./consts.js";
+import {sideTernary} from "./consts.js";
 import {TurnState} from "./GameStates.js";
-import Card, {getVictim, MiscDataStrings} from "./Card.js";
-import {flagNames, flags, getFlag} from "./networking/Server.js";
+import {getVictim, MiscDataStrings, Stat} from "./Card.js";
+import {flagNames, getFlag} from "./networking/Server.js";
 import {GameMiscDataStrings} from "./Game.js";
 import {CardActionOptions} from "./networking/CardActionOption.js";
 
@@ -10,22 +10,17 @@ const cards:{[k:string]:CardData} = {};
 
 const setCard = (data:CardData) => cards[data.name] = data;
 
-setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE));//todo
-    // .with(CardActionType.LAST_ACTION, ({self, game})=>{
-    //     //todo: remove this
-    //     if(game.state instanceof TurnState) {
-    //         const takeFrom = sideTernary(self.side, game.fieldsA, game.fieldsB);
-    //         game.state = new PickCardsState(game, game.state, takeFrom
-    //                 .filter(c => c !== undefined && c.cardData.species === Species.CANINE) as Card[],
-    //             (picked) => {
-    //                 takeFrom.splice(takeFrom.indexOf(picked),1);
-    //                 sideTernary(self.side, game.handA, game.handB).push(picked);
-    //                 shuffled(takeFrom);
-    //                 game.state = (game.state as PickCardsState).parentState;
-    //                 return true;
-    //             });
-    //     }
-    // }));
+setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
+    .with(CardActionType.LAST_ACTION, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.K9_ALPHA);
+    })
+    .with(CardActionType.GET_STATS, ({self, game})=>{
+        const toReturn = [...self.cardData.stats];
+        const newStatData = self.getMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE);
+        if(newStatData !== undefined)
+            toReturn[newStatData?.stat]=newStatData.newVal;
+        return toReturn;
+    }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
     .with(CardActionType.GET_STATS, ({self, game})=>{
@@ -35,12 +30,15 @@ setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
 setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE));
 setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)//done only here
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW)
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW);
     }));
 setCard(new CardData("og-006", [undefined,2,1], 1, Species.FELINE).setFree());
 setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE).setFree());
-setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE));
+setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE)
+    .with(CardActionType.PLACED, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.GREMLIN_SCARE);
+    }));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());
 setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
@@ -54,13 +52,13 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
     }).with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
         if(self!==scared) return InterruptScareResult.PASSTHROUGH;
 
-        if(self.getMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY) !== "not immune") return InterruptScareResult.STOP;
+        if(self.getMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY) !== "not immune") return InterruptScareResult.PREVENT_SCARE;
     return InterruptScareResult.PASSTHROUGH;
     });
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
 setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)//todo
-    .with(CardActionType.INTERRUPT_CRISIS, ({self, game})=>{
+    .with(CardActionType.AFTER_CRISIS, ({self, game})=>{
 
     }));
 setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE)//todo
@@ -69,7 +67,7 @@ setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE)//todo
 
         if(self.getMiscData(MiscDataStrings.LITTLEBOSS_IMMUNITY) === undefined) {
             self.setMiscData(MiscDataStrings.LITTLEBOSS_IMMUNITY, "not immune");//TODO: optional
-            return InterruptScareResult.FAIL;
+            return InterruptScareResult.FAIL_SCARE;
         }else return InterruptScareResult.PASSTHROUGH;
     }));
 setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN));
@@ -168,7 +166,7 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
 
         if(stat !== "card" && scarer.cardData.stat(stat) !== undefined && scared.cardData.stat(getVictim(stat)) !== undefined){
             return scarer.cardData.stat(stat)! > self.cardData.stat(getVictim(stat))! ?
-                InterruptScareResult.PASSTHROUGH : InterruptScareResult.FAIL;
+                InterruptScareResult.PASSTHROUGH : InterruptScareResult.FAIL_SCARE;
         }
         return InterruptScareResult.PASSTHROUGH;
     }));

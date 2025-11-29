@@ -1,2 +1,13 @@
 if deck is empty, can the player still use furmaker's action? (does it consume an action or is it not allowed to use) (Add any card from your deck to your hand)
  - similar for worick
+
+how do k9 agent alpha and broy weasla interact?
+- code it how i think, then verify with ingo
+
+what does gremlin kitten/kibby otes/dark cat wizard override? (they all say "scare", not "scare attempt" or "remove")
+  * im assuming nothing BUT just to make sure
+- trash panda (cannot be scared for one turn after placed)
+- little boss (instead of sending to runaway, keep on deck) (pretty sure nothing overrides this)
+- noble rat (you may change the scare target to this card instead)
+
+do gremlin kitten/kibby otes/dcw abilities consume a scare?

@@ -1,7 +1,7 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
-import {Side} from "../../GameElement.js";
+import {other, Side} from "../../GameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
@@ -36,12 +36,18 @@ export default class FieldMagnet extends CardMagnet{
                     state.canSelectHandCard(this.game.selectedCard)){//todo: this is technically a bandaid fix
                     //place card
                     const card = this.game.selectedCard;
-                    if(this.addCard(this.game.selectedCard)) {
+                    if(this.addCard(this.game.selectedCard)) {//todo: callAction instead of getAction
                         if(this.game.selectedCard.logicalCard.cardData.getAction(CardActionType.PLACED) !== undefined){
-                            this.game.selectedCard.logicalCard.cardData.getAction(CardActionType.PLACED)!({
-                                self:this.game.selectedCard.logicalCard,
-                                game:this.game.getGame()
-                            });
+                            const card = this.game.selectedCard.logicalCard;
+                            const action = card.cardData.getAction(CardActionType.PLACED)!;
+
+                            this.storedRunnable = ()=>{
+                                action({
+                                    self:card,
+                                    game:this.game.getGame()
+                                });
+                            }
+                            if(this.started) this.storedRunnable();
                         }
                         this.game.selectedCard = undefined;
 
@@ -91,7 +97,6 @@ export default class FieldMagnet extends CardMagnet{
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
                                 } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
-                                        console.log("mroww", visualCardClientActions[this.card.logicalCard.cardData.name],this.card.logicalCard.cardData.name)
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         if(visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card)) {
                                             state.cancel();
@@ -109,10 +114,9 @@ export default class FieldMagnet extends CardMagnet{
                                 if (intersects[0] !== undefined) {
                                     if (getVictim(state.attackData.type) !== undefined) {
                                         this.game.sendEvent(new ScareAction({
-                                            scaredPos: this.which,
-                                            scarerPos: state.cardIndex,
+                                            scaredPos: [this.which, other(this.game.getMySide())],
+                                            scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
-                                            scaredSide: this.game.getMySide(),
                                         }));
                                     }
                                     state.cancel();
@@ -167,6 +171,13 @@ export default class FieldMagnet extends CardMagnet{
             this.card.rotation = this.rotation.clone();//bruh
         }
         // this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide());
+    }
+
+    private started=false;
+    private storedRunnable?:()=>void;
+    startGame(){
+        this.started=true;
+        if(this.storedRunnable) this.storedRunnable();
     }
 }
 updateOrder[FieldMagnet.name] = CardMagnet.updateOrder;
