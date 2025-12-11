@@ -13,7 +13,7 @@ export class CrisisCounter extends PositionedVisualGameElement{
         super(game, side, position, rotation??new Quaternion());
 
         game.addElement(this.counterCard=new SuperficialVisualCard(game, "crisis_counter.jpg", this.position.clone(), this.rotation));
-        game.addElement(this.coverCard=new SuperficialVisualCard(game, "card_shape.jpg", this.position.clone(),
+        game.addElement(this.coverCard=new SuperficialVisualCard(game, "card_shape.png", this.position.clone(),
             this.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,-Math.PI/2,0)))));
         this.coverCard.flipFacedown();
     }

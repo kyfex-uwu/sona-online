@@ -6,9 +6,10 @@ import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
-import {MiscDataStrings, Stat} from "../Card.js";
+import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import type {TurnState} from "../GameStates.js";
+import {Vector3} from "three";
 
 export function loadFrontendWrappers(){}
 
@@ -27,12 +28,35 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
             .filter(card => card !== undefined)
-            .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (card)=>{
+            .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (c)=>{
 
             }, EndType.BOTH),
         visualGame.getGame().state);
     return true;
 });
+visualCardClientActions["og-018"] = (card) =>{
+    const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
+    if(toReorder.length === 0) return false;
+    if(toReorder.length === 1){
+        toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), -1), new Vector3()));
+    }
+
+    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+            toReorder, (c)=>{
+            network.sendToServer(new CardAction({
+                cardId:card.logicalCard.id,
+                actionName:CardActionOptions.AMBER_PICK,
+                cardData: c.logicalCard === toReorder[0]?.logicalCard ? 1 : 2
+            })).onReply(successOrFail(()=>{
+
+            },()=>{
+                
+            },()=>{
+                (visualGame.state as VPickCardsState).cancel();
+            }));
+        }, EndType.NONE), visualGame.getGame().state);
+    return true;
+};
 visualCardClientActions["og-038"] = lastAction((card)=>{
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);

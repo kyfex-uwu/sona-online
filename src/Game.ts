@@ -15,7 +15,12 @@ export const GameMiscDataStrings = {
     PLAYER_B_STARTREQ: "playerBStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
     IS_FIRST_TURN:"isFirstTurn" as GameMiscDataString<boolean>,
     CAN_PREDRAW:"canPreDraw" as GameMiscDataString<boolean>,
-    NEXT_ACTION_SHOULD_BE:"nextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>
+    NEXT_ACTION_SHOULD_BE: {
+        [Side.A]: "AnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
+        [Side.B]: "BnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
+    },
+    DO_NOT_USE_VALIDATION_ONLY_NASB_A:"AnextActionShould",
+    DO_NOT_USE_VALIDATION_ONLY_NASB_B:"BnextActionShould",
 };
 verifyNoDuplicateStrVals(GameMiscDataStrings, "GameMiscDataStrings has a duplicate");
 

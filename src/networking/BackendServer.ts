@@ -3,7 +3,8 @@ import * as Events from "./Events.js";
 import {
     AcceptEvent,
     ActionEvent,
-    CardAction, cardsTransform,
+    CardAction,
+    cardsTransform,
     ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
@@ -15,9 +16,12 @@ import {
     GameStartEventWatcher,
     PassAction,
     PlaceAction,
-    RejectEvent, RequestSyncEvent,
+    RejectEvent,
+    RequestSyncEvent,
     ScareAction,
-    StartRequestEvent, StringReprSyncEvent, SyncEvent
+    StartRequestEvent,
+    StringReprSyncEvent,
+    SyncEvent
 } from "./Events.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
@@ -150,7 +154,8 @@ function parseEvent(event:Event<any>){
     //todo: verify things are in array bounds!!!!
 
     if(event.game !== undefined){
-        const nextEvent = event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE);
+        const nextEvent = event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
+            [event.sender === event.game.player(Side.A) ? Side.A : Side.B]);
         if(nextEvent !== undefined){
             if(event instanceof ActionEvent &&
                 //?? what
@@ -476,7 +481,7 @@ function parseEvent(event:Event<any>){
 
                     if (card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
                         card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
-                        event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender){//it is the senders turn
+                        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW){//the sender needs to brownie draw
                         findAndRemove(event.game, card);
                         sideTernary(card.side, event.game.handA, event.game.handB).push(card);
 
@@ -489,6 +494,7 @@ function parseEvent(event:Event<any>){
                                 }))
                             }
                         }
+                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
                         endTurn(event.game);
                     }
                 }break;
@@ -502,7 +508,7 @@ function parseEvent(event:Event<any>){
                     if(!(actor !== undefined && actor.cardData.name === "og-009" &&//card exists and is gremlin
                         event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
                         event.game.player(actor.side) === event.sender &&//actor belongs to sender
-                        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE) === CardActionOptions.GREMLIN_SCARE//sender is allowed to scare
+                        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.GREMLIN_SCARE//sender is allowed to scare
                         ))
                         return rejectEvent(event);
 

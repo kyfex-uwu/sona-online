@@ -12,7 +12,7 @@ const setCard = (data:CardData) => cards[data.name] = data;
 
 setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
     .with(CardActionType.LAST_ACTION, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.K9_ALPHA);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.K9_ALPHA);
     })
     .with(CardActionType.GET_STATS, ({self, game})=>{
         const toReturn = [...self.cardData.stats];
@@ -30,14 +30,14 @@ setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
 setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE));
 setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)//done only here
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROWNIE_DRAW);
     }));
 setCard(new CardData("og-006", [undefined,2,1], 1, Species.FELINE).setFree());
 setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE).setFree());
 setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE)
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.GREMLIN_SCARE);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
     }));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());
 setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
@@ -103,7 +103,7 @@ setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE)//DONE
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE));
 setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.YASHI_REORDER);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
 setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE)//todo
     .with(CardActionType.LAST_ACTION, ({self, game})=>{
@@ -134,7 +134,7 @@ setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES)//todo
     }));
 setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.DCW_GUESS);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_GUESS);
     }));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE).setFree());
 setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));

@@ -31,7 +31,7 @@ import {CardActionOptions} from "./CardActionOption.js";
 
 //@ts-ignore
 window.showNetworkLogs=true;
-const log = (data: any) => {
+const log = (...data: any) => {
     //@ts-ignore
     if(window.showNetworkLogs)
         if(typeof data === "string") console.log(data);
@@ -82,11 +82,26 @@ network.sendToServer = (event) => {
     });
     return new Replyable(event);
 }
+
+const logColors:{[key:string]:string}={
+    DrawAction:"#88f",
+    PlaceAction:"#8f8",
+    ScareAction:"#f88",
+    CardAction:"#ff8",
+    PassAction:"#a8f",
+
+    AcceptEvent:"#0f0",
+    RejectEvent:"#f00",
+
+    GameStartEvent:"#8ff",
+    DetermineStarterEvent:"#fb8",
+    ClarifyCardEvent:"#8fc"
+}
 network.receiveFromServer = async (packed) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
-    log("<- "+packed.type+"\n"+event.serialize());
+    log("%c <- "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
