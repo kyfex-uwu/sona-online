@@ -164,8 +164,9 @@ network.receiveFromServer = async (packed) => {
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
-                game.setState(new VTurnState(event.data.starter, game),
+                game.setState(new VTurnState(event.data.starter, game, false),
                     new TurnState(game.getGame(), event.data.starter, false));
+                (game.state as VTurnState).canInit=true;//top 10 worst things
 
                 for(const field of game.fieldsA) {
                     field.getCard()?.flipFaceup();
@@ -175,6 +176,7 @@ network.receiveFromServer = async (packed) => {
                     field.getCard()?.flipFaceup();
                     field.startGame();
                 }
+                if(game.state instanceof VTurnState) game.state.init();
             }
             if(event.data.flippedCoin){
                 let timer=0;

@@ -130,9 +130,11 @@ export const isDecrementable = (state:VisualGameState<any>) => (state as unknown
  */
 export class VTurnState extends VisualGameState<TurnState> implements Decrementable{
     public readonly currTurn;
-    constructor(currTurn:Side, game:VisualGame) {
+    public canInit;
+    constructor(currTurn:Side, game:VisualGame, canInit=true) {
         super(game);
         this.currTurn=currTurn;
+        this.canInit=canInit;
 
     }
     private initedAlready=false;
@@ -142,9 +144,11 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             StateFeatures.FIELDS_PLACEABLE,
             StateFeatures.DECK_DRAWABLE);
 
-        if(!this.initedAlready) {
+        if(!this.initedAlready && this.canInit) {
             if (this.currTurn === this.game.getMySide()) {
-                this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER)?.then(()=>{//awful!!!!
+                (this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER) ?? {
+                    then:(func:()=>void)=>func()
+                }).then(()=>{//awful!!!!
                     sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
                     network.sendToServer(new DrawAction({}));
                 });
@@ -152,8 +156,8 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             if (!sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(card => card !== undefined)) {
                 //something something crisis mode
             }
+            this.initedAlready=true;
         }
-        this.initedAlready=true;
     }
 
     visualTick(): void {
