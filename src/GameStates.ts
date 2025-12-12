@@ -33,7 +33,7 @@ export class TurnState extends GameState{
     }
     swapAway() {
         super.swapAway();
-        this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
+        this.game.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, undefined);
     }
 
     /**

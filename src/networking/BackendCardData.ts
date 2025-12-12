@@ -17,7 +17,7 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
 wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, stat, game})=>{
     if(orig) orig({self, scarer, stat, game});
 
-    network.sendToClients(new DrawAction({
+    network.sendToClients(new DrawAction({//todo: this should be a card action i think. just for organization
         isAction:false,
         side:self.side,
     }, game));

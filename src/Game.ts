@@ -13,7 +13,8 @@ export type GameMiscDataString<T> = {};
 export const GameMiscDataStrings = {
     PLAYER_A_STARTREQ: "playerAStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
     PLAYER_B_STARTREQ: "playerBStartRequest" as GameMiscDataString<"first"|"second"|"nopref">,
-    IS_FIRST_TURN:"isFirstTurn" as GameMiscDataString<boolean>,
+    //if this is undefined, it is not first turn. and vice versa
+    FIRST_TURN_WAITER:"isFirstTurn" as GameMiscDataString<Promise<void>>,
     CAN_PREDRAW:"canPreDraw" as GameMiscDataString<boolean>,
     NEXT_ACTION_SHOULD_BE: {
         [Side.A]: "AnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
@@ -51,10 +52,7 @@ export default class Game{
         oldState.swapAway();
     }
 
-    private miscData: { [k: string]: any } = {
-        [GameMiscDataStrings.IS_FIRST_TURN as string]:true,
-        [GameMiscDataStrings.CAN_PREDRAW as string]:true,
-    };
+    private miscData: { [k: string]: any } = {};
     public getMiscData<T>(key:GameMiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
     public setMiscData<T>(key:GameMiscDataString<T>, val: T){ this.miscData[key as string]=val; }
 
@@ -92,6 +90,8 @@ export default class Game{
         this._mySide=side||Side.A;
         this.setDeck(Side.A, deckA);
         this.setDeck(Side.B, deckB);
+        this.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, new Promise<void>(r=>r()));
+        this.setMiscData(GameMiscDataStrings.CAN_PREDRAW, true);
         for(const card of this.deckA) this.cards.add(card);
         for(const card of this.deckB) this.cards.add(card);
     }

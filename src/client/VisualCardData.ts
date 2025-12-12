@@ -10,6 +10,7 @@ import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import type {TurnState} from "../GameStates.js";
 import {Vector3} from "three";
+import {GameMiscDataStrings} from "../Game.js";
 
 export function loadFrontendWrappers(){}
 
@@ -50,7 +51,7 @@ visualCardClientActions["og-018"] = (card) =>{
             })).onReply(successOrFail(()=>{
 
             },()=>{
-                
+
             },()=>{
                 (visualGame.state as VPickCardsState).cancel();
             }));
@@ -123,6 +124,8 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         }));
     }
 
+    let waiterResolve;
+    game.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, new Promise(r=>waiterResolve=r));
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 
@@ -144,6 +147,8 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
                 cardData: {
                     id:toRemove.logicalCard.id
                 },
+            })).onReply(successOrFail(()=>{
+                waiterResolve!();
             }));
         }
 
