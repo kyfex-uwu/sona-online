@@ -37,6 +37,12 @@ setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE).setFree());
 setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE)
     .with(CardActionType.PLACED, ({self, game})=>{
+        if(sideTernary(self.side, game.fieldsB, game.fieldsB)
+            .filter(card=>card !== undefined)
+            .filter(card=>(card?.cardData.stat(Stat.RED)??99)<2 ||
+                (card?.cardData.stat(Stat.BLUE)??99)<2 ||
+                (card?.cardData.stat(Stat.YELLOW)??99)<2).length<2)
+            return;
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
     }));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());

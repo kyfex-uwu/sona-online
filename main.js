@@ -35,7 +35,10 @@ const wsServer = new ws.WebSocketServer({ noServer: true });
 backendInit();
 server.on('upgrade', (req, socket, head) => {
     wsServer.handleUpgrade(req, socket, head, (ws) => {
-        const sender = {send:event=>ws.send(event.serialize())};
+        const sender = {send:event=> {
+                console.trace(event.id)
+                ws.send(event.serialize());
+            }};
         ws.on("message", (message) => {
             try{
                 network.receiveFromClient(JSON.parse(message.toString()), sender);
