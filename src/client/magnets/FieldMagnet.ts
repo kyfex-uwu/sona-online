@@ -71,7 +71,7 @@ export default class FieldMagnet extends CardMagnet{
                     }
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === this.game.getMySide() ||
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
-                    if(state instanceof VTurnState && this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER) === undefined){
+                    if(state instanceof VTurnState && !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)){
                         if(this.card === undefined || this.card.logicalCard.hasAttacked) return false;
                         this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
@@ -97,6 +97,7 @@ export default class FieldMagnet extends CardMagnet{
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
                                 } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
+                                    console.log(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined)
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         if(visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card)) {
                                             state.cancel();
