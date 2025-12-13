@@ -191,7 +191,7 @@ export default class VisualGame {
                 }, scale, this.passButtonId, this.frozen);
             }
             if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
-                button(p5, x, p5.height - height - scale * 0.1, width, height, "Cancel", () => {
+                button(p5, x, p5.height - height - scale * 0.1, width, height, "Finish", () => {
                     const toCall = (this.state as unknown as VPickCardsState).onFinish;
                     if(toCall) toCall();
                 }, scale, this.passButtonId);

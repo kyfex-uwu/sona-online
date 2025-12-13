@@ -200,6 +200,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
     }
 }
+//todo: i think theres only gonna be 2 cancellable states? (attacking and pick+subclasses) so do we really need this
 export interface Cancellable{
     isCancellable():boolean;
     cancel():void;
@@ -278,7 +279,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
                 const intersects = this.game.raycaster.intersectObjects(this.cards
                     .map(card => card.model).filter(model => model !== undefined));
                 if (intersects[0] !== undefined) {
-                    console.log(intersects[0], intersects[0].object?.parent?.parent?.parent)
+                    // console.log(intersects[0], intersects[0].object?.parent?.parent?.parent)
                     this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card);
                 }
 

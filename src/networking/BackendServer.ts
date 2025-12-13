@@ -414,10 +414,6 @@ function parseEvent(event:Event<any>){
                 !scarer.hasAttacked&&//if the card hasnt scared yet
                 event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
                 scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
-                console.log("mro", event.game.state instanceof TurnState&&
-                    event.sender === event.game.player(event.game.state.turn) ,//if its the player's turn
-                    scarer !==undefined , scared!==undefined, scarer?.hasAttacked, event.data.attackingWith !== "card",
-                    scarer?.cardData.stat(event.data.attackingWith as Stat), scared?.cardData.stat(getVictim(event.data.attackingWith as Stat)))
                 rejectEvent(event);
                 return;
             }

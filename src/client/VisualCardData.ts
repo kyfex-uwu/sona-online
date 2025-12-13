@@ -1,16 +1,17 @@
 import CardData, {CardActionType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VAttackingState, VPickCardsState} from "./VisualGameStates.js";
+import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
-import type {TurnState} from "../GameStates.js";
+import {GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
+import {Side} from "../GameElement.js";
 
 export function loadFrontendWrappers(){}
 
@@ -26,13 +27,47 @@ function lastAction(callback:(card:VisualCard)=>boolean){
 }
 
 visualCardClientActions["og-001"] = lastAction((card)=>{
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+    let picked = new Set<Card>();
+    const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
+    visualGame.setState(new VPickCardsState(visualGame, oldStates,
             sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
             .filter(card => card !== undefined)
-            .filter(card => card?.logicalCard.cardData.species === Species.CANINE), (c)=>{
-
-            }, EndType.BOTH),
-        visualGame.getGame().state);
+            .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
+            .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
+                if(picked.has(toAttackWith.logicalCard)) picked.delete(toAttackWith.logicalCard);
+                else picked.add(toAttackWith.logicalCard);
+            }, EndType.BOTH, ()=>{
+                visualGame.setState(new VPickCardsState(visualGame, oldStates,
+                    sideTernary(card.getSide(), visualGame.fieldsB, visualGame.fieldsA).map(field => field.getCard())
+                        .filter(card => card !== undefined),
+                    (toAttack)=>{
+                        let thirdState:VPickCardsState;
+                        visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates,
+                            [
+                                new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, -1), new Vector3()),
+                                new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, -1), new Vector3()),
+                                new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, -1), new Vector3()),
+                            ],
+                            (attackStat)=>{
+                                thirdState.cancel();
+                                network.sendToServer(new CardAction({
+                                    cardId:card.logicalCard.id,
+                                    actionName:CardActionOptions.K9_ALPHA,
+                                    cardData:{
+                                        canineFields:sideTernary(card.getSide(), visualGame.getGame().fieldsA, visualGame.getGame().fieldsB)
+                                            .map(card => card !== undefined && picked.has(card)),
+                                        attack:sideTernary(card.getSide(), visualGame.getGame().fieldsB, visualGame.getGame().fieldsA).indexOf(toAttack.logicalCard)+1 as 1|2|3,
+                                        attackWith:{
+                                            "temp_red":Stat.RED,
+                                            "temp_blue":Stat.BLUE,
+                                            "temp_yellow":Stat.YELLOW,
+                                        }[attackStat.logicalCard.cardData.name]!
+                                    }
+                                }));
+                            }, EndType.NONE), oldStates[1]);
+                    },EndType.NONE), oldStates[1]);
+            }),
+        oldStates[1]);
     return true;
 });
 visualCardClientActions["og-018"] = (card) =>{
@@ -129,7 +164,6 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 
-        console.log(card)
         const state = visualGame.state as VPickCardsState;
         state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 

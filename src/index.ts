@@ -3,7 +3,7 @@ import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
 import {FindGameEvent, RequestSyncEvent} from "./networking/Events.js";
-import cards from "./Cards.js";
+import cards, {specialCards} from "./Cards.js";
 import type CardData from "./CardData.js";
 import {network} from "./networking/Server.js";
 
@@ -64,7 +64,7 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [
-                "og-009"
+                "og-001"
             ];
             const alreadyAdded:{[k:string]:true} = {};
             for(const card of toReturn) alreadyAdded[card]=true;
@@ -76,7 +76,7 @@ setTimeout(()=>{
                 let toAdd:CardData;
                 do {
                     toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
-                }while(toAdd === cards["unknown"] || toAdd === cards["utility"] || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
+                }while(specialCards.has(toAdd.name) || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
 
                 toReturn[i]=toAdd.name;
                 alreadyAdded[toAdd.name]=true;
