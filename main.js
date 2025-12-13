@@ -36,7 +36,7 @@ backendInit();
 server.on('upgrade', (req, socket, head) => {
     wsServer.handleUpgrade(req, socket, head, (ws) => {
         const sender = {send:event=> {
-                console.trace(event.id)
+                // console.trace(event.id)
                 ws.send(event.serialize());
             }};
         ws.on("message", (message) => {

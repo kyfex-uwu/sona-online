@@ -371,7 +371,6 @@ function parseEvent(event:Event<any>){
                     return;
                 }
 
-                console.log(event.id);
                 if(draw(event.game, event.sender, side)){
                     acceptEvent(event);
                     return;

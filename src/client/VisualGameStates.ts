@@ -147,7 +147,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         if(!this.initedAlready && this.canInit) {
             if (this.currTurn === this.game.getMySide()) {
                 (this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER) ?? {
-                    then:(func:()=>void)=>func()
+                    then:(func:()=>void)=>{}//func()
                 }).then(()=>{//awful!!!!
                     sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
                     network.sendToServer(new DrawAction({}));
