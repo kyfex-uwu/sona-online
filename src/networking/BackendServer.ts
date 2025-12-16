@@ -52,8 +52,9 @@ export function backendInit(){
 
 //--
 
-function rejectEvent(event:Event<any>){
+function rejectEvent(event:Event<any>, reason:string){
     network.replyToClient(event, new RejectEvent({}, undefined, undefined, event.id));
+    console.log(`# rejected ${event.id}(${typeof event}): ${reason}`)
 }
 function acceptEvent(event:Event<any>){
     network.replyToClient(event, new AcceptEvent({}, undefined, undefined, event.id));
@@ -72,10 +73,8 @@ function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean
         }
         if(game.state instanceof TurnState && isAction) {
             if(game.state.decrementTurn()){
-                if(game.state.serverInit()){
-                    for(const user of (usersFromGameIDs[game.gameID]||[])){
-                        user.send(new DrawAction({side: game.state.turn, isAction:false}, undefined, undefined));
-                    }
+                if(sideTernary((game.state as TurnState).turn, game.handA, game.handB).length<5) {
+                    draw(game, undefined, game.state.turn, false);
                 }
             }
         }
@@ -160,7 +159,7 @@ function parseEvent(event:Event<any>){
             if(event instanceof ActionEvent &&
                 //?? what
                 (!(event instanceof CardAction) || event.data.actionName !== nextEvent)){
-                rejectEvent(event);
+                rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
                 return;
             }
         }
@@ -304,9 +303,8 @@ function parseEvent(event:Event<any>){
                     event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
                     event.game.player(card.side) === event.sender &&//card is the player's
                     sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
-                        .some(other => (other?.cardData.level??0) >= card.cardData.level-1) && //placed card's level is at most 1 above all other cards
-                    !event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)))){//not predraw
-                rejectEvent(event);
+                        .some(other => (other?.cardData.level??0) >= card.cardData.level-1)))){ //placed card's level is at most 1 above all other cards
+                rejectEvent(event, "failed place check");
                 return;
             }
 
@@ -349,40 +347,41 @@ function parseEvent(event:Event<any>){
                 side = Side.B;
             }
             if(side !== undefined){
+                //@ts-ignore
                 if(!(event.game.state instanceof TurnState &&
                     event.game.state.turn === side &&//it is the player's turn
                     sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
-                    rejectEvent(event);
+                    rejectEvent(event, "failed draw check");
                     return;
                 }
-                if(event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
-                    const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
-                    if(card !== undefined){//bro it better not be
-                        sideTernary(side, event.game.handA, event.game.handB).push(card);
-                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                            if(user !== event.sender){
-                                user.send(new DrawAction({side: side, isAction:false}, undefined, undefined));
-                            }
-                        }
-                    }
-
-                    event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-                    acceptEvent(event);
-                    return;
-                }
+                // if(event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
+                //     const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
+                //     if(card !== undefined){//bro it better not be
+                //         sideTernary(side, event.game.handA, event.game.handB).push(card);
+                //         for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                //             if(user !== event.sender){
+                //                 user.send(new DrawAction({side: side, isAction:false}, undefined, undefined));
+                //             }
+                //         }
+                //     }
+                //
+                //     event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
+                //     acceptEvent(event);
+                //     return;
+                // }
 
                 if(draw(event.game, event.sender, side)){
                     acceptEvent(event);
                     return;
                 }
             }
-            rejectEvent(event);
+            rejectEvent(event, "couldnt determine client side");
         }
     }else if (event instanceof PassAction){
         if(event.game !== undefined){
             if(!(event.game.state instanceof TurnState &&
                 event.sender === event.game.player(event.game.state.turn))){//if its the player's turn
-                rejectEvent(event);
+                rejectEvent(event, "failed pass check");
                 return;
             }
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
@@ -403,8 +402,8 @@ function parseEvent(event:Event<any>){
             // }
             // if(side===undefined) return rejectEvent(event);
 
-            if(event.sender !== event.game.player(event.data.scaredPos[1]))
-                rejectEvent(event);
+            if(event.sender !== event.game.player(event.data.scarerPos[1]))
+                rejectEvent(event, "scarer is not consistent");
 
             const scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
             const scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
@@ -414,7 +413,7 @@ function parseEvent(event:Event<any>){
                 !scarer.hasAttacked&&//if the card hasnt scared yet
                 event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
                 scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
-                rejectEvent(event);
+                rejectEvent(event, "failed scare check");
                 return;
             }
             console.log("???")
@@ -455,7 +454,7 @@ function parseEvent(event:Event<any>){
                         sender === undefined || sender!.cardData.name === "og-001" ||//atttacking card is k9
                         !takeFrom.map(card=>card?.cardData.species === Species.CANINE)//NOT(all cards are canines)
                             .reduce((a,c)=>a&&c))
-                        return rejectEvent(event);
+                        return rejectEvent(event, "failed k9 check");
 
                     const stat = data.canineFields.map((v,i)=>v?
                         (takeFrom[i]?.cardData.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
@@ -506,13 +505,13 @@ function parseEvent(event:Event<any>){
                         event.game.player(actor.side) === event.sender &&//actor belongs to sender
                         event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.GREMLIN_SCARE//sender is allowed to scare
                         ))
-                        return rejectEvent(event);
+                        return rejectEvent(event, "failed gremlin check");
 
                     if(data.position === undefined){
                         return acceptEvent(event);
                     }else{
                         const scared = (event.sender === event.game.player(Side.A)?event.game.fieldsB:event.game.fieldsA)[data.position-1];
-                        if(scared === undefined) return rejectEvent(event);
+                        if(scared === undefined) return rejectEvent(event, "gremlin scare card doesnt exist");
 
                         const toSend = new ScareAction({
                             scaredPos:[data.position, event.sender === event.game.player(Side.A)?Side.B:Side.A],
@@ -559,7 +558,7 @@ function parseEvent(event:Event<any>){
             } else if (event.sender === event.game.player(Side.B)) {
                 side = Side.B;
             }
-            if (side === undefined) return rejectEvent(event);
+            if (side === undefined) return rejectEvent(event, "discard couldnt validate sender");
 
             const hand = sideTernary(side, event.game.handA, event.game.handB);
             const toDiscard = hand.find(card => card.id === event.data.which);
@@ -567,7 +566,7 @@ function parseEvent(event:Event<any>){
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                 toDiscard !== undefined&&//the card exists AND is in the player's hand
                 hand.length>5)) {//the player is in a position to discard
-                rejectEvent(event);
+                rejectEvent(event, "failed discard check");
                 return;
             }
 
@@ -663,7 +662,7 @@ network.receiveFromClient= async (packed, client) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
-    if(true) console.log("received "+event.serialize());
+    if(true && !(event instanceof RequestSyncEvent)) console.log("received "+event.serialize());
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);

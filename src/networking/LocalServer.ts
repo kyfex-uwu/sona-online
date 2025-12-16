@@ -101,7 +101,8 @@ network.receiveFromServer = async (packed) => {
     //todo: this smells like vulnerability
     // @ts-ignore
     const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
-    log("%c <- "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
+    if(packed.type !== "SyncEvent" && packed.type !== "StringReprSyncEvent")
+        log("%c <- "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
@@ -241,14 +242,14 @@ network.receiveFromServer = async (packed) => {
     }
 
     else if(event instanceof SyncEvent){
-        log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
+        // log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
     }else if(event instanceof StringReprSyncEvent){
         game.debugLast=event.data.str;
     }

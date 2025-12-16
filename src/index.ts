@@ -95,9 +95,9 @@ renderer.setAnimationLoop(() => {
 
 frontendInit();
 
-// setInterval(()=>{
-//     network.sendToServer(new RequestSyncEvent({}));
-// },1000);
+setInterval(()=>{
+    network.sendToServer(new RequestSyncEvent({}));
+},1000);
 
 // @ts-ignore
 window.logGame = ()=> console.log(game)
