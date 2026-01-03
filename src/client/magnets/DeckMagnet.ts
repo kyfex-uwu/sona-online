@@ -16,16 +16,20 @@ export default class DeckMagnet extends CardMagnet{
     public getCards(){ return this.cards.map(data=>data.card);}
     /**
      * Creates a deck magnet
+     * @param game the game this is in
      * @param side Which side this element belongs to
      * @param position The position of the card magnet
      * @param props Optional data
-     * @param rotation The rotation of this magnet
-     * @param enabled If this magnet is enabled. Default is false
+     * @param props.rotation The rotation of this magnet
+     * @param props.enabled If this magnet is enabled. Default is false
      */
     constructor(game:VisualGame, position: Vector3, side:Side, props:{rotation?:Quaternion,enabled?:boolean}={}) {
         super(game, side, position, {
             onClick:()=>{
-                if (this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === this.game.getMySide() && this.game.selectedCard === undefined) {
+                if (this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) &&
+                    this.getSide() === this.game.getMySide() &&
+                    this.game.selectedCard === undefined &&
+                    sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5) {
                     this.game.frozen=true;
                     this.game.sendEvent(new DrawAction({})).onReply(successOrFail(()=>{
                         this.drawCard();

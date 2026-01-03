@@ -182,17 +182,15 @@ setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)//todo
     }));
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
 
-setCard(new CardData("unknown", [0,0,0], 1, Species.UNKNOWN));
-setCard(new CardData("utility", [0,0,0], 1, Species.UNKNOWN, "utility.png"));
-setCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
-setCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
-setCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
-export const specialCards = new Set<string>([
-    "unknown",
-    "utility",
-    "temp_red",
-    "temp_blue",
-    "temp_yellow"
-]);
+export const specialCards = new Set<string>([]);
+function setSpecialCard(data:CardData){
+    setCard(data);
+    specialCards.add(data.name);
+}
+setSpecialCard(new CardData("unknown", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("utility", [0,0,0], 1, Species.UNKNOWN, "utility.png"));
+setSpecialCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
 
 export default cards;

@@ -27,6 +27,7 @@ import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
+import {specialCards} from "../Cards.js";
 
 const pointer = new Vector2();
 
@@ -257,25 +258,27 @@ ${this.state.getActionsLeft()}`, 0,0);
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.elements.filter(element => element instanceof VisualCard && element.logicalCard.getFaceUp())
+            ...this.elements.filter(element => VisualCard.getExactVisualCard(element) &&
+                !specialCards.has((element as VisualCard).logicalCard.cardData.name) &&
+                (element as VisualCard).logicalCard.getFaceUp())
                 .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
         if(cardsIntersects[0] !== undefined){
             const visualCardMaybe = cardsIntersects[0].object.parent?.parent?.parent?.userData.card as VisualCard|undefined;
             if(visualCardMaybe instanceof VisualCard){
                 shouldRemovePreview = false;
-                if(this.previewCard?.cardData.id !==
+                if (this.previewCard?.cardData.id !==
                     visualCardMaybe.logicalCard.cardData.id) {
                     const wasPreviewCard = this.previewCard !== undefined && this.drawPreviewCard;
-                    setTimeout(()=>{
+                    setTimeout(() => {
                         this.previewCard = visualCardMaybe.logicalCard;
                         const old = this.previewCard;
-                        setTimeout(async ()=>{
-                            if(this.previewCard===old){
-                                this.drawPreviewCard=true;
+                        setTimeout(async () => {
+                            if (this.previewCard === old) {
+                                this.drawPreviewCard = true;
                             }
-                        },wasPreviewCard?0:400);
-                    },0)
+                        }, wasPreviewCard ? 0 : 400);
+                    }, 0)
                     shouldRemovePreview = false;
                 }
             }
