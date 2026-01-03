@@ -204,7 +204,7 @@ network.receiveFromServer = async (packed) => {
             .addCard(card);
         if(event.data.faceUp) card.flipFaceup();
         else card.flipFacedown();
-        if(game.state instanceof VTurnState){
+        if(game.state instanceof VTurnState && !(event.data.forFree ?? false)){
             game.state.decrementTurn();
         }
     }else if(event instanceof DrawAction){

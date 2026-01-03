@@ -110,6 +110,7 @@ export class PlaceAction extends ActionEvent<{
     position:1|2|3,
     side:Side,
     faceUp:boolean,
+    forFree?:boolean
 }>{}
 
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation

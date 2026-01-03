@@ -319,6 +319,8 @@ function parseEvent(event:Event<any>){
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
+            const placedForFree = card.cardData.callAction(CardActionType.IS_FREE, {self:card, game:event.game}) ?? false;
+
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
                 if(event.data.faceUp)
@@ -328,14 +330,18 @@ function parseEvent(event:Event<any>){
                         faceUp: event.data.faceUp,
                     }));
                 user.send(new PlaceAction({
-                    ...event.data,
+                    cardId:event.data.cardId,
+                    position:event.data.position,
+                    side:event.data.side,
+                    faceUp:event.data.faceUp,
+                    forFree:placedForFree,
                 }));
             }
 
-            const action = card.cardData.getAction(CardActionType.PLACED);
-            if(action !== undefined) action({self:card, game:event.game});
+            card.cardData.callAction(CardActionType.PLACED, {self:card, game:event.game});
 
-            endTurn(event.game);
+            if(!placedForFree)
+                endTurn(event.game);
             acceptEvent(event);
         }
     }else if(event instanceof DrawAction){
@@ -380,7 +386,8 @@ function parseEvent(event:Event<any>){
     }else if (event instanceof PassAction){
         if(event.game !== undefined){
             if(!(event.game.state instanceof TurnState &&
-                event.sender === event.game.player(event.game.state.turn))){//if its the player's turn
+                event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                sideTernary(event.game.state.turn, event.game.handA, event.game.handB).length<=5)){//if the player doesnt have to discard
                 rejectEvent(event, "failed pass check");
                 return;
             }
@@ -416,7 +423,6 @@ function parseEvent(event:Event<any>){
                 rejectEvent(event, "failed scare check");
                 return;
             }
-            console.log("???")
 
             const game = event.game;
             scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, ()=>{
@@ -490,7 +496,7 @@ function parseEvent(event:Event<any>){
                             }
                         }
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
-                        endTurn(event.game);
+                        // endTurn(event.game);
                     }
                 }break;
                 case CardActionOptions.YASHI_REORDER:{//og-027

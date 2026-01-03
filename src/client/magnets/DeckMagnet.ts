@@ -99,7 +99,10 @@ export default class DeckMagnet extends CardMagnet{
         }
         this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
         this.utilityCard.rotation.copy(this.rotation);
-        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) && this.getSide() === this.game.getMySide() && this.game.selectedCard === undefined);
+        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) &&
+            this.getSide() === this.game.getMySide() &&
+            this.game.selectedCard === undefined &&
+            sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5);
     }
 }
 updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;
