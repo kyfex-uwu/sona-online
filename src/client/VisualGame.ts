@@ -204,9 +204,9 @@ export default class VisualGame {
             p5.textSize(scale*0.1);
             p5.textAlign(p5.LEFT,p5.TOP);
             if(this.state instanceof VTurnState){
-                p5.text(`side ${Side[this.getMySide()]}
-${this.state.getNonVisState().turn?"A":"B"}
-${this.state.getActionsLeft()}`, 0,0);
+                p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
+current turn: ${this.state.getNonVisState().turn?"A":"B"}
+actions left: ${this.state.getActionsLeft()}`, 0,0);
             }
             if(this.state instanceof VAttackingState){
                 p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!

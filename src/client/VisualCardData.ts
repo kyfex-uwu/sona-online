@@ -151,7 +151,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     let waiterResolve;
-    game.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, new Promise(r=>waiterResolve=r));
+    // game.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, new Promise(r=>waiterResolve=r));
 
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
         card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);

@@ -360,24 +360,11 @@ function parseEvent(event:Event<any>){
                     rejectEvent(event, "failed draw check");
                     return;
                 }
-                // if(event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
-                //     const card = sideTernary(side, event.game.deckA, event.game.deckB).pop();
-                //     if(card !== undefined){//bro it better not be
-                //         sideTernary(side, event.game.handA, event.game.handB).push(card);
-                //         for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                //             if(user !== event.sender){
-                //                 user.send(new DrawAction({side: side, isAction:false}, undefined, undefined));
-                //             }
-                //         }
-                //     }
-                //
-                //     event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-                //     acceptEvent(event);
-                //     return;
-                // }
 
-                if(draw(event.game, event.sender, side)){
+                const canPredraw = event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
+                if(draw(event.game, canPredraw ? undefined : event.sender, side, !canPredraw)){
                     acceptEvent(event);
+                    event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
                     return;
                 }
             }
@@ -549,8 +536,8 @@ function parseEvent(event:Event<any>){
                             user.send(toSend);
                         }
 
-                        const action = scared.cardData.getAction(CardActionType.AFTER_SCARED);
-                        if(action !== undefined) action({self:scared, scarer:actor, game:event.game, stat:"card"});
+                        scared.cardData.callAction(CardActionType.AFTER_SCARED,
+                            {self:scared, scarer:actor, game:event.game, stat:"card"});
                     }
 
                 }break;

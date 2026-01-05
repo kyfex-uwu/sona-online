@@ -23,8 +23,10 @@ export class TurnState extends GameState{
     constructor(game:Game, turn:Side, crisis?:boolean){
         super(game);
         this.turn=turn;
+
         for(const card of sideTernary(turn,game.fieldsA,game.fieldsB))
             if(card !==undefined) card.hasAttacked=false;
+
         this.crisis=crisis ?? !sideTernary(turn, game.fieldsA, game.fieldsB).some(card => card !== undefined);
         if(this.crisis){
             this.actionsLeft=3;
@@ -85,11 +87,11 @@ export class EndGameState extends GameState{
     }
 }
 
-export class InterruptScareActionsState extends GameState{
-    constructor(game:Game, validCards:Card[], ) {
-        super(game);
-    }
-}
+// export class InterruptScareActionsState extends GameState{
+//     constructor(game:Game, validCards:Card[], ) {
+//         super(game);
+//     }
+// }
 
 //--
 

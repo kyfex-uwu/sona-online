@@ -136,6 +136,9 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         this.currTurn=currTurn;
         this.canInit=canInit;
 
+        if(this.currTurn == game.getMySide() && (game.getGame().getMiscData(GameMiscDataStrings.COULD_DRAW_IMMEDIATELY)??false)){
+            game.sendEvent(new DrawAction({}));
+        }
     }
     private initedAlready=false;
     init() {

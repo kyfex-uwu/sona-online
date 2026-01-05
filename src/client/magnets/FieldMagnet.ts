@@ -36,7 +36,7 @@ export default class FieldMagnet extends CardMagnet{
                     state.canSelectHandCard(this.game.selectedCard)){//todo: this is technically a bandaid fix
                     //place card
                     const card = this.game.selectedCard;
-                    if(this.addCard(this.game.selectedCard)) {//todo: callAction instead of getAction
+                    if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
                         if(card.logicalCard.cardData.getAction(CardActionType.PLACED) !== undefined){
@@ -49,6 +49,8 @@ export default class FieldMagnet extends CardMagnet{
                                 });
                             }
                             if(this.started) this.storedRunnable();
+                        }else{
+                            game.getGame().setMiscData(GameMiscDataStrings.COULD_DRAW_IMMEDIATELY, true);
                         }
 
                         this.game.frozen=true;
