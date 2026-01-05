@@ -5,12 +5,10 @@ import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState, VDCWGuess} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
-import {network} from "../networking/Server.js";
 import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
 import {Euler, Group, Quaternion, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
-import {GameMiscDataStrings} from "../Game.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -136,9 +134,6 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         this.currTurn=currTurn;
         this.canInit=canInit;
 
-        if(this.currTurn == game.getMySide() && (game.getGame().getMiscData(GameMiscDataStrings.COULD_DRAW_IMMEDIATELY)??false)){
-            game.sendEvent(new DrawAction({}));
-        }
     }
     private initedAlready=false;
     init() {

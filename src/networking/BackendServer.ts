@@ -338,7 +338,9 @@ function parseEvent(event:Event<any>){
                 }));
             }
 
-            card.cardData.callAction(CardActionType.PLACED, {self:card, game:event.game});
+            event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
+                card.cardData.callAction(CardActionType.PLACED, {self:card, game:event.game});
+            });
 
             if(!placedForFree)
                 endTurn(event.game);
