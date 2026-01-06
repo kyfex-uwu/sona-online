@@ -19,6 +19,8 @@ export class CardActionType<P extends {[k:string]:any}, R>{
         {self:Card,game:Game}, void>();
     public static readonly LAST_ACTION = new CardActionType<
         {self:Card,game:Game}, void>();
+    public static readonly PRE_PLACED = new CardActionType<
+        {self:Card, game:Game}, void>();
     public static readonly PLACED = new CardActionType<
         {self:Card,game:Game}, void>();
     //Called once per scare, on the card that was scared

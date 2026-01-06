@@ -498,7 +498,9 @@ function parseEvent(event:Event<any>){
                         }
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
                         event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                        // endTurn(event.game);
+                        acceptEvent(event);
+                    }else{
+                        rejectEvent(event, "failed brownie check");
                     }
                 }break;
                 case CardActionOptions.GREMLIN_SCARE:{//og-009

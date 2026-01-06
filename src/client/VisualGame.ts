@@ -139,8 +139,7 @@ export default class VisualGame {
         this.state.init();//one-time fix for starting state
 
         this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
-            if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide() &&
-                !this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.waiting){
+            if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide()){
                 this.sendEvent(new DrawAction({}));
             }
         })

@@ -64,7 +64,7 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [
-                "og-041"
+                "og-006"
             ];
             const alreadyAdded:{[k:string]:true} = {};
             for(const card of toReturn) alreadyAdded[card]=true;

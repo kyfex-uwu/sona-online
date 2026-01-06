@@ -146,10 +146,16 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
         return wrapper(oldAction, args);
     });
 }
+function waitToDraw(data:CardData){
+    wrap(data, CardActionType.PRE_PLACED, (orig, {self, game})=>{
+        if(orig) orig({self, game});
+        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)!.waiting=true;
+    });
+}
 
+waitToDraw(cards["og-005"]!);
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
-    game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)!.waiting=true;
 
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
         card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);
@@ -188,6 +194,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         state.cancel();
     }, EndType.NONE), game.state);
 });
+waitToDraw(cards["og-009"]!);
 wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
     if(orig) orig({self, game});
 
@@ -217,6 +224,7 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     }
 });
+waitToDraw(cards["og-011"]!);
 wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();

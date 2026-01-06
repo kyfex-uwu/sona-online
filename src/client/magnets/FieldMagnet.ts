@@ -39,6 +39,8 @@ export default class FieldMagnet extends CardMagnet{
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
+                        card.logicalCard.cardData.callAction(CardActionType.PRE_PLACED,
+                            {self:card.logicalCard, game:game.getGame()});
                         if(card.logicalCard.cardData.getAction(CardActionType.PLACED) !== undefined){
                             const action = card.logicalCard.cardData.getAction(CardActionType.PLACED)!;
 
