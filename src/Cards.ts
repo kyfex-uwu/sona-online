@@ -49,6 +49,7 @@ setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());
 setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
         self.setMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY, "wait");
+        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     })).with(CardActionType.TURN_START, ({self, game})=>{
         if(game.state instanceof TurnState) {
             if (game.state.turn !== self.side)
@@ -96,16 +97,8 @@ setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN)//DONE
         if(toAdd !== undefined) sideTernary(self.side, game.handA, game.handB).push(toAdd);
     }));
 setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID));
-setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE)//DONE
-    .with(CardActionType.PLACED, ({self, game})=>{
-        const toAdd = sideTernary(self.side, game.deckA, game.deckB).pop();
-        if(toAdd !== undefined) sideTernary(self.side, game.handA, game.handB).push(toAdd);
-    }));
-setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE)//DONE
-    .with(CardActionType.PLACED, ({self, game})=>{
-        const toAdd = sideTernary(self.side, game.deckA, game.deckB).shift();
-        if(toAdd !== undefined) sideTernary(self.side, game.handA, game.handB).push(toAdd);
-    }));
+setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE));//DONE
+setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE));//DONE
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE));
 setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{

@@ -5,7 +5,7 @@ import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./Visu
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, DrawAction} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import {GameState, type TurnState} from "../GameStates.js";
@@ -150,9 +150,6 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    let waiterResolve;
-    // game.setMiscData(GameMiscDataStrings.FIRST_TURN_WAITER, new Promise(r=>waiterResolve=r));
-
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
         card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);
     for(const card of cards){
@@ -183,7 +180,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
                     id:toRemove.logicalCard.id
                 },
             })).onReply(successOrFail(()=>{
-                waiterResolve!();
+                visualGame.sendEvent(new DrawAction({}));
             }));
         }
 
@@ -210,8 +207,13 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
                         .findIndex(field => field.getCard()?.logicalCard === card.logicalCard)+1) as 1|2|3
                 }}));
             }, EndType.CANCEL, ()=>{
-                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}));
+                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}))
+                    .onReply(successOrFail(()=>{
+                        visualGame.sendEvent(new DrawAction({}));
+                    }));
             }), visualGame.getGame().state);
+    }else{
+        visualGame.sendEvent(new DrawAction({}));
     }
 });
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{

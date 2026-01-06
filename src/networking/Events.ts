@@ -101,7 +101,7 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 //Draws a card. S2C needs side, C2S does not
 export class DrawAction extends ActionEvent<{
     side?:Side,
-    isAction?:boolean
+    isAction?:boolean,//default true
 }>{}
 
 //Places a card in a specific slot
@@ -110,10 +110,10 @@ export class PlaceAction extends ActionEvent<{
     position:1|2|3,
     side:Side,
     faceUp:boolean,
-    forFree?:boolean
+    forFree?:boolean//default false
 }>{}
 
-//Attempts to scare a given card. C2S is a request, S2C is a confirmation
+//Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
 export class ScareAction extends ActionEvent<{
     scarerPos:[1|2|3, Side],
     scaredPos:[1|2|3, Side],

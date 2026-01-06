@@ -62,7 +62,7 @@ function acceptEvent(event:Event<any>){
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
 //@returns If a card was actually drawn
-function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean=true){
+export function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean=true){
     const card = sideTernary(side, game.deckA, game.deckB).pop();
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
@@ -496,14 +496,11 @@ function parseEvent(event:Event<any>){
                             }
                         }
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
+                        event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                         // endTurn(event.game);
                     }
                 }break;
-                case CardActionOptions.YASHI_REORDER:{//og-027
-                    const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
-                    //TODO
-                }break;
-                case CardActionOptions.GREMLIN_SCARE:{
+                case CardActionOptions.GREMLIN_SCARE:{//og-009
                     const actor = verifyFieldCard(event);
                     const data = (event as CardAction<GREMLIN_SCARE>).data.cardData;
                     if(!(actor !== undefined && actor.cardData.name === "og-009" &&//card exists and is gremlin
@@ -514,6 +511,7 @@ function parseEvent(event:Event<any>){
                         return rejectEvent(event, "failed gremlin check");
 
                     if(data.position === undefined){
+                        event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                         return acceptEvent(event);
                     }else{
                         const scared = (event.sender === event.game.player(Side.A)?event.game.fieldsB:event.game.fieldsA)[data.position-1];
@@ -534,25 +532,18 @@ function parseEvent(event:Event<any>){
                                 user.send(toSend);
                             }
 
+                            event.game!.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                             scared.cardData.callAction(CardActionType.AFTER_SCARED, {
                                 self:sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[0]-1],
                                 scarer:sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[0]-1],
                                 game:event.game!, stat:toSend.data.attackingWith});
-
-                            endTurn(toSend.game!);
                         });
-
-                        actor.hasAttacked=true;
-                        sideTernary(scared.side, event.game.fieldsA, event.game.fieldsB)[data.position-1]=undefined;
-
-                        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                            user.send(toSend);
-                        }
-
-                        scared.cardData.callAction(CardActionType.AFTER_SCARED,
-                            {self:scared, scarer:actor, game:event.game, stat:"card"});
                     }
 
+                }break;
+                case CardActionOptions.YASHI_REORDER:{//og-027
+                    const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
+                    //TODO
                 }break;
             }
         }

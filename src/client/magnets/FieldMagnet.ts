@@ -49,7 +49,7 @@ export default class FieldMagnet extends CardMagnet{
                                 });
                             }
                             if(this.started) this.storedRunnable();
-                        }else{
+                        }else if(game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)){
                             game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)
                                 ?.wait.then(()=>{
                                     if(game.state instanceof VTurnState &&
