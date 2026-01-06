@@ -164,7 +164,7 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
         }
 
         if(stat !== "card" && scarer.cardData.stat(stat) !== undefined && scared.cardData.stat(getVictim(stat)) !== undefined){
-            return scarer.cardData.stat(stat)! > self.cardData.stat(getVictim(stat))! ?
+            return (scarer.cardData.stat(stat)! > self.cardData.stat(getVictim(stat))!) ?
                 InterruptScareResult.PASSTHROUGH : InterruptScareResult.FAIL_SCARE;
         }
         return InterruptScareResult.PASSTHROUGH;

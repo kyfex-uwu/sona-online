@@ -9,6 +9,7 @@ import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
 import {Euler, Group, Quaternion, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
+import {GameMiscDataStrings} from "../Game.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -143,6 +144,8 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready && this.canInit) {
+            // this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+
             // if (this.currTurn === this.game.getMySide()) {
             //     //dont even think about uncommenting this unless youre gonna fix brownie
             //     // this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER)!.then(()=>{
@@ -182,6 +185,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
     decrementTurn(){
         const state = this.game.getGame().state;
         if(state instanceof TurnState) {
+            this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
             if(state.decrementTurn(true)){
                 this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
             }

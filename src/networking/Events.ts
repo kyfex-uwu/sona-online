@@ -102,7 +102,15 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 export class DrawAction extends ActionEvent<{
     side?:Side,
     isAction?:boolean,//default true
-}>{}
+}>{
+    // constructor(data:{
+    //     side?:Side,
+    //     isAction?:boolean,//default true
+    // }, game?:Game, sender?:Client, id?:string) {
+    //     super(data, game, sender, id);
+    //     console.trace("AE")
+    // }
+}
 
 //Places a card in a specific slot
 export class PlaceAction extends ActionEvent<{

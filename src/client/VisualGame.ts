@@ -4,12 +4,12 @@ import RunawayMagnet from "./magnets/RunawayMagnet.js";
 import DeckMagnet from "./magnets/DeckMagnet.js";
 import HandFan from "./fans/HandFan.js";
 import VisualHandFan from "./fans/HandFan.js";
-import Game from "../Game.js";
+import Game, {GameMiscDataStrings} from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
-import {Event, PassAction} from "../networking/Events.js";
+import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import type Card from "../Card.js";
 import p5 from "p5";
@@ -137,6 +137,13 @@ export default class VisualGame {
             new Quaternion().setFromEuler(new Euler(0,Math.PI, 0))));
 
         this.state.init();//one-time fix for starting state
+
+        this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
+            if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide() &&
+                !this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.waiting){
+                this.sendEvent(new DrawAction({}));
+            }
+        })
 
         //--
 

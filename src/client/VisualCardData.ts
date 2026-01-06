@@ -149,6 +149,7 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
 
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
+    game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)!.waiting=true;
 
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
         card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);
@@ -180,7 +181,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
                     id:toRemove.logicalCard.id
                 },
             })).onReply(successOrFail(()=>{
-                visualGame.sendEvent(new DrawAction({}));
+                game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
             }));
         }
 
@@ -209,12 +210,16 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
             }, EndType.CANCEL, ()=>{
                 network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}))
                     .onReply(successOrFail(()=>{
-                        visualGame.sendEvent(new DrawAction({}));
+                        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
             }), visualGame.getGame().state);
     }else{
-        visualGame.sendEvent(new DrawAction({}));
+        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     }
+});
+wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+    game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
 });
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});

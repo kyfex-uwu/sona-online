@@ -78,7 +78,8 @@ function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
 network.sendToServer = (event) => {
     websocketReady.then(()=>{
         websocket.send(event.serialize());
-        log("sent "+event.serialize())
+        if(!(event instanceof RequestSyncEvent))
+            log("sent "+event.serialize())
     });
     return new Replyable(event);
 }

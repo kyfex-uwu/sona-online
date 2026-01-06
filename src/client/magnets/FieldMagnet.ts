@@ -49,14 +49,18 @@ export default class FieldMagnet extends CardMagnet{
                                 });
                             }
                             if(this.started) this.storedRunnable();
-                        }else if(game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)){
-                            game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)
-                                ?.wait.then(()=>{
-                                    if(game.state instanceof VTurnState &&
-                                        game.state.currTurn === game.getMySide())
-                                        game.sendEvent(new DrawAction({}));
-                            });
                         }
+                        // else if(this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN) &&
+                        //     this.game.getGame().getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
+                        //     this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)
+                        //         ?.wait.then(()=>{
+                        //             if(this.game.state instanceof VTurnState &&
+                        //                 this.game.state.currTurn === this.game.getMySide() &&
+                        //                 this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN) &&
+                        //                 this.game.getGame().getMiscData(GameMiscDataStrings.CAN_PREDRAW))
+                        //                 this.game.sendEvent(new DrawAction({}));
+                        //     });
+                        // }
 
                         this.game.frozen=true;
                         this.game.sendEvent(new PlaceAction({
@@ -122,7 +126,8 @@ export default class FieldMagnet extends CardMagnet{
                                     this.card.model
                                 ].filter(mesh => mesh !== undefined));
                                 if (intersects[0] !== undefined) {
-                                    if (getVictim(state.attackData.type) !== undefined) {
+                                    if (getVictim(state.attackData.type) !== undefined &&
+                                        !this.card.logicalCard.hasAttacked) {
                                         this.game.sendEvent(new ScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
