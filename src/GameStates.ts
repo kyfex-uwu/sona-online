@@ -28,7 +28,7 @@ export class TurnState extends GameState{
             if(card !==undefined) card.hasAttacked=false;
 
         const firstTurnAwaiter = game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER);
-        if(firstTurnAwaiter?.waiting)
+        if(!firstTurnAwaiter?.waiting)
             firstTurnAwaiter?.resolve();
 
         this.crisis=crisis ?? !sideTernary(turn, game.fieldsA, game.fieldsB).some(card => card !== undefined);

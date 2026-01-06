@@ -144,7 +144,9 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready && this.canInit) {
-            // this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+            // const firstTurnAwaiter = this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER);
+            // if(!firstTurnAwaiter?.waiting)
+            //     firstTurnAwaiter?.resolve();
 
             // if (this.currTurn === this.game.getMySide()) {
             //     //dont even think about uncommenting this unless youre gonna fix brownie
