@@ -52,7 +52,9 @@ export default class FieldMagnet extends CardMagnet{
                         }else{
                             game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)
                                 ?.wait.then(()=>{
-                                game.sendEvent(new DrawAction({}));
+                                    if(game.state instanceof VTurnState &&
+                                        game.state.currTurn === game.getMySide())
+                                        game.sendEvent(new DrawAction({}));
                             });
                         }
 

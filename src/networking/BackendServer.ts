@@ -157,7 +157,7 @@ function parseEvent(event:Event<any>){
             [event.sender === event.game.player(Side.A) ? Side.A : Side.B]);
         if(nextEvent !== undefined){
             if(event instanceof ActionEvent &&
-                //?? what
+                //?? what (talking about yellow squiggly)
                 (!(event instanceof CardAction) || event.data.actionName !== nextEvent)){
                 rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
                 return;
@@ -183,8 +183,20 @@ function parseEvent(event:Event<any>){
             const waiter = new Promise<FindGameEvent>(r=>resolve=r);
             waiter.then((other) => {
                 let id=0;
+
+                //debug code
+                const firstCard = event.data.deck[0];
+                const firstCardB = other.data.deck[0];
+
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
+
+                //debug code
+                if(firstCard !== undefined)
+                    deckA.push(deckA.splice(deckA.findIndex(card => card.type === firstCard), 1)[0]!);
+                if(firstCardB !== undefined)
+                    deckB.push(deckB.splice(deckB.findIndex(card => card.type === firstCardB), 1)[0]!);
+
                 let hasLevel1A=false;
                 let hasLevel1B=false;
                 for(let i=0;i<3;i++){
@@ -355,7 +367,6 @@ function parseEvent(event:Event<any>){
                 side = Side.B;
             }
             if(side !== undefined){
-                //@ts-ignore
                 if(!(event.game.state instanceof TurnState &&
                     event.game.state.turn === side &&//it is the player's turn
                     sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
