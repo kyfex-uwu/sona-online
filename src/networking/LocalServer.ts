@@ -24,9 +24,10 @@ import {sideTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
-import {TurnState} from "../GameStates.js";
+import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
-import {CardActionOptions} from "./CardActionOption.js";
+import {CardActionOptions, type CLOUD_CAT_PICK} from "./CardActionOption.js";
+import {GameMiscDataStrings} from "../Game.js";
 
 //@ts-ignore
 window.showNetworkLogs=true;
@@ -243,6 +244,10 @@ async function receiveFromServer(packed:{
                     sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
                     card.flipFaceup();
                 }
+            }break;
+            case CardActionOptions.CLOUD_CAT_PICK:{
+                game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =
+                    game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
             }break;
         }
     }

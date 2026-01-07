@@ -1,10 +1,11 @@
 import CardData, {CardActionType, InterruptScareResult, Species} from "./CardData.js";
 import {sideTernary} from "./consts.js";
-import {TurnState} from "./GameStates.js";
+import {BeforeGameState, TurnState} from "./GameStates.js";
 import {getVictim, MiscDataStrings, Stat} from "./Card.js";
 import {flagNames, getFlag} from "./networking/Server.js";
 import {GameMiscDataStrings} from "./Game.js";
 import {CardActionOptions} from "./networking/CardActionOption.js";
+import {other} from "./GameElement.js";
 
 const cards:{[k:string]:CardData} = {};
 
@@ -170,8 +171,13 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
         return InterruptScareResult.PASSTHROUGH;
     }));
 setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)//todo
-    .with(CardActionType.PLACED, ({self, game})=>{
-        //hoo boy
+    .with(CardActionType.PRE_PLACED, ({self, game})=>{
+        if(game.state instanceof BeforeGameState){
+            game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";
+        }
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.CLOUD_CAT_PICK);
+    }).with(CardActionType.AFTER_SCARED, ({self, game})=>{
+        game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = false;
     }));
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
 

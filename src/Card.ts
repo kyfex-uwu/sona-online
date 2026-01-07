@@ -29,7 +29,8 @@ export const MiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
     DCW_PICKED_LEVEL:"og-032_level" as MiscDataString<1|2|3|undefined>,
     LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
-    K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>
+    K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>,
+    CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as MiscDataString<boolean>,
 };
 verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
 
@@ -75,20 +76,19 @@ export default class Card implements GameElement{
 
     getGame() { return this.game; }
 
-    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
+    private disabled(){
         const disabledLoc = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
-        const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
-            .indexOf(this);
-        if(fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc === fieldLoc)) return undefined;
-
-        return this.cardData.getAction(type);
+        if(disabledLoc !== false) {
+            const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
+                .indexOf(this);
+            if (fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc - 1 === fieldLoc)) return true;
+        }
+        return false;
+    }
+    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
+        return this.disabled() ? undefined : this.cardData.getAction(type);
     }
     callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
-        const disabledLoc = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
-        const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
-            .indexOf(this);
-        if(fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc === fieldLoc)) return undefined;
-
-        return this.cardData.callAction(type, param);
+        return this.disabled() ? undefined : this.cardData.callAction(type, param);
     }
 }

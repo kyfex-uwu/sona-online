@@ -6,7 +6,7 @@ import {
     type K9_ALPHA,
     type YASHI_REORDER
 } from "./CardActionOption.js";
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {CardActionType, Species} from "../CardData.js";
 import Card, {MiscDataStrings} from "../Card.js";
@@ -173,7 +173,8 @@ export default function(event:CardAction<any>){
             const pos = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
 
             if(!(actor !== undefined && actor.cardData.name === "og-043" &&//card exists and is cloud cat
-                event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
+                ((event.game.state instanceof TurnState && event.game.state.turn === actor.side) ||//it is the actor's turn
+                event.game.state instanceof BeforeGameState) &&//it is the first place
                 event.game.player(actor.side) === event.sender &&//actor belongs to sender
 
                 event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.CLOUD_CAT_PICK &&//next action
@@ -182,7 +183,11 @@ export default function(event:CardAction<any>){
             ))
                 return rejectEvent(event, "failed cloud cat check");
 
-
+            event.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(actor.side)] =
+                event.game.state instanceof BeforeGameState ? "first" : pos;
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            sendToClients(event, event.sender);
+            acceptEvent(event);
         }break;
     }
 }

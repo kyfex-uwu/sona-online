@@ -8,7 +8,7 @@ import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
-import {GameState, type TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {Side} from "../GameElement.js";
@@ -279,6 +279,47 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
         (card)=>{
             self.setMiscData(MiscDataStrings.DCW_PICKED_LEVEL, card.logicalCard.cardData.level);
             state.cancel();
-        },EndType.NONE,()=>{});
-    visualGame.setState(state, (game.state as TurnState));
+        },EndType.NONE);
+    visualGame.setState(state, game.state);
+});
+wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    if(game.state instanceof BeforeGameState){
+        network.sendToServer(new CardAction({
+            cardId:self.id,
+            actionName:CardActionOptions.CLOUD_CAT_PICK,
+            cardData:1
+        }));
+        self.setMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
+    }
+})
+wrap(cards["og-043"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+    if(self.getMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
+
+    if(game.state instanceof BeforeGameState){
+        network.sendToServer(new CardAction({
+            cardId:self.id,
+            actionName:CardActionOptions.CLOUD_CAT_PICK,
+            cardData:1
+        }));
+        return;
+    }
+
+    const state = new VPickCardsState(visualGame, [visualGame.state, game.state],
+        sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)
+            .map(magnet=>magnet.getCard())
+            .filter(card=>card!==undefined),
+        (card)=>{
+            network.sendToServer(new CardAction({
+                cardId:self.id,
+                actionName:CardActionOptions.CLOUD_CAT_PICK,
+                cardData:sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                    .map(magnet=>magnet.getCard())
+                    .findIndex(mCard=>mCard?.logicalCard.id === card.logicalCard.id)+1
+            }));
+            state.cancel();
+        }, EndType.NONE);
+    visualGame.setState(state, game.state);
 });

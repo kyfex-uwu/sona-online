@@ -38,30 +38,6 @@ export default class FieldMagnet extends CardMagnet{
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
-                        card.logicalCard.callAction(CardActionType.PRE_PLACED,
-                            {self:card.logicalCard, game:game.getGame()});
-                        if(card.logicalCard.getAction(CardActionType.PLACED) !== undefined){
-                            const action = card.logicalCard.getAction(CardActionType.PLACED)!;
-
-                            this.storedRunnable = ()=>{
-                                action({
-                                    self:card.logicalCard,
-                                    game:this.game.getGame()
-                                });
-                            }
-                            if(this.started) this.storedRunnable();
-                        }
-                        // else if(this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN) &&
-                        //     this.game.getGame().getMiscData(GameMiscDataStrings.CAN_PREDRAW)){
-                        //     this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)
-                        //         ?.wait.then(()=>{
-                        //             if(this.game.state instanceof VTurnState &&
-                        //                 this.game.state.currTurn === this.game.getMySide() &&
-                        //                 this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN) &&
-                        //                 this.game.getGame().getMiscData(GameMiscDataStrings.CAN_PREDRAW))
-                        //                 this.game.sendEvent(new DrawAction({}));
-                        //     });
-                        // }
 
                         this.game.frozen=true;
                         this.game.sendEvent(new PlaceAction({
@@ -80,6 +56,20 @@ export default class FieldMagnet extends CardMagnet{
                         },()=>{
                             this.game.frozen=false;
                         }));
+
+                        card.logicalCard.callAction(CardActionType.PRE_PLACED,
+                            {self:card.logicalCard, game:game.getGame()});
+                        if(card.logicalCard.getAction(CardActionType.PLACED) !== undefined){
+                            const action = card.logicalCard.getAction(CardActionType.PLACED)!;
+
+                            this.storedRunnable = ()=>{
+                                action({
+                                    self:card.logicalCard,
+                                    game:this.game.getGame()
+                                });
+                            }
+                            if(this.started) this.storedRunnable();
+                        }
 
                         return true;
                     }
