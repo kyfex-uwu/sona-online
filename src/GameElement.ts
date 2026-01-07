@@ -1,4 +1,6 @@
 //The side of some element
+import type Game from "./Game.js";
+
 export enum Side{
     A,
     B
@@ -15,4 +17,5 @@ export function other(side:Side):Side{
 //An element of a logical game
 export interface GameElement{
     getSide():Side;
+    getGame():Game;
 }

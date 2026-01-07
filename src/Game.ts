@@ -20,6 +20,11 @@ export const GameMiscDataStrings = {
         [Side.A]: "AnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
         [Side.B]: "BnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
     },
+    CLOUD_CAT_DISABLED:"cloudCatDisabled" as GameMiscDataString<{
+        [Side.A]: 1|2|3|"first"|false,
+        [Side.B]: 1|2|3|"first"|false
+    }>,
+
     DO_NOT_USE_VALIDATION_ONLY_NASB_A:"AnextActionShould",
     DO_NOT_USE_VALIDATION_ONLY_NASB_B:"BnextActionShould",
 };
@@ -90,16 +95,19 @@ export default class Game{
         this._mySide=side||Side.A;
         this.setDeck(Side.A, deckA);
         this.setDeck(Side.B, deckB);
+
         this.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, true);
         this.setMiscData(GameMiscDataStrings.CAN_PREDRAW, true);
         let resolve=()=>{};
         const wait = new Promise<void>(r=>resolve=r);
         this.setMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER, {wait, resolve, waiting:false});
+        this.setMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED, {[Side.A]:false, [Side.B]:false});
+
         for(const card of this.deckA) this.cards.add(card);
         for(const card of this.deckB) this.cards.add(card);
     }
     public setDeck(side:Side, deck:Array<{type:string, id:number}>){
-        sideTernary(side,this.deckA, this.deckB).splice(0,0,...deck.map(data=> new Card(cards[data.type]!, side, data.id)));
+        sideTernary(side,this.deckA, this.deckB).splice(0,0,...deck.map(data=> new Card(cards[data.type]!, side, this, data.id)));
     }
     public setMySide(side:Side){ this._mySide=side; }
 

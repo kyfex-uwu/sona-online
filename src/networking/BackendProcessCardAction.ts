@@ -1,13 +1,13 @@
 import {CardAction, ScareAction} from "./Events.js";
 import {
     type BROWNIE_DRAW,
-    CardActionOptions,
+    CardActionOptions, type CLOUD_CAT_PICK,
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {Side} from "../GameElement.js";
-import {TurnState} from "../GameStates.js";
+import {BeforeGameState, TurnState} from "../GameStates.js";
 import {CardActionType, Species} from "../CardData.js";
 import Card, {MiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
@@ -87,7 +87,7 @@ export default function(event:CardAction<any>){
             const card = event.game.cards.values().find(card => card.id === id);
 
             if (card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
-                card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
                 event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW){//the sender needs to brownie draw
                 findAndRemove(event.game, card);
                 sideTernary(card.side, event.game.handA, event.game.handB).push(card);
@@ -135,7 +135,7 @@ export default function(event:CardAction<any>){
                     sendToClients(toSend);
 
                     event.game!.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                    scared.cardData.callAction(CardActionType.AFTER_SCARED, {
+                    scared.callAction(CardActionType.AFTER_SCARED, {
                         self:sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[0]-1],
                         scarer:sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[0]-1],
                         game:event.game!, stat:toSend.data.attackingWith});
@@ -167,6 +167,22 @@ export default function(event:CardAction<any>){
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             acceptEvent(event);
+        }break;
+        case CardActionOptions.CLOUD_CAT_PICK: {//og-043
+            const actor = verifyFieldCard(event);
+            const pos = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
+
+            if(!(actor !== undefined && actor.cardData.name === "og-043" &&//card exists and is cloud cat
+                event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
+                event.game.player(actor.side) === event.sender &&//actor belongs to sender
+
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.CLOUD_CAT_PICK &&//next action
+                (sideTernary(actor.side, event.game.fieldsB, event.game.fieldsA)[pos-1] !== undefined ||//targeted card exists OR
+                    event.game.state instanceof BeforeGameState)//its before the first turn
+            ))
+                return rejectEvent(event, "failed cloud cat check");
+
+
         }break;
     }
 }

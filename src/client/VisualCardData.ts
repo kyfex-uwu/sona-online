@@ -44,9 +44,9 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
                         let thirdState:VPickCardsState;
                         visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates,
                             [
-                                new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, -1), new Vector3()),
-                                new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, -1), new Vector3()),
-                                new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, -1), new Vector3()),
+                                new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                                new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                                new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
                             ],
                             (attackStat)=>{
                                 thirdState.cancel();
@@ -74,7 +74,7 @@ visualCardClientActions["og-018"] = (card) =>{
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
     if(toReorder.length === 1){
-        toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), -1), new Vector3()));
+        toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
     }
 
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
@@ -158,7 +158,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
-        card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined);
+        card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined);
     for(const card of cards){
         network.sendToServer(new ClarifyCardEvent({
             id:card.id,

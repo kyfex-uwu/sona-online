@@ -100,9 +100,11 @@ export default class CardData{
     setFree(){
         return this.with(CardActionType.IS_FREE, ()=>true);
     }
+    //{@link Card.getAction} should be preferred
     getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];
     }
+    //{@link Card.callAction} should be preferred
     callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
         const action = this.getAction(type);
         if(action !== undefined)

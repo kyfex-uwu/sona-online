@@ -38,10 +38,10 @@ export default class FieldMagnet extends CardMagnet{
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
-                        card.logicalCard.cardData.callAction(CardActionType.PRE_PLACED,
+                        card.logicalCard.callAction(CardActionType.PRE_PLACED,
                             {self:card.logicalCard, game:game.getGame()});
-                        if(card.logicalCard.cardData.getAction(CardActionType.PLACED) !== undefined){
-                            const action = card.logicalCard.cardData.getAction(CardActionType.PLACED)!;
+                        if(card.logicalCard.getAction(CardActionType.PLACED) !== undefined){
+                            const action = card.logicalCard.getAction(CardActionType.PLACED)!;
 
                             this.storedRunnable = ()=>{
                                 action({
@@ -71,7 +71,7 @@ export default class FieldMagnet extends CardMagnet{
                             faceUp: (state instanceof VTurnState)
                         })).onReply(successOrFail(()=>{
                             if(isDecrementable(state) &&//deprecated?
-                                !(card.logicalCard.cardData.callAction(CardActionType.IS_FREE,
+                                !(card.logicalCard.callAction(CardActionType.IS_FREE,
                                     {self:card.logicalCard, game:game.getGame()}) ?? false))// card is not free
                                 (state as unknown as Decrementable).decrementTurn();
                         },()=>{

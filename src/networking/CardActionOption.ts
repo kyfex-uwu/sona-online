@@ -11,6 +11,7 @@ export type AMBER_PICK=1 | 2;
 export type FURMAKER_PICK=number;
 export type YASHI_REORDER=[number?, number?, number?];
 export type DCW_GUESS=number;
+export type CLOUD_CAT_PICK=1|2|3;
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -23,5 +24,6 @@ export const CardActionOptions = {
     DCW_GUESS: "og-032_guess" as CardActionOption<DCW_GUESS>,
     WORICK_RESCUE: "og-038_rescue" as CardActionOption<WORICK_RESCUE>,
     FURMAKER_PICK: "og-041_pick" as CardActionOption<FURMAKER_PICK>,
+    CLOUD_CAT_PICK: "og-043_pick" as CardActionOption<CLOUD_CAT_PICK>
 };
 verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");

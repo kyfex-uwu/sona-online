@@ -57,7 +57,7 @@ function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
     const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
     if(oldVCard !== undefined){
         const newCard = cardDataName !== undefined ?
-            new Card(cards[cardDataName!]!, oldVCard.logicalCard.side, oldVCard.logicalCard.id) :
+            new Card(cards[cardDataName!]!, oldVCard.logicalCard.side, game.getGame(), oldVCard.logicalCard.id) :
             oldVCard.logicalCard;
         const oldCard = oldVCard.logicalCard;
         if(!oldCard.getFaceUp()) newCard.flipFacedown();
@@ -132,12 +132,12 @@ async function receiveFromServer(packed:{
         const theirDeck = sideTernary(other(game.getMySide()), game.deckA, game.deckB);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const card of event.data.deck){
-            const visualCard = game.addElement(new VisualCard(game, new Card(cards[card.type]!, game.getMySide(), card.id),
+            const visualCard = game.addElement(new VisualCard(game, new Card(cards[card.type]!, game.getMySide(), game.getGame(), card.id),
                 new Vector3(), rotation));
             myDeck.addCard(visualCard);
         }
         for(const cardId of event.data.otherDeck){
-            const visualCard = game.addElement(new VisualCard(game, new Card(cards.unknown!, other(game.getMySide()), cardId),
+            const visualCard = game.addElement(new VisualCard(game, new Card(cards.unknown!, other(game.getMySide()), game.getGame(), cardId),
                 new Vector3(), rotation));
             theirDeck.addCard(visualCard);
         }
@@ -152,7 +152,7 @@ async function receiveFromServer(packed:{
         const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === event.data.id) as VisualCard;
         if(oldVCard !== undefined){
             const newCard = event.data.cardDataName !== undefined ?
-                new Card(cards[event.data.cardDataName!]!, oldVCard.logicalCard.side, oldVCard.logicalCard.id) :
+                new Card(cards[event.data.cardDataName!]!, oldVCard.logicalCard.side, game.getGame(), oldVCard.logicalCard.id) :
                 oldVCard.logicalCard;
             const oldCard = oldVCard.logicalCard;
             if(!oldCard.getFaceUp()) newCard.flipFacedown();

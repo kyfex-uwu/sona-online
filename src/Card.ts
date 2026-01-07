@@ -1,7 +1,7 @@
 import {type GameElement, Side} from "./GameElement.js";
-import type CardData from "./CardData.js";
-import {verifyNoDuplicateStrVals} from "./consts.js";
-import {GameMiscDataStrings} from "./Game.js";
+import CardData, {CardActionType} from "./CardData.js";
+import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
+import Game, {GameMiscDataStrings} from "./Game.js";
 
 //Which stat on a card
 export enum Stat{
@@ -38,6 +38,7 @@ export default class Card implements GameElement{
     public readonly cardData: CardData;
     public readonly side:Side;
     public readonly id:number;
+    private readonly game:Game;
 
     private miscData: { [k: string]: any } = {};
     public getMiscData<T>(key:MiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
@@ -48,11 +49,13 @@ export default class Card implements GameElement{
      * Creates a logical card
      * @param cardData The card data
      * @param side Which side the card belongs to
+     * @param game The game this card belongs to
      * @param id The id of the card (should be unique per game)
      */
-    constructor(cardData: CardData, side:Side, id:number) {
+    constructor(cardData: CardData, side:Side, game:Game, id:number) {
         this.cardData=cardData;
         this.side=side;
+        this.game=game;
         this.id=id;
     }
 
@@ -69,4 +72,23 @@ export default class Card implements GameElement{
     getSide(){ return this.side; }
     //Returns if this card is face up
     getFaceUp(){ return this.faceUp; }
+
+    getGame() { return this.game; }
+
+    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
+        const disabledLoc = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
+        const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
+            .indexOf(this);
+        if(fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc === fieldLoc)) return undefined;
+
+        return this.cardData.getAction(type);
+    }
+    callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
+        const disabledLoc = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
+        const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
+            .indexOf(this);
+        if(fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc === fieldLoc)) return undefined;
+
+        return this.cardData.callAction(type, param);
+    }
 }

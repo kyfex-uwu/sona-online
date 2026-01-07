@@ -105,7 +105,7 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
         for(const card of sideTernary(scared.side, game.fieldsA, game.fieldsB)) {
             if(card===undefined) continue;
 
-            const result = scared.cardData.callAction(CardActionType.INTERRUPT_SCARE,
+            const result = scared.callAction(CardActionType.INTERRUPT_SCARE,
                 { self: card, scared, scarer, game, stat: scareType, origEvent:event, next:onPass });
             switch(result){
                 case InterruptScareResult.FAIL_SCARE: onPass(false); return;
@@ -296,7 +296,7 @@ export function parseEvent(event:Event<any>){
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
-            const placedForFree = card.cardData.callAction(CardActionType.IS_FREE, {self:card, game:event.game}) ?? false;
+            const placedForFree = card.callAction(CardActionType.IS_FREE, {self:card, game:event.game}) ?? false;
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
@@ -315,9 +315,9 @@ export function parseEvent(event:Event<any>){
                 }));
             }
 
-            card.cardData.callAction(CardActionType.PRE_PLACED, {self:card, game:event.game});
+            card.callAction(CardActionType.PRE_PLACED, {self:card, game:event.game});
             event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
-                card.cardData.callAction(CardActionType.PLACED, {self:card, game:event.game});
+                card.callAction(CardActionType.PLACED, {self:card, game:event.game});
             });
 
             if(!placedForFree)
@@ -408,7 +408,7 @@ export function parseEvent(event:Event<any>){
                 if(succeeded) {
                     sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                    scared.cardData.callAction(CardActionType.AFTER_SCARED,
+                    scared.callAction(CardActionType.AFTER_SCARED,
                         {self: scared, scarer, game: game, stat: event.data.attackingWith});
                 }
 
@@ -453,7 +453,7 @@ export function parseEvent(event:Event<any>){
 
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
                             .find(card => card.id === event.data.id &&
-                                card.cardData.level === 1 && card.cardData.getAction(CardActionType.IS_FREE) !== undefined)?.cardData.name;
+                                card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined)?.cardData.name;
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW);
                     }
                     break;

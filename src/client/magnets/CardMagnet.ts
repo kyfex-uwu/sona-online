@@ -58,7 +58,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
             return false;
         });
 
-        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, -1),this.position, this.rotation));
+        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, game.getGame(), -1),this.position, this.rotation));
     }
 
     //If this magnet should visually snap cards towards it. Should be false if you cant place cards there
