@@ -12,7 +12,13 @@ import {CardActionType, Species} from "../CardData.js";
 import Card, {MiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
-import {acceptEvent, parseEvent, rejectEvent, scareInterrupt, usersFromGameIDs} from "./BackendServer.js";
+import {
+    acceptEvent,
+    parseEvent,
+    rejectEvent,
+    scareInterrupt,
+    sendToClients
+} from "./BackendServer.js";
 
 
 function findAndRemove(game:Game, card:Card){
@@ -86,15 +92,11 @@ export default function(event:CardAction<any>){
                 findAndRemove(event.game, card);
                 sideTernary(card.side, event.game.handA, event.game.handB).push(card);
 
-                for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                    if(user !== event.sender){
-                        user.send(new CardAction({
-                            cardId: -1,
-                            actionName:CardActionOptions.BROWNIE_DRAW,
-                            cardData:{id:card.id},
-                        }))
-                    }
-                }
+                sendToClients(new CardAction({
+                    cardId: -1,
+                    actionName:CardActionOptions.BROWNIE_DRAW,
+                    cardData:{id:card.id},
+                }, event.game), event.sender);
                 event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
                 event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                 acceptEvent(event);
@@ -130,9 +132,7 @@ export default function(event:CardAction<any>){
                     sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[1]-1]!.hasAttacked=true;
                     sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[1]-1]=undefined;
 
-                    for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
-                        user.send(toSend);
-                    }
+                    sendToClients(toSend);
 
                     event.game!.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     scared.cardData.callAction(CardActionType.AFTER_SCARED, {

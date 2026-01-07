@@ -3,8 +3,8 @@ import * as ws from 'ws';
 const website = new express();
 
 import { fileURLToPath } from 'url';
-import {network, flags} from "./dist/networking/Server.js";
-import {backendInit} from "./dist/networking/BackendServer.js";
+import {flags} from "./dist/networking/Server.js";
+import {backendInit, receiveFromClient} from "./dist/networking/BackendServer.js";
 const __dirname=fileURLToPath(import.meta.url).slice(0,"/main.js".length*-1);
 
 if(process.argv[2] === "dev") {

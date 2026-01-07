@@ -1,9 +1,8 @@
 import CardData, {CardActionType} from "../CardData.js";
 import cards from "../Cards.js";
-import {network} from "./Server.js";
 import {CardAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
-import {draw} from "./BackendServer.js";
+import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
 
 export function loadBackendWrappers(){}
@@ -31,7 +30,7 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
     const card = sideTernary(self.side, game.deckA, game.deckB).shift();
     if(card !== undefined){
         sideTernary(self.side, game.handA, game.handB).push(card);
-        network.sendToClients(new CardAction({
+        sendToClients(new CardAction({
             cardId: -1,
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},

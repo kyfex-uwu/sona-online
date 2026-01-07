@@ -54,6 +54,13 @@ export function rejectEvent(event:Event<any>, reason:string){
 export function acceptEvent(event:Event<any>){
     network.replyToClient(event, new AcceptEvent({}, undefined, undefined, event.id));
 }
+export function sendToClients(event:Event<any>, ...toIgnore:(Client|undefined)[]) {
+    for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
+        if(toIgnore.indexOf(user) === -1){
+            user.send(event);
+        }
+    }
+}
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
 //@returns If a card was actually drawn
@@ -61,11 +68,7 @@ export function draw(game: Game, sender: Client|undefined, side: Side, isAction:
     const card = sideTernary(side, game.deckA, game.deckB).pop();
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
-        for(const user of (usersFromGameIDs[game.gameID]||[])){
-            if(user !== sender){
-                user.send(new DrawAction({side: side, isAction}, undefined, undefined));
-            }
-        }
+        sendToClients(new DrawAction({side: side, isAction}, game, undefined), sender);
         if(game.state instanceof TurnState && isAction) {
             if(game.state.decrementTurn()){
                 if(sideTernary((game.state as TurnState).turn, game.handA, game.handB).length<5) {
@@ -204,15 +207,11 @@ export function parseEvent(event:Event<any>){
                     otherDeck:deckA.map(card => card.id),
                     which:Side.B,
                 }, game));
-                for(const user of (usersFromGameIDs[game.gameID]||[])){
-                    if(user !== event.sender && user !== other.sender){
-                        user.send(new GameStartEventWatcher({
-                            deck:deckB.map(card => card.id),
-                            otherDeck:deckA.map(card => card.id),
-                            which:Side.B,
-                        }, game));
-                    }
-                }
+                sendToClients(new GameStartEventWatcher({
+                    deck:deckB.map(card => card.id),
+                    otherDeck:deckA.map(card => card.id),
+                    which:Side.B,
+                }, game), event.sender, other.sender);
                 for(let i=0;i<3;i++){
                     draw(game, undefined, Side.A);
                     draw(game, undefined, Side.B);
@@ -519,11 +518,6 @@ export function parseEvent(event:Event<any>){
     }
 }
 
-network.sendToClients = (event) => {
-    for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
-        user.send(event);
-    }
-}
 export async function receiveFromClient (packed:{
     type:string,
     data:SerializableType,
