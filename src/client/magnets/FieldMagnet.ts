@@ -35,7 +35,6 @@ export default class FieldMagnet extends CardMagnet{
                     state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide() &&
                     state.canSelectHandCard(this.game.selectedCard)){//todo: this is technically a bandaid fix
                     //place card
-                    const card = this.game.selectedCard;
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
@@ -86,7 +85,7 @@ export default class FieldMagnet extends CardMagnet{
                     }
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === this.game.getMySide() ||
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
-                    if(state instanceof VTurnState && !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)){
+                    if(state instanceof VTurnState){
                         if(this.card === undefined || this.card.logicalCard.hasAttacked) return false;
                         this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
@@ -129,15 +128,16 @@ export default class FieldMagnet extends CardMagnet{
                                 ].filter(mesh => mesh !== undefined));
                                 if (intersects[0] !== undefined) {
                                     if (getVictim(state.attackData.type) !== undefined &&
-                                        !this.card.logicalCard.hasAttacked) {
+                                        !this.card.logicalCard.hasAttacked &&
+                                        !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
                                         this.game.sendEvent(new ScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
                                         }));
+                                        state.cancel();
+                                        return true;
                                     }
-                                    state.cancel();
-                                    return true;
                                 }
                             }
                         }

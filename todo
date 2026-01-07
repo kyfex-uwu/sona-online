@@ -2,27 +2,27 @@
 
 3
 
-5
 
 
 
-9
 
-11
+
+
+
 
 
 14
-15
+
 
 
 18
 
 20
 
-22
 
-24
-25
+
+
+
 
 27
 28
@@ -45,6 +45,5 @@
 ---
 NEXT_ACTION_SHOULD_BE check (should be done?)
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
-work out what the fuck brownie is doing on place pregame
 discarding broke at one point
 WAAGH

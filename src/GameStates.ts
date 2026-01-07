@@ -39,7 +39,6 @@ export class TurnState extends GameState{
     }
     swapAway() {
         super.swapAway();
-        this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
     }
 
     /**
@@ -49,6 +48,7 @@ export class TurnState extends GameState{
     decrementTurn(suppressChanges=false){
         this.actionsLeft--;
         if(this.actionsLeft<=0){
+            this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
             if(!suppressChanges) {
                 this.game.state = new TurnState(this.game, other(this.turn));
 

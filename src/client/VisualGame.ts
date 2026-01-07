@@ -211,7 +211,7 @@ export default class VisualGame {
             p5.textAlign(p5.LEFT,p5.TOP);
             if(this.state instanceof VTurnState){
                 p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
-current turn: ${this.state.getNonVisState().turn?"A":"B"}
+current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
 actions left: ${this.state.getActionsLeft()}`, 0,0);
             }
             if(this.state instanceof VAttackingState){
