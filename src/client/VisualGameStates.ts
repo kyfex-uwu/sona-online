@@ -260,7 +260,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     private readonly parentState;
     private listener?:number;
     private readonly onPick;
-    public readonly endType;
+    public endType;
     public readonly onFinish;
     constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCardClone)=>void,
                 endType:EndType, onFinish?:()=>void) {

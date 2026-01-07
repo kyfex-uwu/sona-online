@@ -155,9 +155,18 @@ export default function(event:CardAction<any>){
             ))
                 return rejectEvent(event, "failed yashi check");
 
-            // cards.map()
+            const deckDrawFrom = sideTernary(actor.side, event.game.deckA, event.game.deckB);
+            for(let i=cards.length-1;i>=0;i--){
+                const index = deckDrawFrom.findIndex(card=>card.id === cards[i]);
+                if(index===-1) return rejectEvent(event, "failed yashi check card #"+i);
 
-            //TODO
+                deckDrawFrom.push(deckDrawFrom.splice(index,1)[0]!);
+            }
+
+            //todo:send to clients
+
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            acceptEvent(event);
         }break;
     }
 }

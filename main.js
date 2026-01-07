@@ -43,7 +43,7 @@ server.on('upgrade', (req, socket, head) => {
             }};
         ws.on("message", (message) => {
             try{
-                network.receiveFromClient(JSON.parse(message.toString()), sender);
+                receiveFromClient(JSON.parse(message.toString()), sender);
             }catch(e){
                 ws.send("{\"error\":\"Couldn't process event\"}");
             }

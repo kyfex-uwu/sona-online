@@ -18,7 +18,7 @@ import {
     PlaceAction,
     RejectEvent,
     RequestSyncEvent,
-    ScareAction, SerializableClasses,
+    ScareAction, SerializableClasses, type SerializableType,
     StartRequestEvent,
     StringReprSyncEvent,
     SyncEvent
@@ -78,7 +78,7 @@ export function draw(game: Game, sender: Client|undefined, side: Side, isAction:
         return false;
     }
 }
-function endTurn(game:Game){
+export function endTurn(game:Game){
     if(game.state instanceof TurnState) {
         if (game.state.decrementTurn()) {
             if (sideTernary(game.state.turn, game.handA, game.handB).length < 5)
@@ -524,7 +524,11 @@ network.sendToClients = (event) => {
         user.send(event);
     }
 }
-network.receiveFromClient= async (packed, client) => {
+export async function receiveFromClient (packed:{
+    type:string,
+    data:SerializableType,
+    id:string
+}, client:Client) {
     //todo: this smells like vulnerability (but less now!)
     const event = new (SerializableClasses[packed.type] || InvalidEvent)(
         //@ts-ignore

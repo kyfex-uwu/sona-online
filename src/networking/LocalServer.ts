@@ -1,16 +1,15 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
-import * as Events from "./Events.js";
 import {
     CardAction,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
     Event,
-    GameStartEvent,
+    GameStartEvent, InvalidEvent,
     PassAction,
     PlaceAction,
     RequestSyncEvent,
-    ScareAction,
+    ScareAction, SerializableClasses, type SerializableType,
     StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
@@ -50,7 +49,7 @@ websocketReady.then(() => {
     websocket.onmessage = (message:MessageEvent<any>) => {
         const parsed = JSON.parse(message.data.toString());
         if(parsed.error !== undefined) log("Server error: "+parsed.error)
-        else network.receiveFromServer(parsed);
+        else receiveFromServer(parsed);
     }
 })
 
@@ -98,10 +97,16 @@ const logColors:{[key:string]:string}={
     DetermineStarterEvent:"#fb8",
     ClarifyCardEvent:"#8fc"
 }
-network.receiveFromServer = async (packed) => {
-    //todo: this smells like vulnerability
-    // @ts-ignore
-    const event = new Events[packed.type](packed.data, game.getGame(), null, packed.id) as Event<any>;
+async function receiveFromServer(packed:{
+    type:string,
+    data:SerializableType,
+    id:string,
+}) {
+    //todo: this smells like vulnerability (but less!)
+    const event = new (SerializableClasses[packed.type] || InvalidEvent)(
+        //@ts-ignore
+        packed.data,
+        game.getGame(), null, packed.id) as Event<any>;
     if(packed.type !== "SyncEvent" && packed.type !== "StringReprSyncEvent")
         log("%c <- "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 

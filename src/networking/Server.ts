@@ -68,16 +68,10 @@ export const network:{
     sendToClients:<T extends SerializableEventData> (event:Event<T>)=>void,
     //Replies with an event to a single client
     replyToClient:<T extends SerializableEventData> (replyTo:Event<T>, replyWith:Event<any>)=>Replyable<T>,
-    //Processes an event from the client
-    receiveFromClient:(event:{id:number,type:string,data:SerializableType}, client:Client)=>void,
-    //Processes an event from the server
-    receiveFromServer:(event:{id:number,type:string,data:SerializableType})=>void,
 
     clientGame?:Game,
 } = {
     sendToServer:(e)=>new Replyable(e),
     sendToClients:(e)=>new Replyable(e),
     replyToClient:(e)=>new Replyable(e),
-    receiveFromClient:()=>{},
-    receiveFromServer:()=>{},
 }
