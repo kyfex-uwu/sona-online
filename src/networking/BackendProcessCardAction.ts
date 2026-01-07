@@ -144,7 +144,19 @@ export default function(event:CardAction<any>){
 
         }break;
         case CardActionOptions.YASHI_REORDER:{//og-027
+            const actor = verifyFieldCard(event);
             const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
+
+            if(!(actor !== undefined && actor.cardData.name === "og-027" &&//card exists and is yashi
+                event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
+                event.game.player(actor.side) === event.sender &&//actor belongs to sender
+
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.YASHI_REORDER
+            ))
+                return rejectEvent(event, "failed yashi check");
+
+            // cards.map()
+
             //TODO
         }break;
     }

@@ -13,12 +13,12 @@ import {
     Event,
     FindGameEvent,
     GameStartEvent,
-    GameStartEventWatcher,
+    GameStartEventWatcher, InvalidEvent,
     PassAction,
     PlaceAction,
     RejectEvent,
     RequestSyncEvent,
-    ScareAction,
+    ScareAction, SerializableClasses,
     StartRequestEvent,
     StringReprSyncEvent,
     SyncEvent
@@ -525,11 +525,11 @@ network.sendToClients = (event) => {
     }
 }
 network.receiveFromClient= async (packed, client) => {
-    await wait(50);
-
-    //todo: this smells like vulnerability
-    // @ts-ignore
-    const event = new Events[packed.type](packed.data, gamesFromUser.get(client), client, packed.id) as Event<any>;
+    //todo: this smells like vulnerability (but less now!)
+    const event = new (SerializableClasses[packed.type] || InvalidEvent)(
+        //@ts-ignore
+        packed.data,
+        gamesFromUser.get(client), client, packed.id) as Event<any>;
     if(true && !(event instanceof RequestSyncEvent)) console.log("received "+event.serialize());
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){

@@ -5,7 +5,7 @@ import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./Visu
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, DrawAction} from "../networking/Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import {GameState, type TurnState} from "../GameStates.js";
@@ -234,16 +234,38 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
 
     let toSend:[number?,number?,number?] = [];
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, game.state],
-        sideTernary(self.side, visualGame.deckA.getCards(), visualGame.deckB.getCards()),
+        sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
         (picked)=>{
-            toSend.push(picked.logicalCard.id);
-            return toSend.length >= 3;
+            const index = toSend.indexOf(picked.logicalCard.id);
+            if(index !== -1)
+                toSend.splice(index,1);
+            else
+                toSend.push(picked.logicalCard.id);
     }, EndType.FINISH, ()=>{
-        network.sendToServer(new CardAction({
-            cardId:self.id,
-            actionName:CardActionOptions.YASHI_REORDER,
-            cardData:toSend,
-        }));
+        let newOrder:[number?,number?,number?]=[];
+        const toCancel = new VPickCardsState(visualGame, [visualGame.state, game.state],
+            [...visualGame.getGame().cards.values()].filter(card=>toSend.indexOf(card.id) !== -1)
+                .map(card=>visualGame.elements.find(element=>
+                    element instanceof VisualCard && element.logicalCard === card) as VisualCard|undefined)
+                .filter(card=>card !== undefined),
+            (picked)=>{
+                const index = newOrder.indexOf(picked.logicalCard.id);
+                if(index !== -1)
+                    newOrder.splice(index,1);
+                else
+                    newOrder.push(picked.logicalCard.id);
+
+                if(newOrder.length === toSend.length){
+                    toCancel.cancel();
+                }
+            },EndType.NONE,()=>{
+                network.sendToServer(new CardAction({
+                    cardId:self.id,
+                    actionName:CardActionOptions.YASHI_REORDER,
+                    cardData:newOrder,
+                }));
+            });
+        visualGame.setState(toCancel, game.state);
     }), game.state);
 })
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{

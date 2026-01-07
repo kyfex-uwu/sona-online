@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@arrow-js/core": "^1.0.0-alpha.10",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "ts-patch": "^3.3.0"
   }
 }
