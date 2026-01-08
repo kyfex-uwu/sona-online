@@ -382,6 +382,7 @@ export function parseEvent(event:Event<any>){
 
             const scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
             const scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
+
             if(!(event.game.state instanceof TurnState &&
                 event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn

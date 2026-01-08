@@ -30,9 +30,11 @@ function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
     }
 }
 
-visualCardClientActions["og-001"] = lastAction(async (card)=>{
+visualCardClientActions["og-001"] = lastAction((card)=>{
     const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
     let picked = new Set<Card>();
+    let resolve:(val:boolean)=>void;
+    const toReturn = new Promise<boolean>(r=>resolve=r);
     visualGame.setState(new VPickCardsState(visualGame, oldStates,
             sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
                 .filter(card => card !== undefined)
@@ -46,12 +48,12 @@ visualCardClientActions["og-001"] = lastAction(async (card)=>{
                         .filter(card => card !== undefined),
                     (toAttack)=>{
                         let thirdState:VPickCardsState;
-                        visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates,
-                            [
-                                new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                                new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                                new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            ],
+                        const statCards = [
+                            new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                            new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                            new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                        ];
+                        visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates, statCards,
                             (attackStat)=>{
                                 thirdState.cancel();
                                 network.sendToServer(new CardAction({
@@ -68,11 +70,13 @@ visualCardClientActions["og-001"] = lastAction(async (card)=>{
                                         }[attackStat.logicalCard.cardData.name]!
                                     }
                                 }));
+                                resolve(true);
+                                //why arent cards removing
                             }, EndType.NONE), oldStates[1]);
-                    },EndType.NONE), oldStates[1]);
+                    },EndType.CANCEL), oldStates[1]);
             }),
         oldStates[1]);
-    return true;
+    return toReturn;
 });
 visualCardClientActions["og-018"] = async (card) =>{
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);

@@ -57,15 +57,15 @@ export default function(event:CardAction<any>){
     if(event.game === undefined) return;
     switch(event.data.actionName){
         case CardActionOptions.K9_ALPHA:{//og-001
-            verifyFieldCard(event);
             const data = (event as CardAction<K9_ALPHA>).data.cardData;
-            const sender = event.game.cards.values().find(card => card.id === event.data.cardId);
-            const takeFrom = [...(event.sender === event.game.player(Side.A) ? event.game.fieldsA : event.game.fieldsB)];
+            const sender = verifyFieldCard(event);
+            const takeFrom = [...(event.sender === event.game.player(Side.A) ? event.game.fieldsA : event.game.fieldsB)]
+                .filter((_,i)=>data.canineFields[i]);
 
-            if(!(event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender )||//its the senders turn
-                sender === undefined || sender!.cardData.name === "og-001" ||//atttacking card is k9
-                !takeFrom.map(card=>card?.cardData.species === Species.CANINE)//NOT(all cards are canines)
-                    .reduce((a,c)=>a&&c))
+            if(!(event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender &&//its the senders turn
+                sender !== undefined && sender!.cardData.name === "og-001" &&//atttacking card is k9
+                takeFrom.map(card=>card?.cardData.species === Species.CANINE)//all cards are canines
+                    .reduce((a,c)=>a&&c)))
                 return rejectEvent(event, "failed k9 check");
 
             const stat = data.canineFields.map((v,i)=>v?
@@ -74,8 +74,8 @@ export default function(event:CardAction<any>){
             const toAttack = (event.sender === event.game.player(Side.A) ? event.game.fieldsB : event.game.fieldsA)[data.attack-1];
             if(toAttack !== undefined){
                 sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
-                parseEvent(new ScareAction({//todo
-                    scarerPos:[takeFrom.findIndex(card=>card?.id === sender.id) as 1|2|3, sender.side],
+                parseEvent(new ScareAction({
+                    scarerPos:[(takeFrom.findIndex(card=>card?.id === sender.id)+1) as 1|2|3, sender.side],
                     scaredPos:[data.attack, event.sender === event.game.player(Side.A) ? Side.B : Side.A],
                     attackingWith:data.attackWith,
                 }, event.game, event.sender, event.id));
