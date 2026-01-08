@@ -122,7 +122,7 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         //if(this.flipGroup.children[0] !== actualModel) return;
 
-        this.enabledMaterial= cardMat.clone();
+        this.enabledMaterial = cardMat.clone();
         this.enabledMaterial.map = texture!;
         this.disabledMaterial= cardMat.clone();
         this.disabledMaterial.map = texture!;

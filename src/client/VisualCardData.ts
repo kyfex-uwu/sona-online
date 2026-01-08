@@ -19,25 +19,25 @@ import {Side} from "../GameElement.js";
 
 export function loadFrontendWrappers(){}
 
-export const visualCardClientActions:{[k:string]:(card:VisualCard)=>boolean} = {};
+export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<boolean>} = {};
 
-function lastAction(callback:(card:VisualCard)=>boolean){
+function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
     return (card:VisualCard)=> {
         if (visualGame.state instanceof VAttackingState && visualGame.state.parentState.getActionsLeft() === 1) {
             return callback(card);
         }
-        return false;
+        return new Promise<boolean>(r=>r(false));
     }
 }
 
-visualCardClientActions["og-001"] = lastAction((card)=>{
-    let picked = new Set<Card>();
+visualCardClientActions["og-001"] = lastAction(async (card)=>{
     const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
+    let picked = new Set<Card>();
     visualGame.setState(new VPickCardsState(visualGame, oldStates,
             sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
-            .filter(card => card !== undefined)
-            .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
-            .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
+                .filter(card => card !== undefined)
+                .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
+                .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
                 if(picked.has(toAttackWith.logicalCard)) picked.delete(toAttackWith.logicalCard);
                 else picked.add(toAttackWith.logicalCard);
             }, EndType.BOTH, ()=>{
@@ -74,7 +74,7 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
         oldStates[1]);
     return true;
 });
-visualCardClientActions["og-018"] = (card) =>{
+visualCardClientActions["og-018"] = async (card) =>{
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
     if(toReorder.length === 1){
@@ -97,7 +97,7 @@ visualCardClientActions["og-018"] = (card) =>{
         }, EndType.NONE), visualGame.getGame().state);
     return true;
 };
-visualCardClientActions["og-038"] = lastAction((card)=>{
+visualCardClientActions["og-038"] = lastAction(async (card)=>{
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
     if(cards.length===0) return false;
@@ -120,7 +120,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
         visualGame.getGame().state);
     return true;
 });
-visualCardClientActions["og-041"] = (card)=>{
+visualCardClientActions["og-041"] = async (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0) return false;
 
     //todo

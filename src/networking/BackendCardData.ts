@@ -22,7 +22,7 @@ wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, stat, 
 wrap(cards["og-024"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    draw(game, undefined, self.side, false);//todo: this should be a card action i think. just for organization
+    draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
 });
 wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -35,6 +35,10 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},
         }, game));
+        game.player(self.side)?.send(new ClarifyCardEvent({
+            id:card.id,
+            cardDataName:card.cardData.name
+        }));
     }
 });
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{

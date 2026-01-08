@@ -13,12 +13,16 @@ import {
     Event,
     FindGameEvent,
     GameStartEvent,
-    GameStartEventWatcher, InvalidEvent, multiClarifyFactory,
+    GameStartEventWatcher,
+    InvalidEvent,
+    multiClarifyFactory,
     PassAction,
     PlaceAction,
     RejectEvent,
     RequestSyncEvent,
-    ScareAction, SerializableClasses, type SerializableType,
+    ScareAction,
+    SerializableClasses,
+    type SerializableType,
     StartRequestEvent,
     StringReprSyncEvent,
     SyncEvent
@@ -26,12 +30,12 @@ import {
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
 import {Side} from "../GameElement.js";
-import {shuffled, sideTernary, wait} from "../consts.js";
+import {shuffled, sideTernary} from "../consts.js";
 import Card, {getVictim, Stat} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
-import {CardActionType, InterruptScareResult} from "../CardData.js";
+import {CardActionType, InterruptScareResult, Species} from "../CardData.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 
@@ -455,7 +459,7 @@ export function parseEvent(event:Event<any>){
                                 card.getAction(CardActionType.IS_FREE) !== undefined);
                     }
                     break;
-                case ClarificationJustification.AMBER:
+                case ClarificationJustification.AMBER://todo
                     if(event.game.state instanceof TurnState &&
                         event.sender === event.game.player(event.game.state.turn) &&
                         sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)

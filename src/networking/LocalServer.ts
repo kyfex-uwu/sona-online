@@ -61,22 +61,20 @@ websocketReady.then(() => {
 })
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
-    const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
-    if(oldVCard !== undefined){
-        if(cardDataName !== undefined) {
-            oldVCard.logicalCard.setCardData(cards[cardDataName]!);
-        }
+    const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
+    if(visualCard === undefined) return;
+    if(cardDataName !== undefined)
+        visualCard.logicalCard.setCardData(cards[cardDataName]!);
 
-        if(cardDataName !== undefined){
-            game.getGame().cards.delete(oldVCard.logicalCard);
-            oldVCard.repopulate(oldVCard.logicalCard);
-        }
-
-        if(faceUp !== undefined && faceUp !== oldVCard.logicalCard.getFaceUp())
-            oldVCard[faceUp ? "flipFaceup" : "flipFacedown"]();
-
-        game.getGame().cards.add(oldVCard.logicalCard);
+    if(cardDataName !== undefined){
+        game.getGame().cards.delete(visualCard.logicalCard);
+        visualCard.repopulate(visualCard.logicalCard);
     }
+
+    if(faceUp !== undefined && faceUp !== visualCard.logicalCard.getFaceUp())
+        visualCard[faceUp ? "flipFaceup" : "flipFacedown"]();
+
+    game.getGame().cards.add(visualCard.logicalCard);
 }
 
 network.sendToServer = (event) => {

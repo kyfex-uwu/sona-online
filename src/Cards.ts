@@ -12,9 +12,7 @@ const cards:{[k:string]:CardData} = {};
 const setCard = (data:CardData) => cards[data.name] = data;
 
 setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
-    .with(CardActionType.LAST_ACTION, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.K9_ALPHA);
-    })
+
     .with(CardActionType.GET_STATS, ({self, game})=>{
         const toReturn = [...self.cardData.stats];
         const newStatData = self.getMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE);

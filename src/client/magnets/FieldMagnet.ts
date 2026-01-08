@@ -101,11 +101,10 @@ export default class FieldMagnet extends CardMagnet{
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
                                 } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
-                                    console.log(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined)
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
-                                        if(visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card)) {
-                                            state.cancel();
-                                        }
+                                        visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card).then((cancel)=>{
+                                            if(cancel) state.cancel();
+                                        });
                                         return true;
                                     }
                                 }
