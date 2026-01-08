@@ -264,9 +264,10 @@ actions left: ${this.state.getActionsLeft()}`, 0,0);
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.elements.filter(element => VisualCard.getExactVisualCard(element) &&
-                !specialCards.has((element as VisualCard).logicalCard.cardData.name) &&
-                (element as VisualCard).logicalCard.getFaceUp())
+            ...this.elements.filter(element => VisualCard.getExactVisualCard(element)
+                && !specialCards.has((element as VisualCard).logicalCard.cardData.name)
+                && (element as VisualCard).logicalCard.getFaceUp()
+            )
                 .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
         if(cardsIntersects[0] !== undefined){

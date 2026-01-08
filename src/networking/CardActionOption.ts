@@ -9,7 +9,7 @@ export type GREMLIN_SCARE={ position?: 1|2|3 };
 export type WORICK_RESCUE={ id: number };
 export type AMBER_PICK=1 | 2;
 export type FURMAKER_PICK=number;
-export type YASHI_REORDER=[number?, number?, number?];
+export type YASHI_REORDER={cards:[number?, number?, number?], side?:Side};
 export type DCW_GUESS=number;
 export type CLOUD_CAT_PICK=1|2|3;
 

@@ -262,7 +262,7 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
                         network.sendToServer(new CardAction({
                             cardId:self.id,
                             actionName:CardActionOptions.YASHI_REORDER,
-                            cardData:newOrder,
+                            cardData:{cards:newOrder},
                         }));
                         toCancel.cancel();
                     }

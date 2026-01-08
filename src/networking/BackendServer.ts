@@ -13,7 +13,7 @@ import {
     Event,
     FindGameEvent,
     GameStartEvent,
-    GameStartEventWatcher, InvalidEvent,
+    GameStartEventWatcher, InvalidEvent, MultiClarifyCardEvent,
     PassAction,
     PlaceAction,
     RejectEvent,
@@ -64,15 +64,21 @@ export function sendToClients(event:Event<any>, ...toIgnore:(Client|undefined)[]
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
 //@returns If a card was actually drawn
-export function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean=true){
+export function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean, sendTo?:Client){
     const card = sideTernary(side, game.deckA, game.deckB).pop();
+    if(card !== undefined) {
+        sendTo?.send(new ClarifyCardEvent({
+            id: card.id,
+            cardDataName: card.cardData.name
+        }));
+    }
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
         sendToClients(new DrawAction({side: side, isAction}, game, undefined), sender);
         if(game.state instanceof TurnState && isAction) {
             if(game.state.decrementTurn()){
                 if(sideTernary((game.state as TurnState).turn, game.handA, game.handB).length<5) {
-                    draw(game, undefined, game.state.turn, false);
+                    draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
                 }
             }
         }
@@ -85,7 +91,7 @@ export function endTurn(game:Game){
     if(game.state instanceof TurnState) {
         if (game.state.decrementTurn()) {
             if (sideTernary(game.state.turn, game.handA, game.handB).length < 5)
-                draw(game, undefined, game.state.turn, false);
+                draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
         }
     }
 }
@@ -198,12 +204,12 @@ export function parseEvent(event:Event<any>){
                 game.setPlayers(event.sender!, other.sender!);
 
                 network.replyToClient(event, new GameStartEvent({
-                    deck:deckA,
+                    deck:deckA.map(card=>card.id),
                     otherDeck: deckB.map(card => card.id),
                     which:Side.A,
                 }, game));
                 network.replyToClient(other, new GameStartEvent({
-                    deck:deckB,
+                    deck:deckB.map(card=>card.id),
                     otherDeck:deckA.map(card => card.id),
                     which:Side.B,
                 }, game));
@@ -213,8 +219,8 @@ export function parseEvent(event:Event<any>){
                     which:Side.B,
                 }, game), event.sender, other.sender);
                 for(let i=0;i<3;i++){
-                    draw(game, undefined, Side.A);
-                    draw(game, undefined, Side.B);
+                    draw(game, undefined, Side.A, true, game.player(Side.A));
+                    draw(game, undefined, Side.B, true, game.player(Side.B));
                 }
             })
             unfilledGames.push(resolve!);
@@ -341,7 +347,7 @@ export function parseEvent(event:Event<any>){
                 }
 
                 const canPredraw = event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
-                if(draw(event.game, canPredraw ? undefined : event.sender, side, !canPredraw)){
+                if(draw(event.game, canPredraw ? undefined : event.sender, side, !canPredraw, event.sender)){
                     acceptEvent(event);
                     event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
                     return;
@@ -474,12 +480,9 @@ export function parseEvent(event:Event<any>){
                         sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
                             .find(card =>card !== undefined && card.cardData.name === "og-041")) {
                         shouldClarify=undefined;
-                        network.replyToClient(event, new ClarifyCardEvent({
-                            id:event.data.id,
-                            multipleCardData:Object.fromEntries(sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB).map(card=>{
-                                return ["id", [card.cardData.name]];
-                            }))
-                        }))
+                        network.replyToClient(event, new MultiClarifyCardEvent(
+                            Object.fromEntries(sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
+                                .map(card=>{return ["id", {cardDataName:card.cardData.name}]}))))
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
                     }
                     break;

@@ -145,7 +145,7 @@ export default function(event:CardAction<any>){
         }break;
         case CardActionOptions.YASHI_REORDER:{//og-027
             const actor = verifyFieldCard(event);
-            const cards = (event as CardAction<YASHI_REORDER>).data.cardData;
+            const data = (event as CardAction<YASHI_REORDER>).data.cardData;
 
             if(!(actor !== undefined && actor.cardData.name === "og-027" &&//card exists and is yashi
                 event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
@@ -156,14 +156,14 @@ export default function(event:CardAction<any>){
                 return rejectEvent(event, "failed yashi check");
 
             const deckDrawFrom = sideTernary(actor.side, event.game.deckA, event.game.deckB);
-            for(let i=cards.length-1;i>=0;i--){
-                const index = deckDrawFrom.findIndex(card=>card.id === cards[i]);
+            for(let i=data.cards.length-1;i>=0;i--){
+                const index = deckDrawFrom.findIndex(card=>card.id === data.cards[i]);
                 if(index===-1) return rejectEvent(event, "failed yashi check card #"+i);
 
                 deckDrawFrom.push(deckDrawFrom.splice(index,1)[0]!);
             }
 
-            //todo:send to clients
+            sendToClients(event);
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             acceptEvent(event);

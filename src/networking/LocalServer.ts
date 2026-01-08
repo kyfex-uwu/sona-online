@@ -5,7 +5,7 @@ import {
     DetermineStarterEvent,
     DrawAction,
     Event,
-    GameStartEvent, InvalidEvent,
+    GameStartEvent, InvalidEvent, MultiClarifyCardEvent,
     PassAction,
     PlaceAction,
     RequestSyncEvent,
@@ -26,7 +26,13 @@ import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
-import {CardActionOptions, type CLOUD_CAT_PICK} from "./CardActionOption.js";
+import {
+    type BOTTOM_DRAW,
+    type BROWNIE_DRAW,
+    CardActionOptions,
+    type CLOUD_CAT_PICK,
+    type YASHI_REORDER
+} from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
 
 //@ts-ignore
@@ -117,8 +123,8 @@ async function receiveFromServer(packed:{
     }
 
     if(event instanceof GameStartEvent){
-        game.getGame().setDeck(Side.A, event.data.deck);
-        game.getGame().setDeck(Side.B, event.data.otherDeck.map(id=>{return{type:"unknown",id:id}}));
+        game.getGame().setDeck(Side.A, event.data.deck.map(id=>{return{type:"unknown",id}}));
+        game.getGame().setDeck(Side.B, event.data.otherDeck.map(id=>{return{type:"unknown",id}}));
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
         if(game.getMySide() === Side.A){
@@ -132,8 +138,8 @@ async function receiveFromServer(packed:{
         const myDeck = sideTernary(game.getMySide(), game.deckA, game.deckB);
         const theirDeck = sideTernary(other(game.getMySide()), game.deckA, game.deckB);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
-        for(const card of event.data.deck){
-            const visualCard = game.addElement(new VisualCard(game, new Card(cards[card.type]!, game.getMySide(), game.getGame(), card.id),
+        for(const cardId of event.data.deck){
+            const visualCard = game.addElement(new VisualCard(game, new Card(cards.unknown!, game.getMySide(), game.getGame(), cardId),
                 new Vector3(), rotation));
             myDeck.addCard(visualCard);
         }
@@ -144,30 +150,12 @@ async function receiveFromServer(packed:{
         }
 
         await wait(500);
-    }else if (event instanceof ClarifyCardEvent){
-        if(event.data.cardDataName !== undefined) clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
-        if(event.data.multipleCardData !== undefined)
-            for(const id in event.data.multipleCardData)
-                clarifyCard(parseInt(id), ...event.data.multipleCardData[id]!);
-
-        const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === event.data.id) as VisualCard;
-        if(oldVCard !== undefined){
-            const newCard = event.data.cardDataName !== undefined ?
-                new Card(cards[event.data.cardDataName!]!, oldVCard.logicalCard.side, game.getGame(), oldVCard.logicalCard.id) :
-                oldVCard.logicalCard;
-            const oldCard = oldVCard.logicalCard;
-            if(!oldCard.getFaceUp()) newCard.flipFacedown();
-
-            if(event.data.cardDataName !== undefined){
-                game.getGame().cards.delete(oldVCard.logicalCard);
-                oldVCard.repopulate(newCard);
-            }
-
-            if(event.data.faceUp !== undefined && event.data.faceUp !== oldCard.getFaceUp())
-                oldVCard[event.data.faceUp ? "flipFaceup" : "flipFacedown"]();
-
-            game.getGame().cards.add(newCard);
-        }
+    }else if (event instanceof ClarifyCardEvent) {
+        clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
+    }else if(event instanceof MultiClarifyCardEvent){
+        if(event.data !== undefined)
+            for(const id in event.data)
+                clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
@@ -235,15 +223,32 @@ async function receiveFromServer(packed:{
     }else if(event instanceof CardAction){
         switch(event.data.actionName){
             case CardActionOptions.BOTTOM_DRAW:{
-                sideTernary(event.data.cardData.side, game.deckA, game.deckB).drawCard(true);
+                const data = (event as CardAction<BOTTOM_DRAW>).data.cardData;
+                sideTernary(data.side, game.deckA, game.deckB).drawCard(true);
             }break;
             case CardActionOptions.BROWNIE_DRAW: {
-                const card = game.elements.find(element => VisualCard.getExactVisualCard(element) && (element as VisualCard).logicalCard.id === event.data.cardData.id) as VisualCard
+                const data = (event as CardAction<BROWNIE_DRAW>).data.cardData;
+                const card = game.elements.find(element => VisualCard.getExactVisualCard(element) &&
+                    (element as VisualCard).logicalCard.id === data.id) as VisualCard
                 if (card) {
                     sideTernary(card.logicalCard.side, game.deckA, game.deckB).removeCard(card);
                     sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
                     card.flipFaceup();
                 }
+            }break;
+            case CardActionOptions.YASHI_REORDER:{
+                const data = (event as CardAction<YASHI_REORDER>).data.cardData;
+
+                const deckDrawFrom = sideTernary(event.data.cardData[1], game.deckA, game.deckB);
+                const cards = deckDrawFrom.getCards();
+                for(let i=data.cards.length-1;i>=0;i--){
+                    const toReorder = cards.find(card=>card.logicalCard.id === data.cards[i])!;
+                    console.log(toReorder, data, cards.map(card=>card.logicalCard.id))
+
+                    deckDrawFrom.removeCard(toReorder);
+                    deckDrawFrom.addCard(toReorder);
+                }
+                console.log(data, event)
             }break;
             case CardActionOptions.CLOUD_CAT_PICK:{
                 game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =

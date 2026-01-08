@@ -65,10 +65,14 @@ export class ClarifyCardEvent extends Event<{
     id: number,
     cardDataName?: string,
     faceUp?: boolean,
-    multipleCardData?: { [id: number]: [string, boolean?] },
     justification?: ClarificationJustification
 }>{}
 addToSerializableClasses(ClarifyCardEvent);
+export class MultiClarifyCardEvent extends Event<{
+    [id: number]: {cardDataName?:string, faceUp?:boolean},
+    justification?: ClarificationJustification
+}>{}
+addToSerializableClasses(MultiClarifyCardEvent);
 
 //(S2C) Rejects a client-side event
 export class RejectEvent extends Event<{}>{}
@@ -85,7 +89,7 @@ addToSerializableClasses(FindGameEvent);
 
 //(S2C) Tells the client about the game they've just started
 export class GameStartEvent extends Event<{
-    deck:Array<{type:string, id:number}>,
+    deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
 }>{}
