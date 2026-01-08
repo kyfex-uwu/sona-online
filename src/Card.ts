@@ -36,7 +36,8 @@ verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
 
 //A *logical* card
 export default class Card implements GameElement{
-    public readonly cardData: CardData;
+    private _cardData:CardData;
+    public get cardData(){ return this._cardData; }
     public readonly side:Side;
     public readonly id:number;
     private readonly game:Game;
@@ -54,7 +55,7 @@ export default class Card implements GameElement{
      * @param id The id of the card (should be unique per game)
      */
     constructor(cardData: CardData, side:Side, game:Game, id:number) {
-        this.cardData=cardData;
+        this._cardData=cardData;
         this.side=side;
         this.game=game;
         this.id=id;
@@ -90,5 +91,9 @@ export default class Card implements GameElement{
     }
     callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
         return this.disabled() ? undefined : this.cardData.callAction(type, param);
+    }
+
+    setCardData(data:CardData){
+        this._cardData=data;
     }
 }

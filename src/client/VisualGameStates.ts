@@ -96,6 +96,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
                 }, scale, this.buttonIds[2]);
             }else{
                 p5.textAlign(p5.CENTER,p5.CENTER);
+                p5.fill(255,255,255);
                 p5.textSize(scale/3);
                 p5.text("Waiting"+".".repeat(this.timer), p5.width/2,p5.height/2);
 

@@ -63,21 +63,19 @@ websocketReady.then(() => {
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
     const oldVCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
     if(oldVCard !== undefined){
-        const newCard = cardDataName !== undefined ?
-            new Card(cards[cardDataName!]!, oldVCard.logicalCard.side, game.getGame(), oldVCard.logicalCard.id) :
-            oldVCard.logicalCard;
-        const oldCard = oldVCard.logicalCard;
-        if(!oldCard.getFaceUp()) newCard.flipFacedown();
+        if(cardDataName !== undefined) {
+            oldVCard.logicalCard.setCardData(cards[cardDataName]!);
+        }
 
         if(cardDataName !== undefined){
             game.getGame().cards.delete(oldVCard.logicalCard);
-            oldVCard.repopulate(newCard);
+            oldVCard.repopulate(oldVCard.logicalCard);
         }
 
-        if(faceUp !== undefined && faceUp !== oldCard.getFaceUp())
+        if(faceUp !== undefined && faceUp !== oldVCard.logicalCard.getFaceUp())
             oldVCard[faceUp ? "flipFaceup" : "flipFacedown"]();
 
-        game.getGame().cards.add(newCard);
+        game.getGame().cards.add(oldVCard.logicalCard);
     }
 }
 
@@ -123,8 +121,6 @@ async function receiveFromServer(packed:{
     }
 
     if(event instanceof GameStartEvent){
-        game.getGame().setDeck(Side.A, event.data.deck.map(id=>{return{type:"unknown",id}}));
-        game.getGame().setDeck(Side.B, event.data.otherDeck.map(id=>{return{type:"unknown",id}}));
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
         if(game.getMySide() === Side.A){
@@ -155,7 +151,6 @@ async function receiveFromServer(packed:{
     }else if(event instanceof MultiClarifyCardEvent){
         if(event.data !== undefined)
             for(const id in event.data) {
-                console.log(id, event.data[id]);
                 clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
             }
     }else if(event instanceof DetermineStarterEvent){

@@ -23,14 +23,6 @@ export default class VisualCardClone extends VisualCard{
         }, new Vector3(0,0,0));
 
         this.clonedFrom=clonedFrom;
-        this.clonedFrom.addMaterialListener((newMaterial)=>{
-            super.populate(this.logicalCard).then(()=>{
-                (this
-                    //@ts-ignore
-                    .flipGroup
-                    .children[0]!.children[0] as Mesh).material = this.clonedFrom.enabledMaterial!;
-            });
-        })
     }
 
     getReal(){

@@ -162,40 +162,40 @@ waitToDraw(cards["og-005"]!);
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
-        card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined);
     network.sendToServer(new ClarifyCardEvent({
         id:self.id,
         justification:ClarificationJustification.BROWNIE,
-    }));
-
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
+    })).onReply(successOrFail(()=>{
+        const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
+            card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined);
+        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 
-        const state = visualGame.state as VPickCardsState;
-        state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
+            const state = visualGame.state as VPickCardsState;
+            state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 
-        const deck = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB);
-        const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);
-        if(toRemove) {
-            deck.removeCard(toRemove);
-            toRemove.setRealPosition(card.position.clone());
-            toRemove.setRealRotation(card.rotation.clone());
-            toRemove.flipFaceup();
-            sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(toRemove);
-            network.sendToServer(new CardAction({
-                cardId:self.id,
-                actionName: CardActionOptions.BROWNIE_DRAW,
-                cardData: {
-                    id:toRemove.logicalCard.id
-                },
-            })).onReply(successOrFail(()=>{
-                game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-            }));
-        }
+            const deck = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB);
+            const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);
+            if(toRemove) {
+                deck.removeCard(toRemove);
+                toRemove.setRealPosition(card.position.clone());
+                toRemove.setRealRotation(card.rotation.clone());
+                toRemove.flipFaceup();
+                sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(toRemove);
+                network.sendToServer(new CardAction({
+                    cardId:self.id,
+                    actionName: CardActionOptions.BROWNIE_DRAW,
+                    cardData: {
+                        id:toRemove.logicalCard.id
+                    },
+                })).onReply(successOrFail(()=>{
+                    game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+                }));
+            }
 
-        state.cancel();
-    }, EndType.NONE), game.state);
+            state.cancel();
+        }, EndType.NONE), game.state);
+    }));
 });
 waitToDraw(cards["og-009"]!);
 wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{

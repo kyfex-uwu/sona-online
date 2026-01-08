@@ -480,13 +480,19 @@ export function parseEvent(event:Event<any>){
 
             if(shouldClarify !== undefined){
                 if(shouldClarify instanceof Array){
-                    network.replyToClient(event, multiClarifyFactory(shouldClarify));
+                    if(shouldClarify.length>0) {
+                        network.replyToClient(event, multiClarifyFactory(shouldClarify));
+                        return acceptEvent(event);
+                    }
                 }else {
                     network.replyToClient(event, new ClarifyCardEvent({
                         id: shouldClarify.id,
                         cardDataName: shouldClarify.cardData.name
                     }));
+                    return acceptEvent(event);
                 }
+
+                rejectEvent(event, "no suitable cards found");
             }
         }
     }
