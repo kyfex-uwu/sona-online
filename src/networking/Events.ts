@@ -4,6 +4,7 @@ import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
 import {network} from "./Server.js";
 import {type CardActionOption} from "./CardActionOption.js";
+import type CardData from "../CardData.js";
 
 export const SerializableClasses:{[k:string]:{new():Event<any>}} = {};
 function addToSerializableClasses(clazz:{new(...params:any):Event<any>, prototype:{constructor:{name:string}}}) {
@@ -59,6 +60,7 @@ export enum ClarificationJustification{
     BROWNIE,
     AMBER,
     FURMAKER,
+    YASHI,
 }
 //Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
@@ -73,6 +75,15 @@ export class MultiClarifyCardEvent extends Event<{
     justification?: ClarificationJustification
 }>{}
 addToSerializableClasses(MultiClarifyCardEvent);
+export function multiClarifyFactory(cards:{id:number,cardData:CardData}[],
+                                    justification?:ClarificationJustification){
+    return new MultiClarifyCardEvent({
+        ...Object.fromEntries(cards
+            .map(card => {
+                return [card.id, {cardDataName: card.cardData.name}]})),
+        ...(justification === undefined?{}:{justification})
+    })
+}
 
 //(S2C) Rejects a client-side event
 export class RejectEvent extends Event<{}>{}

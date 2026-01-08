@@ -5,7 +5,11 @@ import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./Visu
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent} from "../networking/Events.js";
+import {
+    CardAction,
+    ClarificationJustification,
+    ClarifyCardEvent,
+} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
 import {CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
@@ -119,6 +123,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
 visualCardClientActions["og-041"] = (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0) return false;
 
+    //todo
     network.sendToServer(new ClarifyCardEvent({
         id:card.logicalCard.id,
         justification:ClarificationJustification.FURMAKER,
@@ -159,12 +164,10 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
 
     const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
         card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined);
-    for(const card of cards){
-        network.sendToServer(new ClarifyCardEvent({
-            id:card.id,
-            justification: ClarificationJustification.BROWNIE
-        }));
-    }
+    network.sendToServer(new ClarifyCardEvent({
+        id:self.id,
+        justification:ClarificationJustification.BROWNIE,
+    }));
 
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{

@@ -13,7 +13,7 @@ import {
     Event,
     FindGameEvent,
     GameStartEvent,
-    GameStartEventWatcher, InvalidEvent, MultiClarifyCardEvent,
+    GameStartEventWatcher, InvalidEvent, multiClarifyFactory,
     PassAction,
     PlaceAction,
     RejectEvent,
@@ -373,14 +373,6 @@ export function parseEvent(event:Event<any>){
         }
     }else if (event instanceof ScareAction){
         if(event.game !== undefined){
-            // let side:Side|undefined=undefined;//the side of the player scaring
-            // if(event.sender === event.game.player(Side.A)){
-            //     side = Side.A;
-            // }else if(event.sender === event.game.player(Side.B)){
-            //     side = Side.B;
-            // }
-            // if(side===undefined) return rejectEvent(event);
-
             if(event.sender !== event.game.player(event.data.scarerPos[1]))
                 rejectEvent(event, "scarer is not consistent");
 
@@ -449,18 +441,18 @@ export function parseEvent(event:Event<any>){
         }
     }else if(event instanceof ClarifyCardEvent){
         if(event.game !== undefined){
-            let shouldClarify:string|undefined=undefined;
+            let shouldClarify:Card|Card[]|undefined=undefined;
             switch(event.data.justification){
                 case ClarificationJustification.BROWNIE:
                     if(event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&
-                        sideTernary(event.game.state.turn, event.game.handA, event.game.handB)
-                            .find(card =>card.cardData.name === "og-005")) {
+                        (event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
+                            [event.game.player(Side.A) === event.sender ? Side.A : Side.B])) === CardActionOptions.BROWNIE_DRAW &&
+                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                            .find(card =>card?.cardData.name === "og-005")!==undefined) {
 
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
-                            .find(card => card.id === event.data.id &&
-                                card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined)?.cardData.name;
-                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.BROWNIE_DRAW);
+                            .filter(card => card.cardData.level === 1 &&
+                                card.getAction(CardActionType.IS_FREE) !== undefined);
                     }
                     break;
                 case ClarificationJustification.AMBER:
@@ -470,29 +462,31 @@ export function parseEvent(event:Event<any>){
                             .find(card =>card !== undefined && card.cardData.name === "og-018")) {
 
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
-                            .find((card, i) => card.id === event.data.id && (i === 0 || i === 1))?.cardData.name;
+                            .find((card, i) => card.id === event.data.id && (i === 0 || i === 1));
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.AMBER_PICK);
                     }
                     break;
-                case ClarificationJustification.FURMAKER:
+                case ClarificationJustification.FURMAKER://todo
                     if(event.game.state instanceof TurnState &&
                         event.sender === event.game.player(event.game.state.turn) &&
                         sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
                             .find(card =>card !== undefined && card.cardData.name === "og-041")) {
-                        shouldClarify=undefined;
-                        network.replyToClient(event, new MultiClarifyCardEvent(
-                            Object.fromEntries(sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
-                                .map(card=>{return ["id", {cardDataName:card.cardData.name}]}))))
+
+                        shouldClarify=sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB);
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
                     }
                     break;
             }
 
             if(shouldClarify !== undefined){
-                network.replyToClient(event, new ClarifyCardEvent({
-                    id:event.data.id,
-                    cardDataName:shouldClarify
-                }));
+                if(shouldClarify instanceof Array){
+                    network.replyToClient(event, multiClarifyFactory(shouldClarify));
+                }else {
+                    network.replyToClient(event, new ClarifyCardEvent({
+                        id: shouldClarify.id,
+                        cardDataName: shouldClarify.cardData.name
+                    }));
+                }
             }
         }
     }

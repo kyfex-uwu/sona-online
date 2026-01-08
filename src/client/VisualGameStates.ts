@@ -333,8 +333,6 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
                     fakeCard.flipFaceup();
                     let pos = new Vector3((x-(width-1)/2)*85*scale, -(y-(height-1)/2)*119*scale, -400);
-                    // console.log((x-(width-1)/2), -(y-(height-1)/2), x, y, width, height)
-                    // console.log(fakeCard.logicalCard.cardData.name)
                     fakeCard.position.copy(pos);
                     fakeCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
                     fakeCard.scale = new Vector3(scale, scale, scale);

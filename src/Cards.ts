@@ -23,13 +23,13 @@ setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
         return toReturn;
     }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
-setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)//DONE
+setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)
     .with(CardActionType.GET_STATS, ({self, game})=>{
         return new Array(3).fill(sideTernary(self.side, game.fieldsA, game.fieldsB)
             .filter(c=>c?.cardData.species === Species.FELINE).length*3);
     }));
 setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE));
-setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)//done only here
+setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE)
     .with(CardActionType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROWNIE_DRAW);
     }));

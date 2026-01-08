@@ -1,5 +1,5 @@
 import VisualCard from "./VisualCard.js";
-import {Vector3} from "three";
+import {Mesh, Vector3} from "three";
 import Card, {type MiscDataString} from "../Card.js";
 
 export default class VisualCardClone extends VisualCard{
@@ -23,12 +23,20 @@ export default class VisualCardClone extends VisualCard{
         }, new Vector3(0,0,0));
 
         this.clonedFrom=clonedFrom;
+        this.clonedFrom.addMaterialListener((newMaterial)=>{
+            super.populate(this.logicalCard).then(()=>{
+                (this
+                    //@ts-ignore
+                    .flipGroup
+                    .children[0]!.children[0] as Mesh).material = this.clonedFrom.enabledMaterial!;
+            });
+        })
     }
 
     getReal(){
         return this.clonedFrom;
     }
-    populate(card: Card) {
+    async populate(card: Card) {
         super.populate(card);
         this.model.userData.card=this.clonedFrom;
     }

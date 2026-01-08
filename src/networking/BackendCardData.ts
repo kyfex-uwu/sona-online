@@ -1,6 +1,6 @@
 import CardData, {CardActionType} from "../CardData.js";
 import cards from "../Cards.js";
-import {CardAction} from "./Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
@@ -36,4 +36,12 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
             cardData:{side:self.side},
         }, game));
     }
+});
+wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    game.player(self.side)?.send(new ClarifyCardEvent({
+        id:self.id,
+        justification:ClarificationJustification.YASHI
+    }));
 });

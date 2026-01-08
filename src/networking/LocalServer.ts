@@ -154,8 +154,10 @@ async function receiveFromServer(packed:{
         clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
     }else if(event instanceof MultiClarifyCardEvent){
         if(event.data !== undefined)
-            for(const id in event.data)
+            for(const id in event.data) {
+                console.log(id, event.data[id]);
                 clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
+            }
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
@@ -243,12 +245,10 @@ async function receiveFromServer(packed:{
                 const cards = deckDrawFrom.getCards();
                 for(let i=data.cards.length-1;i>=0;i--){
                     const toReorder = cards.find(card=>card.logicalCard.id === data.cards[i])!;
-                    console.log(toReorder, data, cards.map(card=>card.logicalCard.id))
 
                     deckDrawFrom.removeCard(toReorder);
                     deckDrawFrom.addCard(toReorder);
                 }
-                console.log(data, event)
             }break;
             case CardActionOptions.CLOUD_CAT_PICK:{
                 game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =
