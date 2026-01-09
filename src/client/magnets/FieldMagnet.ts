@@ -31,10 +31,11 @@ export default class FieldMagnet extends CardMagnet{
             onClick:()=>{
                 const state = this.game.state;
 
-                if(this.game.selectedCard !== undefined &&
-                    state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide() &&
-                    state.canSelectHandCard(this.game.selectedCard)){//todo: this is technically a bandaid fix
-                    //place card
+                if(this.game.selectedCard !== undefined && this.getSide() === this.game.getMySide() &&
+                    state.canSelectHandCard(this.game.selectedCard) &&
+                    (state.hasFeatures(StateFeatures.FIELDS_PLACEABLE)||
+                        this.game.selectedCard.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+                            {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){//todo: this is technically a bandaid fix
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         this.game.selectedCard = undefined;
@@ -168,7 +169,13 @@ export default class FieldMagnet extends CardMagnet{
         return true;
     }
     shouldSnapCards(): boolean {
-        return this.card === undefined && this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.game.getMySide() === this.getSide();
+        return this.card === undefined &&
+            (this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) ||
+                (this.game.selectedCard?.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+                    {self:this.game.selectedCard.logicalCard,
+                        game:this.game.selectedCard.game.getGame(),
+                    normallyValid:false})??false)) &&
+            this.game.getMySide() === this.getSide();
     }
 
     visualTick() {

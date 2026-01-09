@@ -291,7 +291,12 @@ export function parseEvent(event:Event<any>){
                     event.game.player(card.side) === event.sender &&//card is the player's
                     sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
                         .some(other => (other?.cardData.level??0) >= card.cardData.level-1)))){ //placed card's level is at most 1 above all other cards
-                rejectEvent(event, "failed place check");
+                if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:false}) ?? false)) {
+                    rejectEvent(event, "failed place check");
+                    return;
+                }
+            }else if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:false}) ?? true)){
+                rejectEvent(event, "failed place check: custom");
                 return;
             }
 

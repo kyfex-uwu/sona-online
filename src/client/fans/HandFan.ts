@@ -18,7 +18,6 @@ export default class HandFan extends VisualCardFan{
     /**
      * Runs when a card is selected
      * @param card The selected card
-     * @param game The game
      */
     private onSelectImpl(card:VisualCard){
         if(this.game !== undefined && this.getSide() === this.game.getMySide()) {

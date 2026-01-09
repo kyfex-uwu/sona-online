@@ -33,7 +33,9 @@ export class CardActionType<P extends {[k:string]:any}, R>{
     public static readonly INTERRUPT_SCARE = new CardActionType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:Event<any>, next:(succeeded:boolean)=>void}, InterruptScareResult>();
-
+    //Returns true if can be placed
+    public static readonly SPECIAL_PLACED_CHECK = new CardActionType<
+        {self:Card, game:Game, normallyValid:boolean}, boolean>();
     public static readonly TURN_START = new CardActionType<
         {self:Card,game:Game}, void>();
     public static readonly IS_FREE = new CardActionType<

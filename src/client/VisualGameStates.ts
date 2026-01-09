@@ -10,6 +10,7 @@ import {camera, clickListener, removeClickListener} from "./clientConsts.js";
 import {Euler, Group, Quaternion, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
+import {CardActionType} from "../CardData.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -200,8 +201,12 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
     }
     canSelectHandCard(card: VisualCard): boolean {
         if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
-        return card.logicalCard.cardData.level === 1 || sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
-            (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
+        const toReturn = card.logicalCard.cardData.level === 1 ||
+            sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
+                (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
+        if(card.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+            {self:card.logicalCard, game:card.game.getGame(), normallyValid:toReturn})??false) return true;
+        return toReturn;
     }
 }
 //todo: i think theres only gonna be 2 cancellable states? (attacking and pick+subclasses) so do we really need this

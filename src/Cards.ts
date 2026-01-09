@@ -64,8 +64,18 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
 setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)//todo
-    .with(CardActionType.AFTER_CRISIS, ({self, game})=>{
-
+    .with(CardActionType.SPECIAL_PLACED_CHECK, ({self, game, normallyValid})=>{
+        if(game.state instanceof TurnState &&
+            sideTernary(self.side, game.fieldsA, game.fieldsB)
+            .filter(card=>card!==undefined)
+            .length === 0) return true;
+        return normallyValid;
+    }).with(CardActionType.IS_FREE, ({self, game})=>{
+        return game.state instanceof TurnState &&
+            sideTernary(self.side, game.fieldsA, game.fieldsB)
+                .filter(card => card !== undefined && card !== self)
+                .length === 0 && (game.state.turn !== self.side ||
+                    game.state.actionsLeft === 3);
     }));
 setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE)//todo
     .with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
