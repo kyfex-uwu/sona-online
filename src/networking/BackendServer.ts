@@ -68,17 +68,17 @@ export function sendToClients(event:Event<any>, ...toIgnore:(Client|undefined)[]
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
 //@returns If a card was actually drawn
-export function draw(game: Game, sender: Client|undefined, side: Side, isAction:boolean, sendTo?:Client){
+export function draw(game: Game, dontSendTo: Client|undefined, side: Side, isAction:boolean, clarifyTo?:Client){
     const card = sideTernary(side, game.deckA, game.deckB).pop();
     if(card !== undefined) {
-        sendTo?.send(new ClarifyCardEvent({
+        clarifyTo?.send(new ClarifyCardEvent({
             id: card.id,
             cardDataName: card.cardData.name
         }));
     }
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
-        sendToClients(new DrawAction({side: side, isAction}, game, undefined), sender);
+        sendToClients(new DrawAction({side: side, isAction}, game, undefined), dontSendTo);
         if(game.state instanceof TurnState && isAction) {
             if(game.state.decrementTurn()){
                 if(sideTernary((game.state as TurnState).turn, game.handA, game.handB).length<5) {

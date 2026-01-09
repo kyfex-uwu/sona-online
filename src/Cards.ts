@@ -126,20 +126,8 @@ setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID)//todo
         }
         return InterruptScareResult.PASSTHROUGH;
     }));
-setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES)//todo
-    .with(CardActionType.PLACED, ({self, game})=>{
-        for(const data of [{hand:game.handA,deck:game.deckA}, {hand:game.handB,deck:game.deckB}]) {
-            while (data.hand.length < 5) {
-                const toAdd = data.deck.pop();
-                if(toAdd !== undefined) data.hand.push(toAdd);
-
-            }
-        }
-    }));
-setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES)//todo
-    .with(CardActionType.PLACED, ({self, game})=>{
-
-    }));
+setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
+setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES));
 setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_GUESS);

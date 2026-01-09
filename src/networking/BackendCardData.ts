@@ -5,6 +5,7 @@ import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
+import {Side} from "../GameElement.js";
 
 export function loadBackendWrappers(){}
 
@@ -48,4 +49,11 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
+});
+wrap(cards["og-030"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    for(const side of [Side.A, Side.B])
+        for (let i = sideTernary(side, game.handA, game.handB).length; i < 5; i++)
+            draw(game, undefined, side, false, game.player(side));
 });
