@@ -187,5 +187,8 @@ setSpecialCard(new CardData("utility", [0,0,0], 1, Species.UNKNOWN, "utility.png
 setSpecialCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
 setSpecialCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
 setSpecialCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("temp_lv1", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("temp_lv2", [0,0,0], 1, Species.UNKNOWN));
+setSpecialCard(new CardData("temp_lv3", [0,0,0], 1, Species.UNKNOWN));
 
 export default cards;
