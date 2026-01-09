@@ -48,8 +48,7 @@ export default class FieldMagnet extends CardMagnet{
                             faceUp: (state instanceof VTurnState)
                         })).onReply(successOrFail(()=>{
                             if(isDecrementable(state) &&//deprecated?
-                                !(card.logicalCard.callAction(CardActionType.IS_FREE,
-                                    {self:card.logicalCard, game:game.getGame()}) ?? false))// card is not free
+                                !(card.logicalCard.isFreeNow() ?? false))// card is not free
                                 (state as unknown as Decrementable).decrementTurn();
                         },()=>{
                             card.removeFromHolder();

@@ -96,4 +96,13 @@ export default class Card implements GameElement{
     setCardData(data:CardData){
         this._cardData=data;
     }
+
+    //@return if this card is free by way of having "Can be placed for Free" text
+    isAlwaysFree(){
+        return this.getAction(CardActionType.IS_FREE) !== undefined;
+    }
+    //@return if this card should decrement the turn when placed
+    isFreeNow(){
+        return this.callAction(CardActionType.IS_SOMETIMES_FREE, {self:this, game:this.game})??false;
+    }
 }

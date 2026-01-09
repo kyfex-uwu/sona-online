@@ -70,7 +70,7 @@ setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)//todo
             .filter(card=>card!==undefined)
             .length === 0) return true;
         return normallyValid;
-    }).with(CardActionType.IS_FREE, ({self, game})=>{
+    }).with(CardActionType.IS_SOMETIMES_FREE, ({self, game})=>{
         return game.state instanceof TurnState &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
                 .filter(card => card !== undefined && card !== self)

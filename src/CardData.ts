@@ -38,7 +38,8 @@ export class CardActionType<P extends {[k:string]:any}, R>{
         {self:Card, game:Game, normallyValid:boolean}, boolean>();
     public static readonly TURN_START = new CardActionType<
         {self:Card,game:Game}, void>();
-    public static readonly IS_FREE = new CardActionType<
+    public static readonly IS_FREE = new CardActionType<{}, void>();
+    public static readonly IS_SOMETIMES_FREE = new CardActionType<
         {self:Card,game:Game}, boolean>();
     public static readonly SHOULD_SHOW_HAND = new CardActionType<
         {self:Card,game:Game}, boolean>();
@@ -100,7 +101,7 @@ export default class CardData{
         return this;
     }
     setFree(){
-        return this.with(CardActionType.IS_FREE, ()=>true);
+        return this.with(CardActionType.IS_FREE, ()=>{});
     }
     //{@link Card.getAction} should be preferred
     getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{

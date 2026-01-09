@@ -35,7 +35,7 @@ import Card, {getVictim, Stat} from "../Card.js";
 import cards from "../Cards.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
-import {CardActionType, InterruptScareResult, Species} from "../CardData.js";
+import {CardActionType, InterruptScareResult} from "../CardData.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 
@@ -311,7 +311,7 @@ export function parseEvent(event:Event<any>){
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
-            const placedForFree = card.callAction(CardActionType.IS_FREE, {self:card, game:event.game}) ?? false;
+            const placedForFree = card.callAction(CardActionType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false;
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
@@ -454,15 +454,16 @@ export function parseEvent(event:Event<any>){
             let shouldClarify:Card|Card[]|undefined=undefined;
             switch(event.data.justification){
                 case ClarificationJustification.BROWNIE:
+                    const senderSide = event.game.player(Side.A) === event.sender ? Side.A : Side.B;
                     if(event.game.state instanceof TurnState &&
                         (event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
-                            [event.game.player(Side.A) === event.sender ? Side.A : Side.B])) === CardActionOptions.BROWNIE_DRAW &&
-                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                            [senderSide])) === CardActionOptions.BROWNIE_DRAW &&
+                        sideTernary(senderSide, event.game.fieldsA, event.game.fieldsB)
                             .find(card =>card?.cardData.name === "og-005")!==undefined) {
 
-                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
+                        shouldClarify = sideTernary(senderSide, event.game.deckA, event.game.deckB)
                             .filter(card => card.cardData.level === 1 &&
-                                card.getAction(CardActionType.IS_FREE) !== undefined);
+                                card.isAlwaysFree());
                     }
                     break;
                 case ClarificationJustification.AMBER://todo

@@ -171,7 +171,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
         justification:ClarificationJustification.BROWNIE,
     })).onReply(successOrFail(()=>{
         const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
-            card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE) !== undefined);
+            card.cardData.level === 1 && card.isAlwaysFree());
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 

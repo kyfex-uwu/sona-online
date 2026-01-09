@@ -87,7 +87,7 @@ export default function(event:CardAction<any>){
             const card = event.game.cards.values().find(card => card.id === id);
 
             if (card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
-                card.cardData.level === 1 && card.getAction(CardActionType.IS_FREE)&&//and card is level 1 and card is free
+                card.cardData.level === 1 && card.isAlwaysFree() &&//and card is level 1 and card is free
                 event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW){//the sender needs to brownie draw
                 findAndRemove(event.game, card);
                 sideTernary(card.side, event.game.handA, event.game.handB).push(card);
