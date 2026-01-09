@@ -1,6 +1,6 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import {
-    CardAction,
+    CardAction, ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
@@ -100,6 +100,15 @@ const logColors:{[key:string]:string}={
     DetermineStarterEvent:"#fb8",
     ClarifyCardEvent:"#8fc"
 }
+
+const waitingForClarify:{[k:number]:((event:ClarifyCardEvent|MultiClarifyCardEvent)=>void)[]} = {};
+export function waitForClarify(justification:ClarificationJustification,
+                               callback:(event:ClarifyCardEvent|MultiClarifyCardEvent)=>void){
+    if(waitingForClarify[justification] === undefined)
+        waitingForClarify[justification] = [];
+    waitingForClarify[justification].push(callback);
+}
+
 async function receiveFromServer(packed:{
     type:string,
     data:SerializableType,
@@ -111,7 +120,7 @@ async function receiveFromServer(packed:{
         packed.data,
         game.getGame(), null, packed.id) as Event<any>;
     if(packed.type !== "SyncEvent" && packed.type !== "StringReprSyncEvent")
-        log("%c <- "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
+        log("%c -> "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
@@ -146,11 +155,22 @@ async function receiveFromServer(packed:{
         await wait(500);
     }else if (event instanceof ClarifyCardEvent) {
         clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
+        if(event.data.justification !== undefined) {
+            for (const callback of waitingForClarify[event.data.justification] ?? [])
+                callback(event);
+            waitingForClarify[event.data.justification]=[];
+        }
     }else if(event instanceof MultiClarifyCardEvent){
-        if(event.data !== undefined)
-            for(const id in event.data) {
+        if(event.data !== undefined) {
+            for (const id in event.data) {
                 clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
             }
+            if(event.data.justification !== undefined) {
+                for (const callback of waitingForClarify[event.data.justification] ?? [])
+                    callback(event);
+                waitingForClarify[event.data.justification]=[];
+            }
+        }
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
@@ -234,13 +254,14 @@ async function receiveFromServer(packed:{
             case CardActionOptions.YASHI_REORDER:{
                 const data = (event as CardAction<YASHI_REORDER>).data.cardData;
 
-                const deckDrawFrom = sideTernary(event.data.cardData[1], game.deckA, game.deckB);
+                const deckDrawFrom = sideTernary(data.side!, game.deckA, game.deckB);
                 const cards = deckDrawFrom.getCards();
-                for(let i=data.cards.length-1;i>=0;i--){
-                    const toReorder = cards.find(card=>card.logicalCard.id === data.cards[i])!;
+                for(const card of data.cards.map(id=>cards.find(card=>card.logicalCard.id === id))
+                    .reverse()){
+                    if(card === undefined) continue;
 
-                    deckDrawFrom.removeCard(toReorder);
-                    deckDrawFrom.addCard(toReorder);
+                    deckDrawFrom.removeCard(card);
+                    deckDrawFrom.addCard(card);
                 }
             }break;
             case CardActionOptions.CLOUD_CAT_PICK:{

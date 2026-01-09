@@ -39,7 +39,8 @@ export default class Card implements GameElement{
     private _cardData:CardData;
     public get cardData(){ return this._cardData; }
     public readonly side:Side;
-    public readonly id:number;
+    private _id:number;
+    public get id(){ return this._id; }
     private readonly game:Game;
 
     private miscData: { [k: string]: any } = {};
@@ -58,7 +59,7 @@ export default class Card implements GameElement{
         this._cardData=cardData;
         this.side=side;
         this.game=game;
-        this.id=id;
+        this._id=id;
     }
 
     private faceUp = true;
@@ -93,8 +94,13 @@ export default class Card implements GameElement{
         return this.disabled() ? undefined : this.cardData.callAction(type, param);
     }
 
+    //USE WITH EXTREME CAUTION
     setCardData(data:CardData){
         this._cardData=data;
+    }
+    //USE WITH EXTREME CAUTION
+    setId(id:number){
+        this._id=id;
     }
 
     //@return if this card is free by way of having "Can be placed for Free" text

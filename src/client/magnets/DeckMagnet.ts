@@ -47,6 +47,8 @@ export default class DeckMagnet extends CardMagnet{
     }
 
     addCard(card:VisualCard){
+        card.setHolder(this);
+
         sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB).push(card.logicalCard);
 
         card.position.copy(this.position);
@@ -58,7 +60,6 @@ export default class DeckMagnet extends CardMagnet{
         card.flipFacedown();
         this.cards.push({card, rot:rotAmt});
         this.position.add(CardMagnet.offs);
-        card.setHolder(this);
 
         super.addCard(card);
         return true;

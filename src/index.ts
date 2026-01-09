@@ -6,11 +6,16 @@ import {FindGameEvent, RequestSyncEvent} from "./networking/Events.js";
 import cards, {specialCards} from "./Cards.js";
 import type CardData from "./CardData.js";
 import {network} from "./networking/Server.js";
-import {registerDrawCallback} from "./client/ui.js";
+
+import Stats from "stats.js";
 
 /////
 // version 0.1.0
 /////
+
+const stats = new Stats();
+stats.showPanel(0);
+document.getElementById("stats")!.appendChild(stats.dom);
 
 // Init scene.
 const scene = new Scene();
@@ -65,7 +70,7 @@ setTimeout(()=>{
     game.sendEvent(new FindGameEvent({
         deck:(()=>{
             const toReturn = [
-                "og-005"
+                "og-027"
             ];
             const alreadyAdded:{[k:string]:true} = {};
             for(const card of toReturn) alreadyAdded[card]=true;
@@ -88,29 +93,12 @@ setTimeout(()=>{
     }, undefined))
 },1000)
 
-let lastTick = [Date.now(), Date.now()];
-let avgFps:number[] = [];
-registerDrawCallback(0,(p5, scale)=>{
-    p5.push();
-    p5.fill(255,0,0);
-    p5.rect(p5.width, p5.height, -Math.round(avgFps.reduce((a,c)=>a+c,0)/avgFps.length),-10)
-    p5.textSize(scale*0.1);
-    p5.textAlign(p5.RIGHT,p5.BOTTOM);
-    p5.text(Math.round(avgFps.reduce((a,c)=>a+c,0)/avgFps.length), p5.width-10,p5.height-10);
-
-    avgFps.unshift(1000/(lastTick[0]!-lastTick[1]!));
-    avgFps = avgFps.slice(0,20);
-})
 renderer.setAnimationLoop(() => {
-    if(lastTick[0]!-lastTick[1]!<16){
-        lastTick[0] = Date.now();
-        return;
-    }
+    stats.begin();
     game.tick();
     game.visualTick();
     renderer.render(scene, camera);
-    lastTick.pop();
-    lastTick.unshift(Date.now());
+    stats.end();
 });
 
 frontendInit();

@@ -20,7 +20,6 @@ import {
     sendToClients
 } from "./BackendServer.js";
 
-
 function findAndRemove(game:Game, card:Card){
     for(const group of [game.deckA, game.deckB, game.runawayA, game.runawayB, game.handA, game.handB]) {
         for (let i = 0; i < group.length; i++) {
@@ -163,7 +162,14 @@ export default function(event:CardAction<any>){
                 deckDrawFrom.push(deckDrawFrom.splice(index,1)[0]!);
             }
 
-            sendToClients(event);
+            sendToClients(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.YASHI_REORDER,
+                cardData:{
+                    cards:data.cards,
+                    side:actor.side
+                }
+            }, event.game));
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             acceptEvent(event);

@@ -1,6 +1,6 @@
 import Card, {Stat} from "./Card.js";
 import type Game from "./Game.js";
-import type {Event} from "./networking/Events.js";
+import {type Event} from "./networking/Events.js";
 
 let globalID=0;
 

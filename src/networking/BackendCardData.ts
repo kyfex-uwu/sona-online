@@ -1,9 +1,10 @@
 import CardData, {CardActionType} from "../CardData.js";
 import cards from "../Cards.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent} from "./Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
+import {GameMiscDataStrings} from "../Game.js";
 
 export function loadBackendWrappers(){}
 
@@ -44,8 +45,7 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    game.player(self.side)?.send(new ClarifyCardEvent({
-        id:self.id,
-        justification:ClarificationJustification.YASHI
-    }));
+    game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
+        ClarificationJustification.YASHI));
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
 });
