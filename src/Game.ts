@@ -54,6 +54,7 @@ export default class Game{
     public set state(newState:GameState){
         const oldState = this._state;
         this._state = newState;
+        newState.init();
         oldState.swapAway();
     }
 

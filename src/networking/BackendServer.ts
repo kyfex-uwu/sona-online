@@ -302,7 +302,7 @@ export function parseEvent(event:Event<any>){
                     rejectEvent(event, "failed place check");
                     return;
                 }
-            }else if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:false}) ?? true)){
+            }else if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:true}) ?? true)){
                 rejectEvent(event, "failed place check: custom");
                 return;
             }
@@ -421,6 +421,8 @@ export function parseEvent(event:Event<any>){
                     user.send(toSend);
                 }
                 if(succeeded) {
+                    sideTernary(scared.side, game.runawayA, game.runawayB).push(
+                        sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
                     sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
                     scared.callAction(CardActionType.AFTER_SCARED,

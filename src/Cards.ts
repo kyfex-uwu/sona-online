@@ -50,10 +50,12 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
         self.setMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY, "wait");
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     })).with(CardActionType.TURN_START, ({self, game})=>{
-        if(game.state instanceof TurnState) {
+        if(game.state instanceof TurnState &&
+            self.getMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY) !== "not immune") {
             if (game.state.turn !== self.side)
                 self.setMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY, "immune");
-            else self.setMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY, "not immune");
+            else
+                self.setMiscData(MiscDataStrings.TRASH_PANDA_IMMUNITY, "not immune");
         }
     }).with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
         if(self!==scared) return InterruptScareResult.PASSTHROUGH;

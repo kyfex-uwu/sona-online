@@ -1,4 +1,4 @@
-import {CardAction, ClarifyCardEvent, ScareAction, type SerializableType} from "./Events.js";
+import {CardAction, ClarifyCardEvent, Event, ScareAction, type SerializableType} from "./Events.js";
 import {
     type AMBER_PICK,
     AmberData,
@@ -7,7 +7,7 @@ import {
     CardActionOptions,
     type CLOUD_CAT_PICK,
     type GREMLIN_SCARE,
-    type K9_ALPHA,
+    type K9_ALPHA, type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
@@ -66,6 +66,21 @@ function verifyFieldCard(event:CardAction<any>){
     return (event.game === undefined ? undefined :
         (event.sender === event.game.player(Side.A) ? event.game.fieldsA : event.game.fieldsB)
             .find(card => card?.id === event.data.cardId));
+}
+
+function defaultCheck<T extends SerializableType>(event:Event<any>, cardData:string, lastAction:boolean){
+    const actor = verifyFieldCard(event);
+    const data = (event as CardAction<T>).data.cardData;
+
+    if(!(actor !== undefined &&//actor exists
+        event.game !== undefined && //game exists
+        actor.cardData.name === cardData && //card is cardData
+        event.game.state instanceof TurnState && //state is turnState
+        event.game.state.turn === actor.side && //player's turn
+        (!lastAction || event.game.state.actionsLeft === 1) && //last action
+        event.game.player(actor.side) === event.sender)) //card is sender's
+        return false;
+    return {actor:actor!, data};
 }
 
 export default function(event:CardAction<any>){
@@ -222,6 +237,28 @@ export default function(event:CardAction<any>){
             }, event.game));
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            acceptEvent(event);
+        }break;
+        case CardActionOptions.WORICK_RESCUE:{//og-038
+            const succeeded = defaultCheck<WORICK_RESCUE>(event, "og-038", true);
+            if(!succeeded) return rejectEvent(event, "failed default worick check");
+            const {actor, data} = succeeded;
+
+            const toRemove = sideTernary(actor!.side, event.game.runawayA, event.game.runawayB)
+                .findIndex(card=>card.id === data.id);
+            if(toRemove === -1) return rejectEvent(event, "failed special worick check");
+
+            sideTernary(actor!.side, event.game.handA, event.game.handB).push(
+                sideTernary(actor!.side, event.game.runawayA, event.game.runawayB).splice(toRemove,1)[0]!);
+
+            sendToClients(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.WORICK_RESCUE,
+                cardData:{
+                    id:data.id,
+                    side:actor.side
+                }
+            }, event.game));
             acceptEvent(event);
         }break;
         case CardActionOptions.CLOUD_CAT_PICK: {//og-043

@@ -2,6 +2,7 @@ import Game, {GameMiscDataStrings} from "./Game.js";
 import {other, type Side} from "./GameElement.js";
 import {sideTernary} from "./consts.js";
 import type Card from "./Card.js";
+import {CardActionType} from "./CardData.js";
 
 //A logical game state
 export abstract class GameState{
@@ -10,6 +11,7 @@ export abstract class GameState{
         this.game=game;
     }
     swapAway(){}
+    init(){}
 }
 
 //Before anyone's turn, while the players are picking starting cards. Should swap to a {@link TurnState}
@@ -39,6 +41,17 @@ export class TurnState extends GameState{
     }
     swapAway() {
         super.swapAway();
+    }
+    private inited=false;
+    init(){
+        if(this.inited) return;
+        this.inited=true;
+
+        for(const card of [...this.game.fieldsA, ...this.game.fieldsB])
+            card?.callAction(CardActionType.TURN_START, {
+                self:card,
+                game:this.game
+            });
     }
 
     /**

@@ -208,11 +208,11 @@ export default class VisualGame {
             p5.push();
             p5.fill(255,0,0);
             p5.textSize(scale*0.1);
-            p5.textAlign(p5.LEFT,p5.TOP);
+            p5.textAlign(p5.RIGHT,p5.TOP);
             if(this.state instanceof VTurnState){
                 p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
 current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
-actions left: ${this.state.getActionsLeft()}`, 0,0);
+actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
             }
             if(this.state instanceof VAttackingState){
                 p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
@@ -221,11 +221,6 @@ actions left: ${this.state.getActionsLeft()}`, 0,0);
 
             p5.textAlign(p5.LEFT,p5.BOTTOM);
             p5.text(this.debugLast, 0,p5.height);
-
-            if(this.previewCard !== undefined){
-                p5.textAlign(p5.RIGHT,p5.TOP);
-                p5.text(this.previewCard.cardData.stats.join(","), p5.width,0);
-            }
 
             p5.pop();
         });

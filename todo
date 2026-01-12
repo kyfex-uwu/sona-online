@@ -35,7 +35,7 @@
 35
 
 
-38
+
 
 
 41
@@ -48,3 +48,4 @@ https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing 
 discarding broke at one point
 WAAGH
 type checking for all packets (need to write some separate thing)
+scared still fires when cloud catted

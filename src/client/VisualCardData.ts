@@ -107,10 +107,15 @@ visualCardClientActions["og-018"] = async (card) =>{
     });
     return toReturn;
 };
-visualCardClientActions["og-038"] = lastAction(async (card)=>{
+visualCardClientActions["og-038"] = lastAction((card)=>{
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
-    if(cards.length===0) return false;
+    let resolve;
+    const toReturn = new Promise<boolean>(r=>resolve=r);
+    if(cards.length===0) {
+        resolve!(false);
+        return toReturn;
+    }
     visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             cards, (picked)=>{
                     visualGame.frozen=true;
@@ -125,10 +130,11 @@ visualCardClientActions["og-038"] = lastAction(async (card)=>{
                         (visualGame.state as VPickCardsState).cancel();
                     },()=>{},()=>{
                         visualGame.frozen=false;
+                        resolve!(true);
                     }));
             }, EndType.BOTH),
         visualGame.getGame().state);
-    return true;
+    return toReturn;
 });
 visualCardClientActions["og-041"] = async (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0) return false;

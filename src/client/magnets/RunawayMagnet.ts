@@ -65,11 +65,14 @@ export default class RunawayMagnet extends CardMagnet{
         super.addCard(card);
         return true;
     }
-    removeCard(){
+    removeCard(card?:VisualCard){
         if(this.cards.length===0) return false;
-        sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB).pop();
 
-        let index = this.cards.length-1;
+        const takeFrom = sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB);
+        const index = card === undefined ?
+            takeFrom.length-1 : takeFrom.findIndex(c=>c.id === card.logicalCard.id);
+
+        takeFrom.splice(index,1);
         this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
         for(let i=index;i<this.cards.length;i++){
