@@ -59,7 +59,10 @@ export default class Game{
 
     private miscData: { [k: string]: any } = {};
     public getMiscData<T>(key:GameMiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
-    public setMiscData<T>(key:GameMiscDataString<T>, val: T){ this.miscData[key as string]=val; }
+    public setMiscData<T>(key:GameMiscDataString<T>, val: T){
+        if(val === GameMiscDataStrings.NEXT_ACTION_SHOULD_BE) console.trace("BRO U FUCKED UP")
+        this.miscData[key as string]=val;
+    }
 
     private _crisises:[number,number]=[0,0];
     public getCrisis(side:Side){

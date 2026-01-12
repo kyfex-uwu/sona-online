@@ -1,7 +1,11 @@
-import {CardAction, ScareAction} from "./Events.js";
+import {CardAction, ClarifyCardEvent, ScareAction, type SerializableType} from "./Events.js";
 import {
+    type AMBER_PICK,
+    AmberData,
     type BROWNIE_DRAW,
-    CardActionOptions, type CLOUD_CAT_PICK,
+    type CardActionOption,
+    CardActionOptions,
+    type CLOUD_CAT_PICK,
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type YASHI_REORDER
@@ -12,13 +16,25 @@ import {CardActionType, Species} from "../CardData.js";
 import Card, {MiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
-import {
-    acceptEvent,
-    parseEvent,
-    rejectEvent,
-    scareInterrupt,
-    sendToClients
-} from "./BackendServer.js";
+import {acceptEvent, parseEvent, rejectEvent, scareInterrupt, sendToClients} from "./BackendServer.js";
+
+function defaultIsValid<T extends SerializableType>(event:CardAction<T>, cardName:string,
+                                                    cardActionOption?:CardActionOption<any>){
+    const actor = verifyFieldCard(event);
+    const data = event.data.cardData;
+
+    // console.log(event.game !== undefined ,
+    //     actor !== undefined && actor.cardData.name === cardName ,//card exists and is amber
+    //     event.game!.state instanceof TurnState , event.game!.state.turn === actor!.side ,//it is the actor's turn
+    //     event.game!.player(actor!.side) === event.sender ,//actor belongs to sender
+    //     event.game!.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side]) === cardActionOption)
+    return event.game !== undefined &&
+        actor !== undefined && actor.cardData.name === cardName &&//card exists and is amber
+        event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
+        event.game.player(actor.side) === event.sender &&//actor belongs to sender
+        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === cardActionOption ?
+        {actor,data,valid:true}:{actor:undefined,data:undefined,valid:false};
+}
 
 function findAndRemove(game:Game, card:Card){
     for(const group of [game.deckA, game.deckB, game.runawayA, game.runawayB, game.handA, game.handB]) {
@@ -141,6 +157,40 @@ export default function(event:CardAction<any>){
                 });
             }
 
+        }break;
+        case CardActionOptions.AMBER_PICK:{//og-018
+            const {actor, data, valid} = defaultIsValid<AMBER_PICK>(event, "og-018", CardActionOptions.AMBER_PICK);
+
+            if(!valid) return rejectEvent(event, "failed amber check");
+
+            const toReorder = sideTernary(actor!.side, event.game.deckA, event.game.deckB);
+            let [card1, card2] = [toReorder.pop(), toReorder.pop()];
+            if(data!.which === AmberData.KEEP_SECOND) [card1, card2] = [card2, card1];
+            if(card1 !== undefined) {
+                sideTernary(actor!.side, event.game.handA, event.game.handB).push(card1);
+                sendToClients(new ClarifyCardEvent({
+                    id:card1.id,
+                    cardDataName:card1.cardData.name,
+                }, event.game));
+            }
+            if(card2 !== undefined) {
+                sideTernary(actor!.side, event.game.runawayA, event.game.runawayB).push(card2);
+                sendToClients(new ClarifyCardEvent({
+                    id:card2.id,
+                    cardDataName:card2.cardData.name,
+                }, event.game));
+            }
+
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side], undefined);
+
+            sendToClients(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.AMBER_PICK,
+                cardData: {
+                    which:data!.which,
+                    side:actor!.side
+                },
+            }, event.game));
         }break;
         case CardActionOptions.YASHI_REORDER:{//og-027
             const actor = verifyFieldCard(event);

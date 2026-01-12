@@ -27,6 +27,7 @@ import {registerDrawCallback} from "../client/ui.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
+    type AMBER_PICK, AmberData,
     type BOTTOM_DRAW,
     type BROWNIE_DRAW,
     CardActionOptions,
@@ -36,7 +37,7 @@ import {
 import {GameMiscDataStrings} from "../Game.js";
 
 //@ts-ignore
-window.showNetworkLogs=true;
+window.showNetworkLogs=false;
 const log = (...data: any) => {
     //@ts-ignore
     if(window.showNetworkLogs)
@@ -244,12 +245,23 @@ async function receiveFromServer(packed:{
             case CardActionOptions.BROWNIE_DRAW: {
                 const data = (event as CardAction<BROWNIE_DRAW>).data.cardData;
                 const card = game.elements.find(element => VisualCard.getExactVisualCard(element) &&
-                    (element as VisualCard).logicalCard.id === data.id) as VisualCard
+                    (element as VisualCard).logicalCard.id === data.id) as VisualCard;
                 if (card) {
                     sideTernary(card.logicalCard.side, game.deckA, game.deckB).removeCard(card);
                     sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
                     card.flipFaceup();
                 }
+            }break;
+            case CardActionOptions.AMBER_PICK:{
+                const data = (event as CardAction<AMBER_PICK>).data.cardData;
+
+                const toReorder = sideTernary(data.side!, game.deckA, game.deckB).getCards();
+                let [card1, card2] = [toReorder[toReorder.length-1], toReorder[toReorder.length-2]];
+                if(data!.which === AmberData.KEEP_SECOND) [card1, card2] = [card2, card1];
+                card1?.flipFaceup();
+                card2?.flipFaceup();
+                if(card1 !== undefined) sideTernary(data.side!, game.handA, game.handB).addCard(card1);
+                if(card2 !== undefined) sideTernary(data.side!, game.runawayA, game.runawayB).addCard(card2);
             }break;
             case CardActionOptions.YASHI_REORDER:{
                 const data = (event as CardAction<YASHI_REORDER>).data.cardData;

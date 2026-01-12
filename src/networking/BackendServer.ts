@@ -99,6 +99,13 @@ export function endTurn(game:Game){
         }
     }
 }
+export function shuffleBackend(deck:Array<Card>){
+    const ids = deck.map(card=>card.id);
+    shuffled(deck);
+    for(let i=0;i<deck.length;i++){
+        deck[i]!.setId(ids[i]!);
+    }
+}
 
 /**
  * Calls any/all interrupt scares. This should be called whenever you're trying to scare a card AND the attempt would
@@ -473,8 +480,9 @@ export function parseEvent(event:Event<any>){
                             .find(card =>card !== undefined && card.cardData.name === "og-018")) {
 
                         shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
-                            .find((card, i) => card.id === event.data.id && (i === 0 || i === 1));
-                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.AMBER_PICK);
+                            .slice(-2);
+                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[event.game.state.turn],
+                            CardActionOptions.AMBER_PICK);
                     }
                     break;
                 case ClarificationJustification.FURMAKER://todo
@@ -495,7 +503,8 @@ export function parseEvent(event:Event<any>){
                         network.replyToClient(event, multiClarifyFactory(shouldClarify));
                         return acceptEvent(event);
                     }
-                }else {
+                }
+                if(shouldClarify instanceof Card){
                     network.replyToClient(event, new ClarifyCardEvent({
                         id: shouldClarify.id,
                         cardDataName: shouldClarify.cardData.name

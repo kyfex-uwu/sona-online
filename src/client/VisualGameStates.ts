@@ -26,7 +26,6 @@ export abstract class VisualGameState<T extends GameState>{
     public readonly features:Set<StateFeatures> = new Set();
     constructor(game:VisualGame) {
         this.game=game;
-        console.log("creating "+this.constructor.name)
     }
     visualTick(){};
     init(){}

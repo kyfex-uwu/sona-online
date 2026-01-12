@@ -1,6 +1,5 @@
 import {AcceptEvent, Event, RejectEvent, type SerializableEventData, type SerializableType,} from "./Events.js";
 import type Game from "../Game.js";
-import type {Client} from "./BackendServer.js";
 
 class FlagData{
     type:"number"|"boolean";

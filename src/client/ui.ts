@@ -27,6 +27,9 @@ console.log = function(...args){
         args[0].startsWith("Zod error object"))) return;
     oldLog(...args);
 }
+export function tempHowToUse(name:string, message:string){
+    console.log(`%cHow to use ${name}:\n${message}`, `background:#134142; color:#00ff91`);
+}
 
 const mouseData = {
     down:false,

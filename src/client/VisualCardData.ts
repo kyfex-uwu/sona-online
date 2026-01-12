@@ -7,12 +7,13 @@ import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import Card, {MiscDataStrings, Stat} from "../Card.js";
-import {CardActionOptions} from "../networking/CardActionOption.js";
+import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {Side} from "../GameElement.js";
 import {waitForClarify} from "../networking/LocalServer.js";
+import {tempHowToUse} from "./ui.js";
 
 export function loadFrontendWrappers(){}
 
@@ -32,6 +33,8 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     let picked = new Set<Card>();
     let resolve:(val:boolean)=>void;
     const toReturn = new Promise<boolean>(r=>resolve=r);
+    tempHowToUse("K9 Agent Alpha", "Select all the canines you want to use, then press Finish. " +
+        "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.")
     visualGame.setState(new VPickCardsState(visualGame, oldStates,
             sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
                 .filter(card => card !== undefined)
@@ -78,25 +81,31 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
 visualCardClientActions["og-018"] = async (card) =>{
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
-    if(toReorder.length === 1){
-        toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
-    }
+    let resolve;
+    const toReturn = new Promise<boolean>(r=>resolve=r);
 
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
-            toReorder, (c)=>{
-            network.sendToServer(new CardAction({
-                cardId:card.logicalCard.id,
-                actionName:CardActionOptions.AMBER_PICK,
-                cardData: c.logicalCard === toReorder[0]?.logicalCard ? 1 : 2
-            })).onReply(successOrFail(()=>{
+    network.sendToServer(new ClarifyCardEvent({
+        id:card.logicalCard.id,
+        justification:ClarificationJustification.AMBER
+    })).onReply(()=>{
+        tempHowToUse("Amber", "Click the card you want to keep; don't click the card you want to discard");
+        if(toReorder.length === 1){
+            toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
+        }
+        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+            toReorder, (c) => {
+                network.sendToServer(new CardAction({
+                    cardId: card.logicalCard.id,
+                    actionName: CardActionOptions.AMBER_PICK,
+                    cardData: {
+                        which: c.logicalCard === toReorder[0]?.logicalCard ? AmberData.KEEP_FIRST : AmberData.KEEP_SECOND
+                    }
+                }));
+                resolve!(true);
+            }, EndType.NONE), visualGame.getGame().state);
 
-            },()=>{
-
-            },()=>{
-                (visualGame.state as VPickCardsState).cancel();
-            }));
-        }, EndType.NONE), visualGame.getGame().state);
-    return true;
+    });
+    return toReturn;
 };
 visualCardClientActions["og-038"] = lastAction(async (card)=>{
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
@@ -163,6 +172,7 @@ waitToDraw(cards["og-005"]!);
 wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
+    tempHowToUse("Brownie","Click the card you want to add to your hand")
     network.sendToServer(new ClarifyCardEvent({
         id:self.id,
         justification:ClarificationJustification.BROWNIE,
@@ -207,6 +217,7 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
         target.some(card => //and at least one card has at least 1 stat less than 2
             ((card.cardData.stat(Stat.RED)??99)<2 || (card.cardData.stat(Stat.BLUE)??99)<2 || (card.cardData.stat(Stat.YELLOW)??99)<2))) {
 
+        tempHowToUse("Gremlin Kitten", "Select the card to scare");
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA).map(field=>field.getCard())
                 .filter(card => card !== undefined &&
@@ -236,6 +247,9 @@ wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
+    tempHowToUse("Yashi MauMau", "Select your three cards, then press Finish. "+
+        "Click the cards in order of top to bottom: the first card will be on top of " +
+        "the deck and the last card will be third (or second or whatever)");
     waitForClarify(ClarificationJustification.YASHI, ()=>{
         visualGame.frozen=false;
 
@@ -252,7 +266,7 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
                 if(toSend.length>3)
                     //@ts-ignore
                     toSend=toSend.slice(1);
-                firstState.endType = toSend.length === 3 ? EndType.FINISH : EndType.NONE;
+                firstState.endType = toSend.length > 0 ? EndType.FINISH : EndType.NONE;
             }, EndType.NONE, ()=>{
                 let newOrder:[number?,number?,number?]=[];
                 const toCancel = new VPickCardsState(visualGame, [origState, game.state],
@@ -295,6 +309,7 @@ wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     if(game.state instanceof BeforeGameState){
+        tempHowToUse("Cloud Cat", "Whatever the opponent places will be disabled :)");
         network.sendToServer(new CardAction({
             cardId:self.id,
             actionName:CardActionOptions.CLOUD_CAT_PICK,
@@ -307,15 +322,8 @@ wrap(cards["og-043"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     if(self.getMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
 
-    if(game.state instanceof BeforeGameState){
-        network.sendToServer(new CardAction({
-            cardId:self.id,
-            actionName:CardActionOptions.CLOUD_CAT_PICK,
-            cardData:1
-        }));
-        return;
-    }
 
+    tempHowToUse("Cloud Cat", "Click the card to disable");
     const state = new VPickCardsState(visualGame, [visualGame.state, game.state],
         sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)
             .map(magnet=>magnet.getCard())

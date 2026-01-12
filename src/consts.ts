@@ -7,8 +7,7 @@ export function shuffled<T>(array:Array<T>):Array<T>{
     while (shuffledMarker>1) {
         const nextIndex = Math.floor(Math.random() * shuffledMarker);
         shuffledMarker--;
-        // @ts-ignore
-        [array[shuffledMarker], array[nextIndex]] = [array[nextIndex], array[shuffledMarker]];
+        [array[shuffledMarker], array[nextIndex]] = [array[nextIndex]!, array[shuffledMarker]!];
     }
 
     return array;
