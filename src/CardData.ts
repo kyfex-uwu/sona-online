@@ -43,6 +43,9 @@ export class CardActionType<P extends {[k:string]:any}, R>{
         {self:Card,game:Game}, boolean>();
     public static readonly SHOULD_SHOW_HAND = new CardActionType<
         {self:Card,game:Game}, boolean>();
+
+    //Only for use on the client
+    public static readonly VISUAL_TICK = new CardActionType<{self:Card}, void>();
 }
 
 export enum Species{

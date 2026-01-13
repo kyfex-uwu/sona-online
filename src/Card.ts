@@ -31,6 +31,8 @@ export const MiscDataStrings = {
     LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
     K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>,
     CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as MiscDataString<boolean>,
+
+    FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as MiscDataString<Set<number>>
 };
 verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
 

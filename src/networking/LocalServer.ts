@@ -31,7 +31,7 @@ import {
     type BOTTOM_DRAW,
     type BROWNIE_DRAW,
     CardActionOptions,
-    type CLOUD_CAT_PICK, type WORICK_RESCUE,
+    type CLOUD_CAT_PICK, type FURMAKER_PICK, type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -271,6 +271,17 @@ async function receiveFromServer(packed:{
                     VisualCard.getExactVisualCard(element) !== undefined &&
                     element instanceof VisualCard && element.logicalCard.id === data.id) as VisualCard;
                 removeFrom.removeCard(cardToRemove);
+                sideTernary(data.side!, game.handA, game.handB).addCard(cardToRemove);
+            }break;
+            case CardActionOptions.FURMAKER_PICK:{
+                const data = (event as CardAction<FURMAKER_PICK>).data.cardData;
+
+                const removeFrom = sideTernary(data.side!, game.deckA, game.deckB);
+                const cardToRemove = game.elements.find(element =>
+                    VisualCard.getExactVisualCard(element) !== undefined &&
+                    element instanceof VisualCard && element.logicalCard.id === data.id) as VisualCard;
+                removeFrom.removeCard(cardToRemove);
+                cardToRemove.flipFaceup();
                 sideTernary(data.side!, game.handA, game.handB).addCard(cardToRemove);
             }break;
             case CardActionOptions.YASHI_REORDER:{

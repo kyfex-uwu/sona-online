@@ -461,6 +461,7 @@ export function parseEvent(event:Event<any>){
     }else if(event instanceof ClarifyCardEvent){
         if(event.game !== undefined){
             let shouldClarify:Card|Card[]|undefined=undefined;
+            let maybeJustfication:ClarificationJustification|undefined;
             switch(event.data.justification){
                 case ClarificationJustification.BROWNIE:
                     const senderSide = event.game.player(Side.A) === event.sender ? Side.A : Side.B;
@@ -487,29 +488,37 @@ export function parseEvent(event:Event<any>){
                             CardActionOptions.AMBER_PICK);
                     }
                     break;
-                case ClarificationJustification.FURMAKER://todo
-                    if(event.game.state instanceof TurnState &&
+                case ClarificationJustification.FURMAKER: {
+                    if (event.game.state instanceof TurnState &&
                         event.sender === event.game.player(event.game.state.turn) &&
                         sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
-                            .find(card =>card !== undefined && card.cardData.name === "og-041")) {
+                            .find(card => card !== undefined && card.cardData.name === "og-041")
+                            ?.id === event.data.id) {
 
-                        shouldClarify=sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB);
+                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB);
+                        maybeJustfication = ClarificationJustification.FURMAKER;
                         event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
                     }
-                    break;
+                }break;
+                case ClarificationJustification.FURMAKER_VISIBLE: {
+                    const side = event.sender === event.game.player(Side.A) ? Side.A : Side.B;
+                    if(sideTernary(side, event.game.fieldsB, event.game.fieldsA).some(card=>card?.cardData.name === "og-041"))
+                        shouldClarify = sideTernary(side, event.game.handB, event.game.handA);
+                }break;
             }
 
             if(shouldClarify !== undefined){
                 if(shouldClarify instanceof Array){
                     if(shouldClarify.length>0) {
-                        network.replyToClient(event, multiClarifyFactory(shouldClarify));
+                        network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
                         return acceptEvent(event);
                     }
                 }
                 if(shouldClarify instanceof Card){
                     network.replyToClient(event, new ClarifyCardEvent({
                         id: shouldClarify.id,
-                        cardDataName: shouldClarify.cardData.name
+                        cardDataName: shouldClarify.cardData.name,
+                        ...(maybeJustfication?{justification:maybeJustfication}:{})
                     }));
                     return acceptEvent(event);
                 }

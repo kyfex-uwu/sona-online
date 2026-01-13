@@ -60,6 +60,7 @@ export enum ClarificationJustification{
     BROWNIE,
     AMBER,
     FURMAKER,
+    FURMAKER_VISIBLE,
     YASHI,
 }
 //Tells a card's data and if its faceup

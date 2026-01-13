@@ -1,11 +1,14 @@
 import VisualCardFan from "./CardFan.js";
 import type {Side} from "../../GameElement.js";
-import {Quaternion, Vector3} from "three";
+import {Euler, Quaternion, Vector3} from "three";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {sideTernary} from "../../consts.js";
+import {game} from "../../index.js";
 
 export default class HandFan extends VisualCardFan{
+    private defaultRotation;
+    private rotatedRotation;
     constructor(game:VisualGame, position:Vector3, side:Side, params:{
         rotation?:Quaternion
     }={}) {
@@ -13,6 +16,9 @@ export default class HandFan extends VisualCardFan{
             onSelect:(card:VisualCard)=>this.onSelectImpl(card),
             ...params
         });
+
+        this.defaultRotation = this.rotation.clone();
+        this.rotatedRotation = this.defaultRotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
     }
 
     /**
@@ -39,5 +45,15 @@ export default class HandFan extends VisualCardFan{
         super.removeCard(card);
         const hand = sideTernary(this.getSide(), this.game!.getGame().handA, this.game!.getGame().handB);
         hand.splice(hand.indexOf(card.logicalCard),1);
+    }
+
+    tick() {
+        super.tick();
+
+        //og-041
+        const shouldShow = this.getSide() !== this.game.getMySide() &&
+            sideTernary(this.getSide(), game.fieldsA, game.fieldsB).some(field=>
+            field.getCard()?.logicalCard.cardData.name === "og-041");
+        this.rotation = shouldShow ? this.rotatedRotation : this.defaultRotation;
     }
 }

@@ -5,7 +5,7 @@ import {
     type BROWNIE_DRAW,
     type CardActionOption,
     CardActionOptions,
-    type CLOUD_CAT_PICK,
+    type CLOUD_CAT_PICK, type FURMAKER_PICK,
     type GREMLIN_SCARE,
     type K9_ALPHA, type WORICK_RESCUE,
     type YASHI_REORDER
@@ -254,6 +254,28 @@ export default function(event:CardAction<any>){
             sendToClients(new CardAction({
                 cardId:-1,
                 actionName:CardActionOptions.WORICK_RESCUE,
+                cardData:{
+                    id:data.id,
+                    side:actor.side
+                }
+            }, event.game));
+            acceptEvent(event);
+        }break;
+        case CardActionOptions.FURMAKER_PICK:{//og-041
+            const succeeded = defaultCheck<FURMAKER_PICK>(event, "og-041", false);
+            if(!succeeded) return rejectEvent(event, "failed default furmaker check");
+            const {actor, data} = succeeded;
+
+            const toRemove = sideTernary(actor!.side, event.game.deckA, event.game.deckB)
+                .findIndex(card=>card.id === data.id);
+            if(toRemove === -1) return rejectEvent(event, "failed special furmaker check");
+
+            sideTernary(actor!.side, event.game.handA, event.game.handB).push(
+                sideTernary(actor!.side, event.game.deckA, event.game.deckB).splice(toRemove,1)[0]!);
+
+            sendToClients(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.FURMAKER_PICK,
                 cardData:{
                     id:data.id,
                     side:actor.side
