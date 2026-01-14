@@ -1,4 +1,4 @@
-import {CardAction, ClarifyCardEvent, Event, ScareAction, type SerializableType} from "./Events.js";
+import {CardAction, ClarifyCardEvent, Event, PlaceAction, ScareAction, type SerializableType} from "./Events.js";
 import {
     type AMBER_PICK,
     AmberData,
@@ -7,7 +7,7 @@ import {
     CardActionOptions,
     type CLOUD_CAT_PICK, type FURMAKER_PICK,
     type GREMLIN_SCARE,
-    type K9_ALPHA, type WORICK_RESCUE,
+    type K9_ALPHA, type KIBBY_SCARE, type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
@@ -238,6 +238,38 @@ export default function(event:CardAction<any>){
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             acceptEvent(event);
+        }break;
+        case CardActionOptions.KIBBY_SCARE:{//og-028
+            const succeeded = defaultCheck<KIBBY_SCARE>(event, "og-028", true);
+            if(!succeeded) return rejectEvent(event, "failed default kibby otes check");
+            const {actor, data} = succeeded;
+
+            if(actor.hasAttacked) return rejectEvent(event, "failed special kibby otes check");
+            const fields = sideTernary(actor.side, event.game.fieldsA, event.game.fieldsB);
+            for(const card of fields.filter((card, i) => data.cards[i] !== false && card !== undefined)
+                .sort((c1,c2)=> {return{//this sorting ensure kibby otes is scared last
+                    [c1!.id]:1,
+                    [c2!.id]:-1
+                }[actor.id] ?? 0})){
+                parseEvent(new ScareAction({
+                    scarerPos:[(fields.indexOf(actor)+1) as 1|2|3, actor.side],
+                    scaredPos:[(fields.indexOf(card)+1) as 1|2|3, actor.side],
+                    attackingWith:"card",
+                    failed:false,
+                }, event.game, event.sender).force());
+            }
+            for(let i=0;i<3;i++){
+                if(data.cards[i] === false) continue;
+
+                parseEvent(new PlaceAction({
+                    cardId:data.cards[i] as number,
+                    position:(i+1) as 1|2|3,
+                    side:actor.side,
+                    faceUp:true,
+                    forFree:true,
+                }, event.game).force());
+            }
+
         }break;
         case CardActionOptions.WORICK_RESCUE:{//og-038
             const succeeded = defaultCheck<WORICK_RESCUE>(event, "og-038", true);

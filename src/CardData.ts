@@ -17,8 +17,6 @@ export class CardActionType<P extends {[k:string]:any}, R>{
 
     public static readonly ACTION = new CardActionType<
         {self:Card,game:Game}, void>();
-    public static readonly LAST_ACTION = new CardActionType<
-        {self:Card,game:Game}, void>();
     public static readonly PRE_PLACED = new CardActionType<
         {self:Card, game:Game}, void>();
     public static readonly PLACED = new CardActionType<

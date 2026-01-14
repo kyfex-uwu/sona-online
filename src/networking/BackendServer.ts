@@ -118,7 +118,7 @@ export function shuffleBackend(deck:Array<Card>){
  * @param onPass The function to run if/when the scare passes
  */
 export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
-    if(event.interruptScareBypass !== bypassInterruptScareMarker){
+    // if(event.interruptScareBypass !== bypassInterruptScareMarker){
         for(const card of sideTernary(scared.side, game.fieldsA, game.fieldsB)) {
             if(card===undefined) continue;
 
@@ -129,11 +129,11 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
                 case InterruptScareResult.PREVENT_SCARE: return;
             }
         }
-    }
+    // }
     onPass(true);
 }
 
-const bypassInterruptScareMarker = {};//todo: is this needed?
+// const bypassInterruptScareMarker = {};//todo: is this needed?
 
 export function parseEvent(event:Event<any>){
     //todo: verify things are in array bounds!!!!
@@ -288,23 +288,34 @@ export function parseEvent(event:Event<any>){
         if(event.game!==undefined){
             const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
 
-            //validate
-            if(!((event.game.state instanceof BeforeGameState &&
-                    event.game.player(card.side) === event.sender &&//card is the player's
-                    card.cardData.level === 1 && //card is level 1
-                    (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
-                (event.game.state instanceof TurnState &&
-                    event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
-                    event.game.player(card.side) === event.sender &&//card is the player's
-                    sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
-                        .some(other => (other?.cardData.level??0) >= card.cardData.level-1)))){ //placed card's level is at most 1 above all other cards
-                if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:false}) ?? false)) {
-                    rejectEvent(event, "failed place check");
+            if(!event.isForced()) {
+                //validate
+                if (!((event.game.state instanceof BeforeGameState &&
+                        event.game.player(card.side) === event.sender &&//card is the player's
+                        card.cardData.level === 1 && //card is level 1
+                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
+                    (event.game.state instanceof TurnState &&
+                        event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
+                        event.game.player(card.side) === event.sender &&//card is the player's
+                        sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
+                            .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1)))) { //placed card's level is at most 1 above all other cards
+                    if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
+                        self: card,
+                        game: event.game,
+                        normallyValid: false
+                    }) ?? false)) {
+                        rejectEvent(event, "failed place check");
+                        return;
+                    }
+                } else if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
+                    self: card,
+                    game: event.game,
+                    normallyValid: true
+                }) ?? true)) {
+                    rejectEvent(event, "failed place check: custom");
                     return;
                 }
-            }else if(!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {self:card,game:event.game, normallyValid:true}) ?? true)){
-                rejectEvent(event, "failed place check: custom");
-                return;
+                event.data.forFree=false;
             }
 
             for(const group of [event.game.handA, event.game.handB]) {
@@ -318,7 +329,8 @@ export function parseEvent(event:Event<any>){
             sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
                 event.game.cards.values().find(card => card.id === event.data.cardId);
 
-            const placedForFree = card.callAction(CardActionType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false;
+            const placedForFree = event.data.forFree === true ||
+                (card.callAction(CardActionType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false);
 
             for(const user of (usersFromGameIDs[event.game.gameID]||[])){
                 if(user === event.sender) continue;
@@ -392,29 +404,35 @@ export function parseEvent(event:Event<any>){
             if(event.sender !== event.game.player(event.data.scarerPos[1]))
                 rejectEvent(event, "scarer is not consistent");
 
-            const scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
-            const scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
+            let scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
+            let scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
+            let forceFailed:boolean|undefined=undefined;
 
-            if(!(event.game.state instanceof TurnState &&
-                event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
-                event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
-                scarer !==undefined && scared!==undefined&&//the cards exist
-                !scarer.hasAttacked&&//if the card hasnt scared yet
-                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
-                scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)){//neither stat is null
-                rejectEvent(event, "failed scare check");
-                return;
+            if(!event.isForced()) {
+                if (!(event.game.state instanceof TurnState &&
+                    event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
+                    event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                    scarer !== undefined && scared !== undefined &&//the cards exist
+                    !scarer.hasAttacked &&//if the card hasnt scared yet
+                    event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
+                    scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)) {//neither stat is null
+                    rejectEvent(event, "failed scare check");
+                    return;
+                }
+            }else{
+                scarer=scarer!;
+                scared=scared!;
+                forceFailed=event.data.failed;
             }
 
             const game = event.game;
             scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=>{
-                if(event.data.attackingWith==="card") return;
-
                 const toSend = new ScareAction({
                     scaredPos: event.data.scaredPos,
                     scarerPos: event.data.scarerPos,
                     attackingWith: event.data.attackingWith,
-                    failed: !succeeded || !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)
+                    failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
+                        !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)))
                 });
                 scarer.hasAttacked = true;
                 for (const user of (usersFromGameIDs[game.gameID] || [])) {

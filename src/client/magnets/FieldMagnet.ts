@@ -4,7 +4,7 @@ import {updateOrder} from "../clientConsts.js";
 import {other, Side} from "../../GameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
-import {DrawAction, PlaceAction, ScareAction} from "../../networking/Events.js";
+import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {type Decrementable, isDecrementable, StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";

@@ -17,6 +17,7 @@ export type FURMAKER_PICK= { id:number, side?:Side };
 export type YASHI_REORDER={cards:[number?, number?, number?], side?:Side};
 export type DCW_GUESS=number;
 export type CLOUD_CAT_PICK=1|2|3;
+export type KIBBY_SCARE={cards:[number|false, number|false, number|false], side?:Side};
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -29,6 +30,7 @@ export const CardActionOptions = {
     DCW_GUESS: "og-032_guess" as CardActionOption<DCW_GUESS>,
     WORICK_RESCUE: "og-038_rescue" as CardActionOption<WORICK_RESCUE>,
     FURMAKER_PICK: "og-041_pick" as CardActionOption<FURMAKER_PICK>,
-    CLOUD_CAT_PICK: "og-043_pick" as CardActionOption<CLOUD_CAT_PICK>
+    CLOUD_CAT_PICK: "og-043_pick" as CardActionOption<CLOUD_CAT_PICK>,
+    KIBBY_SCARE: "og-028_scare" as CardActionOption<KIBBY_SCARE>,
 };
 verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");

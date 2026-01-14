@@ -115,10 +115,7 @@ setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardActionType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
-setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE)//todo
-    .with(CardActionType.LAST_ACTION, ({self, game})=>{
-
-    }));
+setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE));
 setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID)//todo
     .with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
         if(self!==scared) return InterruptScareResult.PASSTHROUGH;

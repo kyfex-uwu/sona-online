@@ -24,8 +24,6 @@ export abstract class Event<T extends SerializableEventData>{
     public readonly sender:Client|undefined;
     public readonly id;
 
-    public interruptScareBypass?:{};
-
     /**
      * Creates an event
      * @param data The data to send
@@ -135,15 +133,7 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 export class DrawAction extends ActionEvent<{
     side?:Side,
     isAction?:boolean,//default true
-}>{
-    // constructor(data:{
-    //     side?:Side,
-    //     isAction?:boolean,//default true
-    // }, game?:Game, sender?:Client, id?:string) {
-    //     super(data, game, sender, id);
-    //     console.trace("AE")
-    // }
-}
+}>{}
 addToSerializableClasses(DrawAction);
 
 //Places a card in a specific slot
@@ -153,16 +143,37 @@ export class PlaceAction extends ActionEvent<{
     side:Side,
     faceUp:boolean,
     forFree?:boolean//default false
-}>{}
+}>{
+    private forceMarker?:{};
+    //Forces the scare through
+    force(){
+        this.forceMarker = forceMarker;
+        return this;
+    }
+    isForced(){
+        return this.forceMarker === forceMarker;
+    }
+}
 addToSerializableClasses(PlaceAction);
 
+const forceMarker = {};
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
 export class ScareAction extends ActionEvent<{
     scarerPos:[1|2|3, Side],
     scaredPos:[1|2|3, Side],
     attackingWith:Stat|"card",
     failed?:boolean,
-}>{}
+}>{
+    private forceMarker?:{};
+    //Forces the scare through
+    force(){
+        this.forceMarker = forceMarker;
+        return this;
+    }
+    isForced(){
+        return this.forceMarker === forceMarker;
+    }
+}
 addToSerializableClasses(ScareAction);
 // export const internalCardScareMarker={};
 // export class InternalCardScareAction extends ScareAction{

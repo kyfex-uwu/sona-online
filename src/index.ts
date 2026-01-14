@@ -66,32 +66,30 @@ window.addEventListener("resize", windowResize);
 
 export const game = new VisualGame(scene);
 game.changeView(ViewType.WHOLE_BOARD_A);
-setTimeout(()=>{
-    game.sendEvent(new FindGameEvent({
-        deck:(()=>{
-            const toReturn = [
-                "og-041"
-            ];
-            const alreadyAdded:{[k:string]:true} = {};
-            for(const card of toReturn) alreadyAdded[card]=true;
-            const cardsValues = Object.values(cards);
-            let oneFlag = false;
-            for(let i=0;i<20;i++) {
-                if(toReturn[i] !== undefined) continue;
+game.sendEvent(new FindGameEvent({
+    deck:(()=>{
+        const toReturn = [
+            "og-028"
+        ];
+        const alreadyAdded:{[k:string]:true} = {};
+        for(const card of toReturn) alreadyAdded[card]=true;
+        const cardsValues = Object.values(cards);
+        let oneFlag = false;
+        for(let i=0;i<20;i++) {
+            if(toReturn[i] !== undefined) continue;
 
-                let toAdd:CardData;
-                do {
-                    toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
-                }while(specialCards.has(toAdd.name) || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
+            let toAdd:CardData;
+            do {
+                toAdd = cardsValues[Math.floor(Math.random() * cardsValues.length)]!;
+            }while(specialCards.has(toAdd.name) || (alreadyAdded[toAdd.name] && (i!==19 || oneFlag || toAdd.level !== 1)));
 
-                toReturn[i]=toAdd.name;
-                alreadyAdded[toAdd.name]=true;
-                oneFlag = oneFlag || toAdd.level === 1;
-            }
-            return toReturn;
-        })(),
-    }, undefined))
-},1000)
+            toReturn[i]=toAdd.name;
+            alreadyAdded[toAdd.name]=true;
+            oneFlag = oneFlag || toAdd.level === 1;
+        }
+        return toReturn;
+    })(),
+}, undefined));
 
 renderer.setAnimationLoop(() => {
     stats.begin();

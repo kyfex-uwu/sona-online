@@ -107,6 +107,57 @@ visualCardClientActions["og-018"] = async (card) =>{
     });
     return toReturn;
 };
+visualCardClientActions["og-028"] = lastAction((card)=>{
+    if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
+
+    let resolve;
+    const toReturn = new Promise<boolean>(r=>resolve=r);
+
+    const toScare = new Set<number>();
+    const fields = sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB);
+    const oldStates:[VisualGameState<any>, GameState]=[visualGame.state, visualGame.getGame().state];
+    const state = new VPickCardsState(visualGame, oldStates,
+        fields.map(field=>field.getCard()).filter(card=>card!==undefined),
+        (picked)=>{
+            if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
+            else toScare.add(picked.logicalCard.id);
+
+            state.endType = (toScare.size <= sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+                .filter(card=>card.logicalCard.cardData.level === 3).length &&
+                toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
+        }, EndType.CANCEL, ()=>{
+            if(toScare.size===0) return resolve!(true);
+
+            const toReplace:number[] = [];
+            const state2 = new VPickCardsState(visualGame, oldStates,
+                sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+                    .filter(card=>card.logicalCard.cardData.level === 3),
+                (picked)=>{
+                    if(toReplace.indexOf(picked.logicalCard.id) !== -1)
+                        toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
+                    else toReplace.push(picked.logicalCard.id);
+
+                    state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
+                },EndType.CANCEL,()=>{
+                    let toSend:[number|false,number|false,number|false] = [false,false,false];
+                    for(let i=0;i<3;i++){
+                        if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
+                            toSend[i] = toReplace.pop()!;
+                    }
+
+                    network.sendToServer(new CardAction({
+                        cardId:card.logicalCard.id,
+                        actionName:CardActionOptions.KIBBY_SCARE,
+                        cardData:{cards:toSend}
+                    }));
+                    resolve!(true);
+                });
+            visualGame.setState(state2, visualGame.getGame().state);
+        });
+    visualGame.setState(state, visualGame.getGame().state);
+
+    return toReturn;
+})
 visualCardClientActions["og-038"] = lastAction((card)=>{
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
@@ -306,7 +357,7 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
         visualGame.setState(firstState, game.state);
     });
     visualGame.frozen=true;
-})
+});
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
