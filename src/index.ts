@@ -77,7 +77,7 @@ game.changeView(ViewType.WHOLE_BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
         const toReturn = [
-            "og-031"
+            "og-032"
         ];
         const alreadyAdded:{[k:string]:true} = {};
         for(const card of toReturn) alreadyAdded[card]=true;

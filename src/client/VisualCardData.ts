@@ -385,6 +385,8 @@ wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
+    game.freeze(()=>true);
+
     waitForClarify(ClarificationJustification.DCW, ()=>{
         const oldStates:[VisualGameState<any>,GameState]=[visualGame.state,game.state];
         const state = new VPickCardsState(visualGame, oldStates,
@@ -412,7 +414,9 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
                                             pos:sideTernary(picked2.getSide(), visualGame.fieldsA, visualGame.fieldsB)
                                                 .findIndex(field=>field.getCard()?.logicalCard.id === picked2.logicalCard.id) + 1
                                         }
-                                    }));
+                                    })).onReply(successOrFail(()=>{
+                                        game.unfreeze();
+                                    },()=>{},()=>{}));
                                     state2.cancel();
                                 },EndType.NONE);
                             visualGame.setState(state2, oldStates[1]);

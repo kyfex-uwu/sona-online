@@ -138,6 +138,7 @@ export default class Game{
             data.isFrozen = false;
             while(data.queue.length>0){
                 data.queue[0]!();
+                data.queue.shift();
                 if(data.isFrozen) break;
             }
         }

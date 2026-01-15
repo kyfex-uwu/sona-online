@@ -1,6 +1,6 @@
 import CardData, {CardActionType} from "../CardData.js";
 import cards from "../Cards.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory} from "./Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
@@ -77,7 +77,8 @@ wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.FOXY_MAGICIAN));
 });
-wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
+//has to be preplaced because first turn waiter pushes it to next frame
+wrap(cards["og-032"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);
@@ -93,7 +94,9 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
             event.sender === game.player(self.side)) ||
         (event instanceof CardAction &&
             event.data.actionName === CardActionOptions.DCW_SCARE &&
-            event.sender === game.player(self.side)));
+            event.sender === game.player(self.side)) ||
+        (event instanceof ScareAction &&
+            event.isForced() && event.sender === undefined));
 
 
     game.player(self.side)?.send(multiClarifyFactory(

@@ -123,6 +123,10 @@ export function waitForClarify(justification:ClarificationJustification,
         waitingForClarify[justification] = [];
     waitingForClarify[justification].push(callback);
 }
+const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
+export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
+    waitingFor.push({filter,callback});
+}
 
 async function receiveFromServer(packed:{
     type:string,
@@ -140,6 +144,15 @@ async function receiveFromServer(packed:{
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
         return;
+    }
+
+    for(let i=0;i<waitingFor.length;i++){
+        if(waitingFor[i]!.filter(event)){
+            let processNormally = waitingFor[i]!.callback(event);
+            waitingFor.splice(i,1);
+            if(!processNormally) return;
+            else break;
+        }
     }
 
     if(event instanceof GameStartEvent){
@@ -316,7 +329,7 @@ async function receiveFromServer(packed:{
                     game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
             }break;
             case CardActionOptions.DCW_GUESS:{
-                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state]
+                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
                 const state = new VPickCardsState(game, oldStates,
                     [1,2,3].map(level => new VisualCard(game,
                         new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
@@ -339,16 +352,24 @@ async function receiveFromServer(packed:{
                                                 console.log("The card was "+event.data.cardDataName);
                                         });
 
+                                        waitFor(event=>{
+                                            return event instanceof ScareAction && event.data.free === true
+                                        }, ()=> {
+                                            game.getGame().unfreeze();
+                                            return true;
+                                        });
                                         network.sendToServer(new CardAction({
                                             cardId:-1,
                                             actionName:CardActionOptions.DCW_GUESS,
                                             cardData:picked2.logicalCard.cardData.level
                                         }));
+                                        game.getGame().unfreeze();
                                         state.cancel();
                                     },EndType.NONE);
                                 game.setState(state2, oldStates[1]);
                             }else if(event instanceof ClarifyCardEvent){
                                 console.log("The card was "+event.data.cardDataName);
+                                game.getGame().unfreeze();
                             }
                         });
                     },EndType.NONE);

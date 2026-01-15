@@ -186,13 +186,15 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
     }
     readonly __isDecrementableInterface=true;
     decrementTurn(){
-        const state = this.game.getGame().state;
-        if(state instanceof TurnState) {
-            this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-            if(state.decrementTurn(true)){
-                this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+        this.game.getGame().freezableAction(()=>{
+            const state = this.game.getGame().state;
+            if(state instanceof TurnState) {
+                this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
+                if(state.decrementTurn(true)){
+                    this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+                }
             }
-        }
+        });
     }
     getActionsLeft(){
         const state = this.game.getGame().state;

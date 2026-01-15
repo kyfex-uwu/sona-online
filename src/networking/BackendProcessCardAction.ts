@@ -411,13 +411,15 @@ export default function(event:CardAction<any>):processedEvent{
                 CardActionOptions.DCW_SCARE) return rejectEvent(event, "not time for that buddy dcw");
 
             const data = (event as CardAction<DCW_SCARE>).data.cardData;
-            event.game.unfreeze();
             parseEvent(new ScareAction({
                 scarerPos:[(sideTernary(actor.side, event.game.fieldsA, event.game.fieldsB).indexOf(actor)+1) as 1|2|3, actor.side],
                 scaredPos:[data.pos, data.side],
                 attackingWith:"card",
                 failed:false
+                //note: the freeze filter is specifically letting through forced scares without senders.
+                //if you need to add a sender to this event in the future make sure to modify the freeze filter as well
             }, event.game).force().forceFree());
+            event.game.unfreeze();
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             return acceptEvent(event);
         }
