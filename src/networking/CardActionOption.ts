@@ -1,6 +1,7 @@
 import {Side} from "../GameElement.js";
 import {verifyNoDuplicateStrVals} from "../consts.js";
 import type {Stat} from "../Card.js";
+import type {Level} from "../CardData.js";
 
 export enum AmberData{
     KEEP_FIRST,
@@ -17,8 +18,11 @@ export type FURMAKER_PICK= { id:number, side?:Side };
 export type YASHI_REORDER={cards:[number?, number?, number?], side?:Side};
 export type CLOUD_CAT_PICK=1|2|3;
 export type KIBBY_SCARE={cards:[number|false, number|false, number|false], side?:Side};
-export type FOXY_MAGICIAN_PICK=1|2|3;
-export type DCW_PICK=1|2|3;
+export type FOXY_MAGICIAN_PICK=Level;
+export type DCW_PICK=Level;
+export type FOXY_MAGICIAN_GUESS=Level;
+export type DCW_GUESS=Level;
+export type DCW_SCARE={side:Side,pos:1|2|3};
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -32,7 +36,13 @@ export const CardActionOptions = {
     FURMAKER_PICK: "og-041_pick" as CardActionOption<FURMAKER_PICK>,
     CLOUD_CAT_PICK: "og-043_pick" as CardActionOption<CLOUD_CAT_PICK>,
     KIBBY_SCARE: "og-028_scare" as CardActionOption<KIBBY_SCARE>,
-    FOXY_MAGICIAN_PICK: "og-031_guess" as CardActionOption<FOXY_MAGICIAN_PICK>,
-    DCW_PICK: "og-032_guess" as CardActionOption<DCW_PICK>,
+    FOXY_MAGICIAN_PICK: "og-031_pick" as CardActionOption<FOXY_MAGICIAN_PICK>,
+    DCW_PICK: "og-032_pick" as CardActionOption<DCW_PICK>,
+    FOXY_MAGICIAN_GUESS: "og-031_guess" as CardActionOption<FOXY_MAGICIAN_GUESS>,
+    DCW_GUESS: "og-032_guess" as CardActionOption<DCW_GUESS>,
+    DCW_SCARE: "og-032_scare" as CardActionOption<DCW_SCARE>,
+
+    //dont send this one
+    CANNOT_PLAY: "cannot_play" as CardActionOption<void>
 };
 verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");

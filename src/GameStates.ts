@@ -103,19 +103,3 @@ export class EndGameState extends GameState{
         this.winner=winner;
     }
 }
-
-// export class InterruptScareActionsState extends GameState{
-//     constructor(game:Game, validCards:Card[], ) {
-//         super(game);
-//     }
-// }
-
-//--
-
-export class VDCWGuess extends GameState{
-    public readonly level;
-    constructor(game:Game, level:undefined|1|2|3) {
-        super(game);
-        this.level=level;
-    }
-}

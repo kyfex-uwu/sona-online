@@ -1,15 +1,20 @@
 import {eventReplyIds, network, Replyable} from "./Server.js";
 import {
-    CardAction, ClarificationJustification,
+    CardAction,
+    ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
     Event,
-    GameStartEvent, InvalidEvent, MultiClarifyCardEvent,
+    GameStartEvent,
+    InvalidEvent,
+    MultiClarifyCardEvent,
     PassAction,
     PlaceAction,
     RequestSyncEvent,
-    ScareAction, SerializableClasses, type SerializableType,
+    ScareAction,
+    SerializableClasses,
+    type SerializableType,
     StringReprSyncEvent,
     SyncEvent
 } from "./Events.js";
@@ -22,16 +27,25 @@ import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
 import {sideTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
-import {VChoosingStartState, VTurnState} from "../client/VisualGameStates.js";
+import {
+    EndType,
+    VChoosingStartState,
+    VisualGameState,
+    VPickCardsState,
+    VTurnState
+} from "../client/VisualGameStates.js";
 import {registerDrawCallback} from "../client/ui.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
-    type AMBER_PICK, AmberData,
+    type AMBER_PICK,
+    AmberData,
     type BOTTOM_DRAW,
     type BROWNIE_DRAW,
     CardActionOptions,
-    type CLOUD_CAT_PICK, type FURMAKER_PICK, type WORICK_RESCUE,
+    type CLOUD_CAT_PICK,
+    type FURMAKER_PICK,
+    type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -63,7 +77,7 @@ websocketReady.then(() => {
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
     const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
-    if(visualCard === undefined) return;
+    if(visualCard === undefined || visualCard.logicalCard.id<0) return;
     if(cardDataName !== undefined)
         visualCard.logicalCard.setCardData(cards[cardDataName]!);
 
@@ -233,7 +247,7 @@ async function receiveFromServer(packed:{
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
             if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         }
-        if(game.state instanceof VTurnState){
+        if(game.state instanceof VTurnState && !event.data.free){
             game.state.decrementTurn();
         }
     }else if(event instanceof CardAction){
@@ -300,6 +314,63 @@ async function receiveFromServer(packed:{
             case CardActionOptions.CLOUD_CAT_PICK:{
                 game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =
                     game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
+            }break;
+            case CardActionOptions.DCW_GUESS:{
+                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state]
+                const state = new VPickCardsState(game, oldStates,
+                    [1,2,3].map(level => new VisualCard(game,
+                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
+                    (picked)=>{
+                        network.sendToServer(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.DCW_GUESS,
+                            cardData:picked.logicalCard.cardData.level
+                        }));
+                        state.cancel();
+
+                        waitForClarify(ClarificationJustification.DCW, (event)=>{
+                            if(event instanceof ClarifyCardEvent && event.data.cardDataName === ""){
+                                const state2 = new VPickCardsState(game,oldStates,
+                                    [1,2,3].map(level => new VisualCard(game,
+                                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
+                                    (picked2)=>{
+                                        waitForClarify(ClarificationJustification.DCW, (event)=>{
+                                            if(event instanceof ClarifyCardEvent)
+                                                console.log("The card was "+event.data.cardDataName);
+                                        });
+
+                                        network.sendToServer(new CardAction({
+                                            cardId:-1,
+                                            actionName:CardActionOptions.DCW_GUESS,
+                                            cardData:picked2.logicalCard.cardData.level
+                                        }));
+                                        state.cancel();
+                                    },EndType.NONE);
+                                game.setState(state2, oldStates[1]);
+                            }else if(event instanceof ClarifyCardEvent){
+                                console.log("The card was "+event.data.cardDataName);
+                            }
+                        });
+                    },EndType.NONE);
+                game.setState(state, game.getGame().state);
+            }break;
+            case CardActionOptions.FOXY_MAGICIAN_GUESS:{
+                const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                    [1,2,3].map(level => new VisualCard(game,
+                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
+                    (picked)=>{
+                        network.sendToServer(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
+                            cardData:picked.logicalCard.cardData.level
+                        }));
+                        waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
+                            if(event instanceof ClarifyCardEvent && event.data.id !== -1)
+                                console.log("You guessed wrong. The card was: "+event.data.cardDataName);
+                        });
+                        state.cancel();
+                    },EndType.NONE);
+                game.setState(state, game.getGame().state);
             }break;
         }
     }

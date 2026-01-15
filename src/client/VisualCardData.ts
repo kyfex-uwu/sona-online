@@ -361,32 +361,66 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
-        sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
-        (picked)=>{
-            network.sendToServer(new CardAction({
-                cardId:self.id,
-                actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
-                cardData:picked.logicalCard.cardData.level
-            }));
-            state.cancel();
-        },EndType.NONE);
-    visualGame.setState(state, game.state);
+    waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
+        const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
+            sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+            (picked)=>{
+                network.sendToServer(new CardAction({
+                    cardId:self.id,
+                    actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
+                    cardData:picked.logicalCard.id
+                }));
+                state.cancel();
+
+                waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
+                    if(event instanceof ClarifyCardEvent && event.data.id === picked.logicalCard.id) {
+                        picked.flipFaceup();
+                        sideTernary(self.side, visualGame.handA, visualGame.handB).addCard(picked);
+                    }
+                });
+            },EndType.NONE);
+        visualGame.setState(state, game.state);
+    });
 });
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
-        sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
-            (picked)=>{
-                network.sendToServer(new CardAction({
-                    cardId:self.id,
-                    actionName:CardActionOptions.DCW_PICK,
-                    cardData:picked.logicalCard.cardData.level
-                }));
-                state.cancel();
-            },EndType.NONE);
-    visualGame.setState(state, game.state);
+    waitForClarify(ClarificationJustification.DCW, ()=>{
+        const oldStates:[VisualGameState<any>,GameState]=[visualGame.state,game.state];
+        const state = new VPickCardsState(visualGame, oldStates,
+            sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+                (picked)=>{
+                    network.sendToServer(new CardAction({
+                        cardId:self.id,
+                        actionName:CardActionOptions.DCW_PICK,
+                        cardData:picked.logicalCard.id
+                    }));
+                    state.cancel();
+
+                    waitForClarify(ClarificationJustification.DCW, (event)=>{
+                        if(event instanceof ClarifyCardEvent && event.data.id === -1) {
+                            //scare any card
+                            const state2 = new VPickCardsState(visualGame, oldStates,
+                                [...visualGame.fieldsA, ...visualGame.fieldsB].map(field=>field.getCard())
+                                    .filter(card=>card !== undefined),
+                                (picked2)=>{
+                                    network.sendToServer(new CardAction({
+                                        cardId:self.id,
+                                        actionName:CardActionOptions.DCW_SCARE,
+                                        cardData:{
+                                            side:picked2.getSide(),
+                                            pos:sideTernary(picked2.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                                                .findIndex(field=>field.getCard()?.logicalCard.id === picked2.logicalCard.id) + 1
+                                        }
+                                    }));
+                                    state2.cancel();
+                                },EndType.NONE);
+                            visualGame.setState(state2, oldStates[1]);
+                        }
+                    });
+                },EndType.NONE);
+        visualGame.setState(state, game.state);
+    });
 });
 wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
     if(self.getMiscData(MiscDataStrings.FURMAKER_ALREADY_ASKED_FOR) === undefined)

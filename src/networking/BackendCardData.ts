@@ -5,7 +5,8 @@ import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
+import {MiscDataStrings} from "../Card.js";
 
 export function loadBackendWrappers(){}
 
@@ -56,4 +57,44 @@ wrap(cards["og-030"]!, CardActionType.PLACED, (orig, {self, game})=>{
     for(const side of [Side.A, Side.B])
         for (let i = sideTernary(side, game.handA, game.handB).length; i < 5; i++)
             draw(game, undefined, side, false, game.player(side));
+});
+wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.FOXY_MAGICIAN_PICK);
+    game.freeze(event=>
+        (event instanceof CardAction &&
+            event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS &&
+            event.sender === game.player(other(self.side))) ||
+        (event instanceof CardAction &&
+            event.data.actionName === CardActionOptions.FOXY_MAGICIAN_PICK &&
+            event.sender === game.player(self.side)) ||
+        (event instanceof ClarifyCardEvent &&
+            event.data.justification === ClarificationJustification.FOXY_MAGICIAN &&
+            event.sender === game.player(self.side)));
+
+    game.player(self.side)?.send(multiClarifyFactory(
+        sideTernary(self.side, game.deckA, game.deckB),
+        ClarificationJustification.FOXY_MAGICIAN));
+});
+wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    self.setMiscData(MiscDataStrings.DCW_NOT_INITIALIZED, true);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);
+    game.freeze(event=>
+        (event instanceof CardAction &&
+            event.data.actionName === CardActionOptions.DCW_GUESS &&
+            event.sender === game.player(other(self.side))) ||
+        (event instanceof CardAction &&
+            event.data.actionName === CardActionOptions.DCW_PICK &&
+            event.sender === game.player(self.side)) ||
+        (event instanceof ClarifyCardEvent &&
+            event.data.justification === ClarificationJustification.DCW &&
+            event.sender === game.player(self.side)));
+
+
+    game.player(self.side)?.send(multiClarifyFactory(
+        sideTernary(self.side, game.deckA, game.deckB),
+        ClarificationJustification.DCW));
 });

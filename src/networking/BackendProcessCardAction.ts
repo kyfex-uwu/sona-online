@@ -1,13 +1,25 @@
-import {CardAction, ClarifyCardEvent, Event, PlaceAction, ScareAction, type SerializableType} from "./Events.js";
+import {
+    CardAction,
+    ClarificationJustification,
+    ClarifyCardEvent,
+    PlaceAction,
+    ScareAction,
+    type SerializableType
+} from "./Events.js";
 import {
     type AMBER_PICK,
     AmberData,
     type BROWNIE_DRAW,
     type CardActionOption,
     CardActionOptions,
-    type CLOUD_CAT_PICK, type DCW_PICK, type FURMAKER_PICK,
+    type CLOUD_CAT_PICK,
+    type DCW_PICK, type DCW_SCARE,
+    type FOXY_MAGICIAN_PICK,
+    type FURMAKER_PICK,
     type GREMLIN_SCARE,
-    type K9_ALPHA, type KIBBY_SCARE, type WORICK_RESCUE,
+    type K9_ALPHA,
+    type KIBBY_SCARE,
+    type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
@@ -32,6 +44,15 @@ function defaultIsValid<T extends SerializableType>(event:CardAction<T>, cardNam
     const actor = verifyFieldCard(event);
     const data = event.data.cardData;
 
+    // console.log(actor !== undefined ,//actor exists
+    //     event.game !== undefined , //game exists
+    //     actor!.cardData.name === cardName , //card is cardData
+    //     event.game!.state instanceof TurnState , //state is turnState
+    //     event.game!.state.turn === actor!.side , //player's turn
+    //     event.game!.state.actionsLeft === 1 , //last action
+    //     (optData.cardActionOption === undefined ?
+    //         event.game!.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side]) === optData.cardActionOption : "") ,//card action option matches
+    //     event.game!.player(actor!.side) === event.sender)
     if(!(actor !== undefined &&//actor exists
         event.game !== undefined && //game exists
         actor.cardData.name === cardName && //card is cardData
@@ -268,13 +289,134 @@ export default function(event:CardAction<any>):processedEvent{
             }
             return acceptEvent(event);
         }
+        case CardActionOptions.FOXY_MAGICIAN_PICK:{//og-031
+            const actor = verifyFieldCard(event);
+            if(!(actor !== undefined &&//actor exists
+                event.game !== undefined && //game exists
+                actor.cardData.name === "og-031" && //card is cardData
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) ===
+                    CardActionOptions.FOXY_MAGICIAN_PICK&&//card action option matches
+                event.game.player(actor.side) === event.sender)) //card is sender's
+                return rejectEvent(event, "failed default foxy check");
+
+            const data = (event as CardAction<FOXY_MAGICIAN_PICK>).data.cardData;
+
+            if(!sideTernary(actor.side, event.game.deckA, event.game.deckB).some(card=>card.id === data))
+                rejectEvent(event, "invalid level foxy");
+
+            event.game.setMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED, data);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(actor.side)], CardActionOptions.FOXY_MAGICIAN_GUESS);
+            event.game.player(other(actor.side))?.send(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
+                cardData:1
+            }));
+            return acceptEvent(event);
+        }
         case CardActionOptions.DCW_PICK:{//og-032
-            const succeeded = defaultIsValid<DCW_PICK>(event, "og-038", {
-                cardActionOption:CardActionOptions.DCW_PICK
-            });
-            if(!succeeded) return rejectEvent(event, "failed default worick check");
-            const {actor, data} = succeeded;//TODO
-        }break;
+            const actor = verifyFieldCard(event);
+            if(!(actor !== undefined &&//actor exists
+                event.game !== undefined && //game exists
+                actor.cardData.name === "og-032" && //card is cardData
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) ===
+                CardActionOptions.DCW_PICK&&//card action option matches
+                event.game.player(actor.side) === event.sender)) //card is sender's
+                return rejectEvent(event, "failed default dcw check");
+
+            const data = (event as CardAction<DCW_PICK>).data.cardData;
+
+            if(!sideTernary(actor.side, event.game.deckA, event.game.deckB).some(card=>card.id === data))
+                rejectEvent(event, "invalid level dcw");
+
+            event.game.setMiscData(GameMiscDataStrings.DCW_PICKED, {cardId:data,guesses:0});
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(actor.side)], CardActionOptions.DCW_GUESS);
+            event.game.player(other(actor.side))?.send(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.DCW_GUESS,
+                cardData:1
+            }));
+            return acceptEvent(event);
+        }
+        case CardActionOptions.FOXY_MAGICIAN_GUESS:{
+            const guesserSide = event.sender === event.game.player(Side.A) ? Side.A : Side.B;
+            if(event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
+                [guesserSide]) !== CardActionOptions.FOXY_MAGICIAN_GUESS) //card is sender's
+                return rejectEvent(event, "failed foxy guess check");
+
+            const toDraw = sideTernary(guesserSide, event.game.deckB, event.game.deckA)
+                .find(card=>card.id === event.game!.getMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED))!;
+
+            if(toDraw.cardData.level !== (event as CardAction<FOXY_MAGICIAN_PICK>).data.cardData){
+                sendToClients(new ClarifyCardEvent({
+                    id: toDraw.id,
+                    cardDataName: toDraw.cardData.name,
+                    justification:ClarificationJustification.FOXY_MAGICIAN
+                }, event.game));
+                sideTernary(guesserSide, event.game.handB, event.game.handA).push(toDraw);
+            }else{
+                sendToClients(new ClarifyCardEvent({
+                    id: -1,
+                    cardDataName: "",
+                    justification:ClarificationJustification.FOXY_MAGICIAN
+                }, event.game));
+            }
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.A], undefined);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
+            return acceptEvent(event);
+        }
+        case CardActionOptions.DCW_GUESS:{
+            const guesserSide = event.sender === event.game.player(Side.A) ? Side.A : Side.B;
+            if(event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
+                [guesserSide]) !== CardActionOptions.DCW_GUESS) //card is sender's
+                return rejectEvent(event, "failed dcw guess check");
+
+            const pickedData = event.game.getMiscData(GameMiscDataStrings.DCW_PICKED);
+            if(pickedData === undefined) return rejectEvent(event, "dcw: this is so sad. what");
+
+            const toDraw = sideTernary(guesserSide, event.game.deckB, event.game.deckA)
+                .find(card=>card.id === pickedData.cardId)!;
+
+            let failed=false;
+            if(toDraw.cardData.level === (event as CardAction<DCW_PICK>).data.cardData){
+                pickedData.guesses=1;//skip straight to the end
+            }else if(pickedData.guesses === 1){//does this have the potential to not trigger if 2 packets are sent in quick succession?
+                failed=true;
+            }
+            pickedData.guesses++;
+            if(pickedData.guesses >=2){
+                event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[guesserSide], undefined);
+                sendToClients(new ClarifyCardEvent({
+                    id: failed ? -1 : toDraw.id,
+                    cardDataName: toDraw.cardData.name,
+                    justification:ClarificationJustification.DCW
+                }, event.game));
+                event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(guesserSide)],
+                    failed?CardActionOptions.DCW_SCARE:undefined);
+            }else{
+                event.game.player(guesserSide)?.send(new ClarifyCardEvent({
+                    id:-1,
+                    cardDataName:"",
+                    justification:ClarificationJustification.DCW
+                }));
+            }
+            return acceptEvent(event);
+        }
+        case CardActionOptions.DCW_SCARE:{
+            const actor = verifyFieldCard(event);
+            if(actor===undefined || event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !==
+                CardActionOptions.DCW_SCARE) return rejectEvent(event, "not time for that buddy dcw");
+
+            const data = (event as CardAction<DCW_SCARE>).data.cardData;
+            parseEvent(new ScareAction({
+                scarerPos:[(sideTernary(actor.side, event.game.fieldsA, event.game.fieldsB).indexOf(actor)+1) as 1|2|3, actor.side],
+                scaredPos:[data.pos, data.side],
+                attackingWith:"card",
+                failed:false
+            }, event.game).force().forceFree());
+            return acceptEvent(event);
+        }
         case CardActionOptions.WORICK_RESCUE:{//og-038
             const succeeded = defaultIsValid<WORICK_RESCUE>(event, "og-038", {lastAction:true});
             if(!succeeded) return rejectEvent(event, "failed default worick check");

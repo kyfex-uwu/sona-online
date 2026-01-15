@@ -25,9 +25,6 @@ export default class VisualCardClone extends VisualCard{
         this.clonedFrom=clonedFrom;
     }
 
-    getReal(){
-        return this.clonedFrom;
-    }
     async populate(card: Card) {
         super.populate(card);
         this.model.userData.card=this.clonedFrom;

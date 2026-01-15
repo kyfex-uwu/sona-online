@@ -60,6 +60,8 @@ export enum ClarificationJustification{
     FURMAKER,
     FURMAKER_VISIBLE,
     YASHI,
+    DCW,
+    FOXY_MAGICIAN
 }
 //Tells a card's data and if its faceup
 export class ClarifyCardEvent extends Event<{
@@ -147,31 +149,40 @@ export class PlaceAction extends ActionEvent<{
     private forceMarker?:{};
     //Forces the scare through
     force(){
-        this.forceMarker = forceMarker;
+        this.forceMarker = backendMarker;
         return this;
     }
     isForced(){
-        return this.forceMarker === forceMarker;
+        return this.forceMarker === backendMarker;
     }
 }
 addToSerializableClasses(PlaceAction);
 
-const forceMarker = {};
+const backendMarker = {};
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
 export class ScareAction extends ActionEvent<{
     scarerPos:[1|2|3, Side],
     scaredPos:[1|2|3, Side],
     attackingWith:Stat|"card",
     failed?:boolean,
+    free?:boolean,
 }>{
     private forceMarker?:{};
+    private freeMarker?:{};
     //Forces the scare through
     force(){
-        this.forceMarker = forceMarker;
+        this.forceMarker = backendMarker;
         return this;
     }
     isForced(){
-        return this.forceMarker === forceMarker;
+        return this.forceMarker === backendMarker;
+    }
+    forceFree(){
+        this.freeMarker = backendMarker;
+        return this;
+    }
+    isForcedFree(){
+        return this.freeMarker === backendMarker;
     }
 }
 addToSerializableClasses(ScareAction);
@@ -256,4 +267,3 @@ export class SyncEvent extends Event<{
 addToSerializableClasses(SyncEvent);
 export class StringReprSyncEvent extends Event<{str:string}>{}
 addToSerializableClasses(StringReprSyncEvent);
-

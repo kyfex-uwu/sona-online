@@ -148,7 +148,8 @@ export function parseEvent(event:Event<any>):processedEvent{
         if(nextEvent !== undefined){
             if(event instanceof ActionEvent &&
                 //to remove the squiggly, add the generic (you cant though, itll error)
-                (!(event instanceof CardAction) || event.data.actionName !== nextEvent)){
+                (!(event instanceof CardAction) || event.data.actionName !== nextEvent ||
+                    event.data.actionName === CardActionOptions.CANNOT_PLAY)){
                 return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
             }
         }
@@ -399,7 +400,7 @@ export function parseEvent(event:Event<any>):processedEvent{
         return acceptEvent(event);//todo:validation (what does this mean?)
     }else if (event instanceof ScareAction){
         if(event.game === undefined) return rejectEvent(event, "no game found (scareaction)");
-        if(event.sender !== event.game.player(event.data.scarerPos[1]))
+        if(!event.isForced() && event.sender !== event.game.player(event.data.scarerPos[1]))
             rejectEvent(event, "scarer is not consistent");
 
         let scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
@@ -430,7 +431,8 @@ export function parseEvent(event:Event<any>):processedEvent{
                 scarerPos: event.data.scarerPos,
                 attackingWith: event.data.attackingWith,
                 failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
-                    !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)))
+                    !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!))),
+                free:event.isForcedFree(),
             });
             scarer.hasAttacked = true;
             for (const user of (usersFromGameIDs[game.gameID] || [])) {
@@ -445,7 +447,7 @@ export function parseEvent(event:Event<any>):processedEvent{
                     {self: scared, scarer, game: game, stat: event.data.attackingWith});
             }
 
-            endTurn(game);
+            if(!event.isForcedFree()) endTurn(game);
         });
         return acceptEvent(event);
     }else if(event instanceof CardAction){

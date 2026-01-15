@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import {DrawAction, StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, TurnState, VDCWGuess} from "../GameStates.js";
+import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
@@ -267,7 +267,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     private readonly onPick;
     public endType;
     public readonly onFinish;
-    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCardClone)=>void,
+    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCard)=>void,
                 endType:EndType, onFinish?:()=>void) {
         super(game);
         this.cards=cards;
@@ -383,25 +383,5 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
         if(isDecrementable(this.parentState[0]))
             (this.parentState[0] as unknown as Decrementable).decrementTurn();
 
-    }
-}
-//server side picking cards state?
-
-//--
-
-export class VDCWPicked extends VisualGameState<VDCWGuess>{
-    private readonly card;
-    private readonly parentState;
-    constructor(game:VisualGame, card:VisualCardClone, parentState:VTurnState) {
-        super(game);
-        this.card=card;
-        this.parentState=parentState;
-    }
-}
-export class VDCWGuesser extends VisualGameState<VDCWGuess>{
-    private readonly parentState;
-    constructor(game:VisualGame, parentState:VTurnState) {
-        super(game);
-        this.parentState=parentState;
     }
 }
