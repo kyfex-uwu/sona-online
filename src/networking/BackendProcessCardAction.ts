@@ -357,13 +357,14 @@ export default function(event:CardAction<any>):processedEvent{
                 sideTernary(guesserSide, event.game.handB, event.game.handA).push(toDraw);
             }else{
                 sendToClients(new ClarifyCardEvent({
-                    id: -1,
+                    id: toDraw.id,
                     cardDataName: "",
                     justification:ClarificationJustification.FOXY_MAGICIAN
                 }, event.game));
             }
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.A], undefined);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
+            event.game.unfreeze();
             return acceptEvent(event);
         }
         case CardActionOptions.DCW_GUESS:{
@@ -394,6 +395,7 @@ export default function(event:CardAction<any>):processedEvent{
                 }, event.game));
                 event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(guesserSide)],
                     failed?CardActionOptions.DCW_SCARE:undefined);
+                if(!failed) event.game.unfreeze();
             }else{
                 event.game.player(guesserSide)?.send(new ClarifyCardEvent({
                     id:-1,
@@ -409,12 +411,14 @@ export default function(event:CardAction<any>):processedEvent{
                 CardActionOptions.DCW_SCARE) return rejectEvent(event, "not time for that buddy dcw");
 
             const data = (event as CardAction<DCW_SCARE>).data.cardData;
+            event.game.unfreeze();
             parseEvent(new ScareAction({
                 scarerPos:[(sideTernary(actor.side, event.game.fieldsA, event.game.fieldsB).indexOf(actor)+1) as 1|2|3, actor.side],
                 scaredPos:[data.pos, data.side],
                 attackingWith:"card",
                 failed:false
             }, event.game).force().forceFree());
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             return acceptEvent(event);
         }
         case CardActionOptions.WORICK_RESCUE:{//og-038

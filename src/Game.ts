@@ -142,4 +142,10 @@ export default class Game{
             }
         }
     }
+    freezableAction(action:()=>void){
+        const data = this.getMiscData(GameMiscDataStrings.FROZEN);
+        if(data?.isFrozen) {
+            data.queue.push(action);
+        }else action();
+    }
 }

@@ -365,8 +365,12 @@ async function receiveFromServer(packed:{
                             cardData:picked.logicalCard.cardData.level
                         }));
                         waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
-                            if(event instanceof ClarifyCardEvent && event.data.id !== -1)
-                                console.log("You guessed wrong. The card was: "+event.data.cardDataName);
+                            if(event instanceof ClarifyCardEvent && event.data.cardDataName !== "") {
+                                console.log("You guessed wrong. The card was: " + event.data.cardDataName);
+                                sideTernary(game.getMySide(), game.handB, game.handA)
+                                    .addCard(sideTernary(game.getMySide(), game.deckB, game.deckA).getCards()
+                                        .find(card=>card.logicalCard.id === event.data.id)!);
+                            }
                         });
                         state.cancel();
                     },EndType.NONE);

@@ -83,25 +83,29 @@ export function draw(game: Game, dontSendTo: Client|undefined, side: Side, isAct
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
         sendToClients(new DrawAction({side: side, isAction}, game, undefined), dontSendTo);
-        if(game.state instanceof TurnState && isAction) {
-            if(game.state.decrementTurn()){
-                if(sideTernary((game.state as TurnState).turn, game.handA, game.handB).length<5) {
-                    draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
+        game.freezableAction(()=> {
+            if(game.state instanceof TurnState && isAction) {
+                if (game.state.decrementTurn()) {
+                    if (sideTernary(game.state.turn, game.handA, game.handB).length < 5) {
+                        draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
+                    }
                 }
             }
-        }
+        });
         return true;
     }else{
         return false;
     }
 }
 export function endTurn(game:Game){
-    if(game.state instanceof TurnState) {
-        if (game.state.decrementTurn()) {
-            if (sideTernary(game.state.turn, game.handA, game.handB).length < 5)
-                draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
+    game.freezableAction(()=>{
+        if(game.state instanceof TurnState) {
+            if (game.state.decrementTurn()) {
+                if (sideTernary(game.state.turn, game.handA, game.handB).length < 5)
+                    draw(game, undefined, game.state.turn, false, game.player(game.state.turn));
+            }
         }
-    }
+    });
 }
 export function shuffleBackend(deck:Array<Card>){
     const ids = deck.map(card=>card.id);
@@ -149,10 +153,14 @@ export function parseEvent(event:Event<any>):processedEvent{
             if(event instanceof ActionEvent &&
                 //to remove the squiggly, add the generic (you cant though, itll error)
                 (!(event instanceof CardAction) || event.data.actionName !== nextEvent ||
-                    event.data.actionName === CardActionOptions.CANNOT_PLAY)){
-                return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
+                    nextEvent === CardActionOptions.CANNOT_PLAY)){
+                return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check, "+nextEvent);
             }
         }
+
+        const freezeData = event.game?.getMiscData(GameMiscDataStrings.FROZEN);
+        if(freezeData!==undefined && freezeData.isFrozen && !freezeData.allowThrough(event))
+            return rejectEvent(event, "game is currently frozen, this event is not allowed through");
     }
 
     if(event instanceof FindGameEvent){

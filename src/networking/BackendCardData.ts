@@ -80,7 +80,6 @@ wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(MiscDataStrings.DCW_NOT_INITIALIZED, true);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);
     game.freeze(event=>
         (event instanceof CardAction &&
@@ -91,6 +90,9 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
             event.sender === game.player(self.side)) ||
         (event instanceof ClarifyCardEvent &&
             event.data.justification === ClarificationJustification.DCW &&
+            event.sender === game.player(self.side)) ||
+        (event instanceof CardAction &&
+            event.data.actionName === CardActionOptions.DCW_SCARE &&
             event.sender === game.player(self.side)));
 
 
