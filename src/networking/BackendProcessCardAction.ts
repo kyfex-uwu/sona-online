@@ -5,7 +5,7 @@ import {
     type BROWNIE_DRAW,
     type CardActionOption,
     CardActionOptions,
-    type CLOUD_CAT_PICK, type FURMAKER_PICK,
+    type CLOUD_CAT_PICK, type DCW_PICK, type FURMAKER_PICK,
     type GREMLIN_SCARE,
     type K9_ALPHA, type KIBBY_SCARE, type WORICK_RESCUE,
     type YASHI_REORDER
@@ -16,24 +16,33 @@ import {CardActionType, Species} from "../CardData.js";
 import Card, {MiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
-import {acceptEvent, parseEvent, rejectEvent, scareInterrupt, sendToClients} from "./BackendServer.js";
+import {
+    acceptEvent,
+    parseEvent,
+    type processedEvent,
+    rejectEvent,
+    scareInterrupt,
+    sendToClients
+} from "./BackendServer.js";
 
-function defaultIsValid<T extends SerializableType>(event:CardAction<T>, cardName:string,
-                                                    cardActionOption?:CardActionOption<any>){
+function defaultIsValid<T extends SerializableType>(event:CardAction<T>, cardName:string, optData:{
+    cardActionOption?: CardActionOption<any>,
+    lastAction?:boolean
+}){
     const actor = verifyFieldCard(event);
     const data = event.data.cardData;
 
-    // console.log(event.game !== undefined ,
-    //     actor !== undefined && actor.cardData.name === cardName ,//card exists and is amber
-    //     event.game!.state instanceof TurnState , event.game!.state.turn === actor!.side ,//it is the actor's turn
-    //     event.game!.player(actor!.side) === event.sender ,//actor belongs to sender
-    //     event.game!.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side]) === cardActionOption)
-    return event.game !== undefined &&
-        actor !== undefined && actor.cardData.name === cardName &&//card exists and is amber
-        event.game.state instanceof TurnState && event.game.state.turn === actor.side &&//it is the actor's turn
-        event.game.player(actor.side) === event.sender &&//actor belongs to sender
-        event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === cardActionOption ?
-        {actor,data,valid:true}:{actor:undefined,data:undefined,valid:false};
+    if(!(actor !== undefined &&//actor exists
+        event.game !== undefined && //game exists
+        actor.cardData.name === cardName && //card is cardData
+        event.game.state instanceof TurnState && //state is turnState
+        event.game.state.turn === actor.side && //player's turn
+        (!(optData.lastAction??false) || event.game.state.actionsLeft === 1) && //last action
+        (optData.cardActionOption === undefined ||
+            event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === optData.cardActionOption) &&//card action option matches
+        event.game.player(actor.side) === event.sender)) //card is sender's
+        return false;
+    return {actor:actor!, data, valid:true};
 }
 
 function findAndRemove(game:Game, card:Card){
@@ -68,23 +77,8 @@ function verifyFieldCard(event:CardAction<any>){
             .find(card => card?.id === event.data.cardId));
 }
 
-function defaultCheck<T extends SerializableType>(event:Event<any>, cardData:string, lastAction:boolean){
-    const actor = verifyFieldCard(event);
-    const data = (event as CardAction<T>).data.cardData;
-
-    if(!(actor !== undefined &&//actor exists
-        event.game !== undefined && //game exists
-        actor.cardData.name === cardData && //card is cardData
-        event.game.state instanceof TurnState && //state is turnState
-        event.game.state.turn === actor.side && //player's turn
-        (!lastAction || event.game.state.actionsLeft === 1) && //last action
-        event.game.player(actor.side) === event.sender)) //card is sender's
-        return false;
-    return {actor:actor!, data};
-}
-
-export default function(event:CardAction<any>){
-    if(event.game === undefined) return;
+export default function(event:CardAction<any>):processedEvent{
+    if(event.game === undefined) return rejectEvent(event, "no game");
     switch(event.data.actionName){
         case CardActionOptions.K9_ALPHA:{//og-001
             const data = (event as CardAction<K9_ALPHA>).data.cardData;
@@ -102,38 +96,38 @@ export default function(event:CardAction<any>){
                 (takeFrom[i]?.cardData.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
 
             const toAttack = (event.sender === event.game.player(Side.A) ? event.game.fieldsB : event.game.fieldsA)[data.attack-1];
-            if(toAttack !== undefined){
-                sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
-                parseEvent(new ScareAction({
-                    scarerPos:[(takeFrom.findIndex(card=>card?.id === sender.id)+1) as 1|2|3, sender.side],
-                    scaredPos:[data.attack, event.sender === event.game.player(Side.A) ? Side.B : Side.A],
-                    attackingWith:data.attackWith,
-                }, event.game, event.sender, event.id));
-                sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
-            }
-        }break;
+            if(toAttack === undefined) return rejectEvent(event, "k9 no card found");
+
+            sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
+            parseEvent(new ScareAction({
+                scarerPos:[(takeFrom.findIndex(card=>card?.id === sender.id)+1) as 1|2|3, sender.side],
+                scaredPos:[data.attack, event.sender === event.game.player(Side.A) ? Side.B : Side.A],
+                attackingWith:data.attackWith,
+            }, event.game, event.sender, event.id));
+            sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
+            return acceptEvent(event);
+        }
         case CardActionOptions.BROWNIE_DRAW: {//og-005
             const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
             const card = event.game.cards.values().find(card => card.id === id);
 
-            if (card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
+            if (!(card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
                 card.cardData.level === 1 && card.isAlwaysFree() &&//and card is level 1 and card is free
-                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW){//the sender needs to brownie draw
-                findAndRemove(event.game, card);
-                sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW))//the sender needs to brownie draw
+                return rejectEvent(event, "failed brownie check");
 
-                sendToClients(new CardAction({
-                    cardId: -1,
-                    actionName:CardActionOptions.BROWNIE_DRAW,
-                    cardData:{id:card.id},
-                }, event.game), event.sender);
-                event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
-                event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                acceptEvent(event);
-            }else{
-                rejectEvent(event, "failed brownie check");
-            }
-        }break;
+            findAndRemove(event.game, card);
+            sideTernary(card.side, event.game.handA, event.game.handB).push(card);
+
+            sendToClients(new CardAction({
+                cardId: -1,
+                actionName:CardActionOptions.BROWNIE_DRAW,
+                cardData:{id:card.id},
+            }, event.game), event.sender);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
+            event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+            return acceptEvent(event);
+        }
         case CardActionOptions.GREMLIN_SCARE:{//og-009
             const actor = verifyFieldCard(event);
             const data = (event as CardAction<GREMLIN_SCARE>).data.cardData;
@@ -170,26 +164,28 @@ export default function(event:CardAction<any>){
                         scarer:sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[0]-1],
                         game:event.game!, stat:toSend.data.attackingWith});
                 });
+                return acceptEvent(event);
             }
-
-        }break;
+        }
         case CardActionOptions.AMBER_PICK:{//og-018
-            const {actor, data, valid} = defaultIsValid<AMBER_PICK>(event, "og-018", CardActionOptions.AMBER_PICK);
+            const succeeded = defaultIsValid<AMBER_PICK>(event, "og-018", {
+                cardActionOption:CardActionOptions.AMBER_PICK
+            });
+            if(succeeded === false) return rejectEvent(event, "failed amber check");
+            const {actor, data} = succeeded;
 
-            if(!valid) return rejectEvent(event, "failed amber check");
-
-            const toReorder = sideTernary(actor!.side, event.game.deckA, event.game.deckB);
+            const toReorder = sideTernary(actor.side, event.game.deckA, event.game.deckB);
             let [card1, card2] = [toReorder.pop(), toReorder.pop()];
             if(data!.which === AmberData.KEEP_SECOND) [card1, card2] = [card2, card1];
             if(card1 !== undefined) {
-                sideTernary(actor!.side, event.game.handA, event.game.handB).push(card1);
+                sideTernary(actor.side, event.game.handA, event.game.handB).push(card1);
                 sendToClients(new ClarifyCardEvent({
                     id:card1.id,
                     cardDataName:card1.cardData.name,
                 }, event.game));
             }
             if(card2 !== undefined) {
-                sideTernary(actor!.side, event.game.runawayA, event.game.runawayB).push(card2);
+                sideTernary(actor.side, event.game.runawayA, event.game.runawayB).push(card2);
                 sendToClients(new ClarifyCardEvent({
                     id:card2.id,
                     cardDataName:card2.cardData.name,
@@ -206,7 +202,8 @@ export default function(event:CardAction<any>){
                     side:actor!.side
                 },
             }, event.game));
-        }break;
+            return acceptEvent(event);
+        }
         case CardActionOptions.YASHI_REORDER:{//og-027
             const actor = verifyFieldCard(event);
             const data = (event as CardAction<YASHI_REORDER>).data.cardData;
@@ -237,10 +234,10 @@ export default function(event:CardAction<any>){
             }, event.game));
 
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
-            acceptEvent(event);
-        }break;
+            return acceptEvent(event);
+        }
         case CardActionOptions.KIBBY_SCARE:{//og-028
-            const succeeded = defaultCheck<KIBBY_SCARE>(event, "og-028", true);
+            const succeeded = defaultIsValid<KIBBY_SCARE>(event, "og-028", {lastAction:true});
             if(!succeeded) return rejectEvent(event, "failed default kibby otes check");
             const {actor, data} = succeeded;
 
@@ -269,10 +266,17 @@ export default function(event:CardAction<any>){
                     forFree:true,
                 }, event.game).force());
             }
-
+            return acceptEvent(event);
+        }
+        case CardActionOptions.DCW_PICK:{//og-032
+            const succeeded = defaultIsValid<DCW_PICK>(event, "og-038", {
+                cardActionOption:CardActionOptions.DCW_PICK
+            });
+            if(!succeeded) return rejectEvent(event, "failed default worick check");
+            const {actor, data} = succeeded;//TODO
         }break;
         case CardActionOptions.WORICK_RESCUE:{//og-038
-            const succeeded = defaultCheck<WORICK_RESCUE>(event, "og-038", true);
+            const succeeded = defaultIsValid<WORICK_RESCUE>(event, "og-038", {lastAction:true});
             if(!succeeded) return rejectEvent(event, "failed default worick check");
             const {actor, data} = succeeded;
 
@@ -291,10 +295,10 @@ export default function(event:CardAction<any>){
                     side:actor.side
                 }
             }, event.game));
-            acceptEvent(event);
-        }break;
+            return acceptEvent(event);
+        }
         case CardActionOptions.FURMAKER_PICK:{//og-041
-            const succeeded = defaultCheck<FURMAKER_PICK>(event, "og-041", false);
+            const succeeded = defaultIsValid<FURMAKER_PICK>(event, "og-041", {lastAction:false});
             if(!succeeded) return rejectEvent(event, "failed default furmaker check");
             const {actor, data} = succeeded;
 
@@ -313,8 +317,8 @@ export default function(event:CardAction<any>){
                     side:actor.side
                 }
             }, event.game));
-            acceptEvent(event);
-        }break;
+            return acceptEvent(event);
+        }
         case CardActionOptions.CLOUD_CAT_PICK: {//og-043
             const actor = verifyFieldCard(event);
             const pos = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
@@ -334,7 +338,9 @@ export default function(event:CardAction<any>){
                 event.game.state instanceof BeforeGameState ? "first" : pos;
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             sendToClients(event, event.sender);
-            acceptEvent(event);
-        }break;
+            return acceptEvent(event);
+        }
     }
+
+    return rejectEvent(event, "not a recognized action");
 }

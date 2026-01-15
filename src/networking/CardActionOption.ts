@@ -15,9 +15,10 @@ export type WORICK_RESCUE={ id: number, side?:Side };
 export type AMBER_PICK= {which: AmberData, side?:Side };
 export type FURMAKER_PICK= { id:number, side?:Side };
 export type YASHI_REORDER={cards:[number?, number?, number?], side?:Side};
-export type DCW_GUESS=number;
 export type CLOUD_CAT_PICK=1|2|3;
 export type KIBBY_SCARE={cards:[number|false, number|false, number|false], side?:Side};
+export type FOXY_MAGICIAN_PICK=1|2|3;
+export type DCW_PICK=1|2|3;
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -27,10 +28,11 @@ export const CardActionOptions = {
     AMBER_PICK: "og-018_pick" as CardActionOption<AMBER_PICK>,
     BOTTOM_DRAW: "og-025_bottom_draw" as CardActionOption<BOTTOM_DRAW>,
     YASHI_REORDER: "og-027_reorder" as CardActionOption<YASHI_REORDER>,
-    DCW_GUESS: "og-032_guess" as CardActionOption<DCW_GUESS>,
     WORICK_RESCUE: "og-038_rescue" as CardActionOption<WORICK_RESCUE>,
     FURMAKER_PICK: "og-041_pick" as CardActionOption<FURMAKER_PICK>,
     CLOUD_CAT_PICK: "og-043_pick" as CardActionOption<CLOUD_CAT_PICK>,
     KIBBY_SCARE: "og-028_scare" as CardActionOption<KIBBY_SCARE>,
+    FOXY_MAGICIAN_PICK: "og-031_guess" as CardActionOption<FOXY_MAGICIAN_PICK>,
+    DCW_PICK: "og-032_guess" as CardActionOption<DCW_PICK>,
 };
 verifyNoDuplicateStrVals(CardActionOptions, "Duplicate card action");

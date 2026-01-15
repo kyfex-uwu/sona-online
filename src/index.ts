@@ -1,5 +1,11 @@
-import {AmbientLight, Color, Mesh, MeshBasicMaterial, Scene, WebGLRenderer} from "three";
-import {camera, modelLoader, textureLoader} from "./client/clientConsts.js";
+import {
+    AmbientLight,
+    Color,
+    CubeTextureLoader,
+    Scene,
+    WebGLRenderer
+} from "three";
+import {camera, modelLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
 import {FindGameEvent, RequestSyncEvent} from "./networking/Events.js";
@@ -17,16 +23,18 @@ const stats = new Stats();
 stats.showPanel(0);
 document.getElementById("stats")!.appendChild(stats.dom);
 
-// Init scene.
+// Init scene
 const scene = new Scene();
-scene.background = new Color("#111111");
+
+const loader = new CubeTextureLoader();
+loader.setPath('/assets/skybox/cloudy/');
+scene.background = loader.load(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
+
 scene.add(new AmbientLight(new Color(0xffffff), 3));
 scene.add(camera);
 
 modelLoader.load("/assets/board.glb", model => {
-    (model.scene.children[0] as Mesh).material = new MeshBasicMaterial({
-        map: textureLoader.load("/assets/temp_board_tex.png")
-    })
+    model.scene.scale.set(10,10,10);
     scene.add(model.scene);
 });
 
@@ -69,7 +77,7 @@ game.changeView(ViewType.WHOLE_BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
         const toReturn = [
-            "og-028"
+            "og-032"
         ];
         const alreadyAdded:{[k:string]:true} = {};
         for(const card of toReturn) alreadyAdded[card]=true;

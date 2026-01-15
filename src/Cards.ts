@@ -126,10 +126,13 @@ setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID)//todo
         return InterruptScareResult.PASSTHROUGH;
     }));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
-setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES));
-setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)//todo
+setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES)
     .with(CardActionType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_GUESS);
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.FOXY_MAGICIAN_PICK);
+    }));
+setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE)
+    .with(CardActionType.PLACED, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);
     }));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE).setFree());
 setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));

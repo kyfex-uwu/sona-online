@@ -358,15 +358,34 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     });
     visualGame.frozen=true;
 });
+wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
+        sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+        (picked)=>{
+            network.sendToServer(new CardAction({
+                cardId:self.id,
+                actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
+                cardData:picked.logicalCard.cardData.level
+            }));
+            state.cancel();
+        },EndType.NONE);
+    visualGame.setState(state, game.state);
+});
 wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
         sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
-        (card)=>{
-            self.setMiscData(MiscDataStrings.DCW_PICKED_LEVEL, card.logicalCard.cardData.level);
-            state.cancel();
-        },EndType.NONE);
+            (picked)=>{
+                network.sendToServer(new CardAction({
+                    cardId:self.id,
+                    actionName:CardActionOptions.DCW_PICK,
+                    cardData:picked.logicalCard.cardData.level
+                }));
+                state.cancel();
+            },EndType.NONE);
     visualGame.setState(state, game.state);
 });
 wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{

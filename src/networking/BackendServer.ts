@@ -51,12 +51,16 @@ export function backendInit(){
 
 //--
 
+const processedEventMarker = {dontUseThisRawCallRejectOrAccept:3 as 3};
+export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
 export function rejectEvent(event:Event<any>, reason:string){
     network.replyToClient(event, new RejectEvent({}, undefined, undefined, event.id));
-    console.log(`# rejected ${event.id}(${typeof event}): ${reason}`)
+    console.log(`# rejected ${event.id}(${typeof event}): ${reason}`);
+    return processedEventMarker;
 }
 export function acceptEvent(event:Event<any>){
     network.replyToClient(event, new AcceptEvent({}, undefined, undefined, event.id));
+    return processedEventMarker;
 }
 export function sendToClients(event:Event<any>, ...toIgnore:(Client|undefined)[]) {
     for(const user of (usersFromGameIDs[event.game!.gameID]||[])){
@@ -135,7 +139,7 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
 
 // const bypassInterruptScareMarker = {};//todo: is this needed?
 
-export function parseEvent(event:Event<any>){
+export function parseEvent(event:Event<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
 
     if(event.game !== undefined){
@@ -143,27 +147,27 @@ export function parseEvent(event:Event<any>){
             [event.sender === event.game.player(Side.A) ? Side.A : Side.B]);
         if(nextEvent !== undefined){
             if(event instanceof ActionEvent &&
-                //?? what (talking about yellow squiggly)
+                //to remove the squiggly, add the generic (you cant though, itll error)
                 (!(event instanceof CardAction) || event.data.actionName !== nextEvent)){
-                rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
-                return;
+                return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check");
             }
         }
     }
 
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1)) {
-            return;
+            return rejectEvent(event, "no level one card in deck");
         }
         const cardDuplChecker:{[key:string]:true} = {};
         for(const card of event.data.deck) {
-            if (cardDuplChecker[card] !== undefined) return;
+            if (cardDuplChecker[card] !== undefined) return rejectEvent(event, "duplicate card found");
             cardDuplChecker[card] = true;
         }
 
         if(unfilledGames.length>0){
             const gamePromise = unfilledGames.shift()!;
             gamePromise(event);
+            return acceptEvent(event);
         }else{
             let resolve:(v:FindGameEvent)=>void;
             const waiter = new Promise<FindGameEvent>(r=>resolve=r);
@@ -235,339 +239,334 @@ export function parseEvent(event:Event<any>){
                 }
             })
             unfilledGames.push(resolve!);
+            return acceptEvent(event);
         }
     }else if(event instanceof StartRequestEvent){
-        if(event.game!==undefined && event.game.state instanceof BeforeGameState){
-            event.game.setMiscData((event.sender === event.game.player(Side.A))?
-                GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ, event.data.which);
+        if(!(event.game!==undefined && event.game.state instanceof BeforeGameState))
+            return rejectEvent(event, "not beforeGameState (startrequest)");
 
-            const playerAStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_A_STARTREQ);
-            const playerBStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_B_STARTREQ);
-            if(playerAStartReq !== undefined &&
-                playerBStartReq !== undefined){
-                let startingSide: Side;
-                let flippedCoin: boolean;
+        event.game.setMiscData((event.sender === event.game.player(Side.A))?
+            GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ, event.data.which);
 
-                if(playerAStartReq === playerBStartReq){
-                    flippedCoin=true;
-                    startingSide = Math.random()<0.5 ? Side.A : Side.B;
+        const playerAStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_A_STARTREQ);
+        const playerBStartReq = event.game.getMiscData(GameMiscDataStrings.PLAYER_B_STARTREQ);
+        if(playerAStartReq !== undefined && playerBStartReq !== undefined){
+            let startingSide: Side;
+            let flippedCoin: boolean;
+
+            if(playerAStartReq === playerBStartReq){
+                flippedCoin=true;
+                startingSide = Math.random()<0.5 ? Side.A : Side.B;
+            }else{
+                flippedCoin=false;
+                if(playerAStartReq === "nopref"){
+                    startingSide = playerBStartReq === "first" ? Side.B : Side.A;
+                }else if(playerBStartReq === "nopref"){
+                    startingSide = playerAStartReq === "first" ? Side.A : Side.B;
                 }else{
-                    flippedCoin=false;
-                    if(playerAStartReq === "nopref"){
-                        startingSide = playerBStartReq === "first" ? Side.B : Side.A;
-                    }else if(playerBStartReq === "nopref"){
-                        startingSide = playerAStartReq === "first" ? Side.A : Side.B;
-                    }else{
-                        //first and second
-                        startingSide = playerBStartReq === "first" ? Side.B : Side.A;
-                    }
-                }
-
-                for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                    user.send(new DetermineStarterEvent({
-                        starter:startingSide,
-                        flippedCoin:flippedCoin,
-                    }));
-                    for(const card of event.game.fieldsA)
-                        if(card !== undefined)
-                            user.send(new ClarifyCardEvent({
-                                id: card.id,
-                                cardDataName:card.cardData.name,
-                            }));
-                    for(const card of event.game.fieldsB)
-                        if(card !== undefined)
-                            user.send(new ClarifyCardEvent({
-                                id: card.id,
-                                cardDataName:card.cardData.name,
-                            }));
-                    event.game.state = new TurnState(event.game, startingSide, false);
+                    //first and second
+                    startingSide = playerBStartReq === "first" ? Side.B : Side.A;
                 }
             }
+
+            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+                user.send(new DetermineStarterEvent({
+                    starter:startingSide,
+                    flippedCoin:flippedCoin,
+                }));
+                for(const card of event.game.fieldsA)
+                    if(card !== undefined)
+                        user.send(new ClarifyCardEvent({
+                            id: card.id,
+                            cardDataName:card.cardData.name,
+                        }));
+                for(const card of event.game.fieldsB)
+                    if(card !== undefined)
+                        user.send(new ClarifyCardEvent({
+                            id: card.id,
+                            cardDataName:card.cardData.name,
+                        }));
+                event.game.state = new TurnState(event.game, startingSide, false);
+            }
         }
+        return acceptEvent(event);
     }else if(event instanceof PlaceAction){
-        if(event.game!==undefined){
+        if(event.game===undefined) return rejectEvent(event, "no game found (placeaction)");
             const card = event.game.cards.values().find(card=>card.id === event.data.cardId)!;
 
-            if(!event.isForced()) {
-                //validate
-                if (!((event.game.state instanceof BeforeGameState &&
-                        event.game.player(card.side) === event.sender &&//card is the player's
-                        card.cardData.level === 1 && //card is level 1
-                        (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
-                    (event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
-                        event.game.player(card.side) === event.sender &&//card is the player's
-                        sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
-                            .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1)))) { //placed card's level is at most 1 above all other cards
-                    if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
-                        self: card,
-                        game: event.game,
-                        normallyValid: false
-                    }) ?? false)) {
-                        rejectEvent(event, "failed place check");
-                        return;
-                    }
-                } else if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
+        if(!event.isForced()) {
+            //validate
+            if (!((event.game.state instanceof BeforeGameState &&
+                    event.game.player(card.side) === event.sender &&//card is the player's
+                    card.cardData.level === 1 && //card is level 1
+                    (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
+                (event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
+                    event.game.player(card.side) === event.sender &&//card is the player's
+                    sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
+                        .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1)))) { //placed card's level is at most 1 above all other cards
+                if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
                     self: card,
                     game: event.game,
-                    normallyValid: true
-                }) ?? true)) {
-                    rejectEvent(event, "failed place check: custom");
-                    return;
+                    normallyValid: false
+                }) ?? false)) {
+                    return rejectEvent(event, "failed place check");
                 }
-                event.data.forFree=false;
+            } else if (!(card.callAction(CardActionType.SPECIAL_PLACED_CHECK, {
+                self: card,
+                game: event.game,
+                normallyValid: true
+            }) ?? true)) {
+                return rejectEvent(event, "failed place check: custom");
             }
+            event.data.forFree=false;
+        }
 
-            for(const group of [event.game.handA, event.game.handB]) {
-                for (let i = 0; i < group.length; i++) {
-                    if (group[i] === card) {
-                        group.splice(i, 1);
-                        break;
-                    }
+        for(const group of [event.game.handA, event.game.handB]) {
+            for (let i = 0; i < group.length; i++) {
+                if (group[i] === card) {
+                    group.splice(i, 1);
+                    break;
                 }
             }
-            sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
-                event.game.cards.values().find(card => card.id === event.data.cardId);
+        }
+        sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
+            event.game.cards.values().find(card => card.id === event.data.cardId);
 
-            const placedForFree = event.data.forFree === true ||
-                (card.callAction(CardActionType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false);
+        const placedForFree = event.data.forFree === true ||
+            (card.callAction(CardActionType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false);
 
-            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                if(user === event.sender) continue;
-                if(event.data.faceUp)
-                    user.send(new ClarifyCardEvent({
-                        id: event.data.cardId,
-                        cardDataName: card.cardData.name,
-                        faceUp: event.data.faceUp,
-                    }));
-                user.send(new PlaceAction({
-                    cardId:event.data.cardId,
-                    position:event.data.position,
-                    side:event.data.side,
-                    faceUp:event.data.faceUp,
-                    forFree:placedForFree,
+        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+            if(user === event.sender) continue;
+            if(event.data.faceUp)
+                user.send(new ClarifyCardEvent({
+                    id: event.data.cardId,
+                    cardDataName: card.cardData.name,
+                    faceUp: event.data.faceUp,
                 }));
-            }
-
-            card.callAction(CardActionType.PRE_PLACED, {self:card, game:event.game});
-            event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
-                card.callAction(CardActionType.PLACED, {self:card, game:event.game});
-            });
-
-            if(!placedForFree)
-                endTurn(event.game);
-            acceptEvent(event);
+            user.send(new PlaceAction({
+                cardId:event.data.cardId,
+                position:event.data.position,
+                side:event.data.side,
+                faceUp:event.data.faceUp,
+                forFree:placedForFree,
+            }));
         }
-    }else if(event instanceof DrawAction){
-        if(event.game !== undefined){
-            let side:Side|undefined=undefined;//the side of the player drawing
-            if(event.sender === event.game.player(Side.A)){
-                side = Side.A;
-            }else if(event.sender === event.game.player(Side.B)){
-                side = Side.B;
-            }
-            if(side !== undefined){
-                if(!(event.game.state instanceof TurnState &&
-                    event.game.state.turn === side &&//it is the player's turn
-                    sideTernary(side, event.game.handA, event.game.handB).length<5)){//their hand is less than 5
-                    rejectEvent(event, "failed draw check");
-                    return;
-                }
 
-                const canPredraw = event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
-                if(draw(event.game, canPredraw ? undefined : event.sender, side, !canPredraw, event.sender)){
-                    acceptEvent(event);
-                    event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-                    return;
-                }
-            }
-            rejectEvent(event, "couldnt determine client side");
-        }
-    }else if (event instanceof PassAction){
-        if(event.game !== undefined){
-            if(!(event.game.state instanceof TurnState &&
-                event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
-                sideTernary(event.game.state.turn, event.game.handA, event.game.handB).length<=5)){//if the player doesnt have to discard
-                rejectEvent(event, "failed pass check");
-                return;
-            }
-            for(const user of (usersFromGameIDs[event.game.gameID]||[])){
-                if(user === event.sender) continue;
-                user.send(new PassAction({}));
-            }
+        card.callAction(CardActionType.PRE_PLACED, {self:card, game:event.game});
+        event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
+            card.callAction(CardActionType.PLACED, {self:card, game:event.game});
+        });
 
+        if(!placedForFree)
             endTurn(event.game);
-            acceptEvent(event);//todo:validation
+        return acceptEvent(event);
+    }else if(event instanceof DrawAction){
+        if(event.game === undefined) return rejectEvent(event, "no game found (drawaction)");
+
+        let side:Side|undefined=undefined;//the side of the player drawing
+        if(event.sender === event.game.player(Side.A)){
+            side = Side.A;
+        }else if(event.sender === event.game.player(Side.B)){
+            side = Side.B;
         }
+
+        if(side === undefined) return rejectEvent(event, "couldnt determine client side");
+        if(!(event.game.state instanceof TurnState &&
+            event.game.state.turn === side &&//it is the player's turn
+            sideTernary(side, event.game.handA, event.game.handB).length<5))//their hand is less than 5
+            return rejectEvent(event, "failed draw check");
+
+        const canPredraw = event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
+        if(draw(event.game, canPredraw ? undefined : event.sender, side, !canPredraw, event.sender)){
+            event.game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
+            return acceptEvent(event);
+        }
+        return rejectEvent(event, "couldnt draw (empty deck)");
+    }else if (event instanceof PassAction){
+        if(event.game === undefined) return rejectEvent(event, "no game found (passaction)");
+        if(!(event.game.state instanceof TurnState &&
+            event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+            sideTernary(event.game.state.turn, event.game.handA, event.game.handB).length<=5))//if the player doesnt have to discard
+            return rejectEvent(event, "failed pass check");
+
+        for(const user of (usersFromGameIDs[event.game.gameID]||[])){
+            if(user === event.sender) continue;
+            user.send(new PassAction({}));
+        }
+
+        endTurn(event.game);
+        return acceptEvent(event);//todo:validation (what does this mean?)
     }else if (event instanceof ScareAction){
-        if(event.game !== undefined){
-            if(event.sender !== event.game.player(event.data.scarerPos[1]))
-                rejectEvent(event, "scarer is not consistent");
+        if(event.game === undefined) return rejectEvent(event, "no game found (scareaction)");
+        if(event.sender !== event.game.player(event.data.scarerPos[1]))
+            rejectEvent(event, "scarer is not consistent");
 
-            let scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
-            let scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
-            let forceFailed:boolean|undefined=undefined;
+        let scarer = sideTernary(event.data.scarerPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scarerPos[0]-1];
+        let scared = sideTernary(event.data.scaredPos[1], event.game.fieldsA, event.game.fieldsB)[event.data.scaredPos[0]-1];
+        let forceFailed:boolean|undefined=undefined;
 
-            if(!event.isForced()) {
-                if (!(event.game.state instanceof TurnState &&
-                    event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
-                    event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
-                    scarer !== undefined && scared !== undefined &&//the cards exist
-                    !scarer.hasAttacked &&//if the card hasnt scared yet
-                    event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
-                    scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)) {//neither stat is null
-                    rejectEvent(event, "failed scare check");
-                    return;
-                }
-            }else{
-                scarer=scarer!;
-                scared=scared!;
-                forceFailed=event.data.failed;
-            }
-
-            const game = event.game;
-            scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=>{
-                const toSend = new ScareAction({
-                    scaredPos: event.data.scaredPos,
-                    scarerPos: event.data.scarerPos,
-                    attackingWith: event.data.attackingWith,
-                    failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
-                        !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)))
-                });
-                scarer.hasAttacked = true;
-                for (const user of (usersFromGameIDs[game.gameID] || [])) {
-                    user.send(toSend);
-                }
-                if(succeeded) {
-                    sideTernary(scared.side, game.runawayA, game.runawayB).push(
-                        sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
-                    sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
-
-                    scared.callAction(CardActionType.AFTER_SCARED,
-                        {self: scared, scarer, game: game, stat: event.data.attackingWith});
-                }
-
-                endTurn(game);
-            });
-        }
-    }else if(event instanceof CardAction){
-        processCardAction(event);
-    }else if(event instanceof DiscardEvent){
-        if(event.game !== undefined) {
-            let side: Side | undefined = undefined;//the side of the player discarding
-            if (event.sender === event.game.player(Side.A)) {
-                side = Side.A;
-            } else if (event.sender === event.game.player(Side.B)) {
-                side = Side.B;
-            }
-            if (side === undefined) return rejectEvent(event, "discard couldnt validate sender");
-
-            const hand = sideTernary(side, event.game.handA, event.game.handB);
-            const toDiscard = hand.find(card => card.id === event.data.which);
+        if(!event.isForced()) {
             if (!(event.game.state instanceof TurnState &&
+                event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
-                toDiscard !== undefined&&//the card exists AND is in the player's hand
-                hand.length>5)) {//the player is in a position to discard
-                rejectEvent(event, "failed discard check");
-                return;
+                scarer !== undefined && scared !== undefined &&//the cards exist
+                !scarer.hasAttacked &&//if the card hasnt scared yet
+                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
+                scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)) {//neither stat is null
+
+                return rejectEvent(event, "failed scare check");
+            }
+        }else{
+            scarer=scarer!;
+            scared=scared!;
+            forceFailed=event.data.failed;
+        }
+
+        const game = event.game;
+        scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=>{
+            const toSend = new ScareAction({
+                scaredPos: event.data.scaredPos,
+                scarerPos: event.data.scarerPos,
+                attackingWith: event.data.attackingWith,
+                failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
+                    !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!)))
+            });
+            scarer.hasAttacked = true;
+            for (const user of (usersFromGameIDs[game.gameID] || [])) {
+                user.send(toSend);
+            }
+            if(succeeded) {
+                sideTernary(scared.side, game.runawayA, game.runawayB).push(
+                    sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
+                sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
+
+                scared.callAction(CardActionType.AFTER_SCARED,
+                    {self: scared, scarer, game: game, stat: event.data.attackingWith});
             }
 
-            sideTernary(side, event.game.runawayA, event.game.runawayB).push(
-                hand.splice(hand.indexOf(toDiscard),1)[0]!);
-            acceptEvent(event);
+            endTurn(game);
+        });
+        return acceptEvent(event);
+    }else if(event instanceof CardAction){
+        return processCardAction(event);
+    }else if(event instanceof DiscardEvent){
+        if(event.game === undefined) return rejectEvent(event, "no game found (discardaction)");
+
+        let side: Side | undefined = undefined;//the side of the player discarding
+        if (event.sender === event.game.player(Side.A)) {
+            side = Side.A;
+        } else if (event.sender === event.game.player(Side.B)) {
+            side = Side.B;
         }
+        if (side === undefined) return rejectEvent(event, "discard couldnt validate sender");
+
+        const hand = sideTernary(side, event.game.handA, event.game.handB);
+        const toDiscard = hand.find(card => card.id === event.data.which);
+        if (!(event.game.state instanceof TurnState &&
+            event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+            toDiscard !== undefined&&//the card exists AND is in the player's hand
+            hand.length>5)) {//the player is in a position to discard
+
+            return rejectEvent(event, "failed discard check");
+        }
+
+        sideTernary(side, event.game.runawayA, event.game.runawayB).push(
+            hand.splice(hand.indexOf(toDiscard),1)[0]!);
+        return acceptEvent(event);
     }else if(event instanceof ClarifyCardEvent){
-        if(event.game !== undefined){
-            let shouldClarify:Card|Card[]|undefined=undefined;
-            let maybeJustfication:ClarificationJustification|undefined;
-            switch(event.data.justification){
-                case ClarificationJustification.BROWNIE:
-                    const senderSide = event.game.player(Side.A) === event.sender ? Side.A : Side.B;
-                    if(event.game.state instanceof TurnState &&
-                        (event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
-                            [senderSide])) === CardActionOptions.BROWNIE_DRAW &&
-                        sideTernary(senderSide, event.game.fieldsA, event.game.fieldsB)
-                            .find(card =>card?.cardData.name === "og-005")!==undefined) {
+        if(event.game === undefined) return rejectEvent(event, "no game found (clarifycardevent)");
 
-                        shouldClarify = sideTernary(senderSide, event.game.deckA, event.game.deckB)
-                            .filter(card => card.cardData.level === 1 &&
-                                card.isAlwaysFree());
-                    }
-                    break;
-                case ClarificationJustification.AMBER://todo
-                    if(event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&
-                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
-                            .find(card =>card !== undefined && card.cardData.name === "og-018")) {
+        let shouldClarify:Card|Card[]|undefined=undefined;
+        let maybeJustfication:ClarificationJustification|undefined;
+        switch(event.data.justification){
+            case ClarificationJustification.BROWNIE:
+                const senderSide = event.game.player(Side.A) === event.sender ? Side.A : Side.B;
+                if(event.game.state instanceof TurnState &&
+                    (event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
+                        [senderSide])) === CardActionOptions.BROWNIE_DRAW &&
+                    sideTernary(senderSide, event.game.fieldsA, event.game.fieldsB)
+                        .find(card =>card?.cardData.name === "og-005")!==undefined) {
 
-                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
-                            .slice(-2);
-                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[event.game.state.turn],
-                            CardActionOptions.AMBER_PICK);
-                    }
-                    break;
-                case ClarificationJustification.FURMAKER: {
-                    if (event.game.state instanceof TurnState &&
-                        event.sender === event.game.player(event.game.state.turn) &&
-                        sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
-                            .find(card => card !== undefined && card.cardData.name === "og-041")
-                            ?.id === event.data.id) {
-
-                        shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB);
-                        maybeJustfication = ClarificationJustification.FURMAKER;
-                        event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
-                    }
-                }break;
-                case ClarificationJustification.FURMAKER_VISIBLE: {
-                    const side = event.sender === event.game.player(Side.A) ? Side.A : Side.B;
-                    if(sideTernary(side, event.game.fieldsB, event.game.fieldsA).some(card=>card?.cardData.name === "og-041"))
-                        shouldClarify = sideTernary(side, event.game.handB, event.game.handA);
-                }break;
-            }
-
-            if(shouldClarify !== undefined){
-                if(shouldClarify instanceof Array){
-                    if(shouldClarify.length>0) {
-                        network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
-                        return acceptEvent(event);
-                    }
+                    shouldClarify = sideTernary(senderSide, event.game.deckA, event.game.deckB)
+                        .filter(card => card.cardData.level === 1 &&
+                            card.isAlwaysFree());
                 }
-                if(shouldClarify instanceof Card){
-                    network.replyToClient(event, new ClarifyCardEvent({
-                        id: shouldClarify.id,
-                        cardDataName: shouldClarify.cardData.name,
-                        ...(maybeJustfication?{justification:maybeJustfication}:{})
-                    }));
-                    return acceptEvent(event);
-                }
+                break;
+            case ClarificationJustification.AMBER://todo
+                if(event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn) &&
+                    sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                        .find(card =>card !== undefined && card.cardData.name === "og-018")) {
 
-                rejectEvent(event, "no suitable cards found");
+                    shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB)
+                        .slice(-2);
+                    event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[event.game.state.turn],
+                        CardActionOptions.AMBER_PICK);
+                }
+                break;
+            case ClarificationJustification.FURMAKER: {
+                if (event.game.state instanceof TurnState &&
+                    event.sender === event.game.player(event.game.state.turn) &&
+                    sideTernary(event.game.state.turn, event.game.fieldsA, event.game.fieldsB)
+                        .find(card => card !== undefined && card.cardData.name === "og-041")
+                        ?.id === event.data.id) {
+
+                    shouldClarify = sideTernary(event.game.state.turn, event.game.deckA, event.game.deckB);
+                    maybeJustfication = ClarificationJustification.FURMAKER;
+                    event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE, CardActionOptions.FURMAKER_PICK);
+                }
+            }break;
+            case ClarificationJustification.FURMAKER_VISIBLE: {
+                const side = event.sender === event.game.player(Side.A) ? Side.A : Side.B;
+                if(sideTernary(side, event.game.fieldsB, event.game.fieldsA).some(card=>card?.cardData.name === "og-041"))
+                    shouldClarify = sideTernary(side, event.game.handB, event.game.handA);
+            }break;
+        }
+
+        if(shouldClarify instanceof Array){
+            if(shouldClarify.length>0) {
+                network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
+                return acceptEvent(event);
             }
         }
+        if(shouldClarify instanceof Card){
+            network.replyToClient(event, new ClarifyCardEvent({
+                id: shouldClarify.id,
+                cardDataName: shouldClarify.cardData.name,
+                ...(maybeJustfication?{justification:maybeJustfication}:{})
+            }));
+            return acceptEvent(event);
+        }
+
+        return rejectEvent(event, "no suitable cards found");
     }
 
     //DEBUG, DONT UNCOMMENT UNLESS DEVELOPING
     else if(event instanceof RequestSyncEvent){
-        if(event.game!==undefined) {
-            event.sender?.send(new SyncEvent({
-                fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-                fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-                deckA: cardsTransform(event.game.deckA),
-                deckB: cardsTransform(event.game.deckB),
-                handA: cardsTransform(event.game.handA),
-                handB: cardsTransform(event.game.handB),
-                runawayA: cardsTransform(event.game.runawayA),
-                runawayB: cardsTransform(event.game.runawayB),
-            }));
-            network.replyToClient(event, new StringReprSyncEvent({
-                str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
-                    `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
-                    `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
-                    `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
-                    `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
-            }, undefined, undefined, event.id));
-        }
+        if(event.game === undefined) return rejectEvent(event, "no game found (requestsyncevent)");
+
+        event.sender?.send(new SyncEvent({
+            fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
+            fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
+            deckA: cardsTransform(event.game.deckA),
+            deckB: cardsTransform(event.game.deckB),
+            handA: cardsTransform(event.game.handA),
+            handB: cardsTransform(event.game.handB),
+            runawayA: cardsTransform(event.game.runawayA),
+            runawayB: cardsTransform(event.game.runawayB),
+        }));
+        network.replyToClient(event, new StringReprSyncEvent({
+            str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
+                `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
+                `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
+                `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
+                `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
+        }, undefined, undefined, event.id));
+        return acceptEvent(event);
     }
+
+    else return rejectEvent(event, "not a recognized event");
 }
 
 export async function receiveFromClient (packed:{

@@ -27,7 +27,6 @@ export function getAttacker(stat:Stat){
 export type MiscDataString<T> = {};
 export const MiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
-    DCW_PICKED_LEVEL:"og-032_level" as MiscDataString<1|2|3|undefined>,
     LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
     K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>,
     CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as MiscDataString<boolean>,
