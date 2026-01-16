@@ -138,11 +138,11 @@ async function receiveFromServer(packed:{
         //@ts-ignore
         packed.data,
         game.getGame(), null, packed.id) as Event<any>;
-    if(packed.type !== "SyncEvent" && packed.type !== "StringReprSyncEvent")
+    if(!(event instanceof SyncEvent || event instanceof StringReprSyncEvent))
         log("%c -> "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
-    if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
-        ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);
+    if((eventReplyIds[game.getGame().gameID]||{})[event.id] !== undefined){
+        ((eventReplyIds[game.getGame().gameID]||{})[event.id]?._callback||(()=>{}))(event);
         return;
     }
 
@@ -430,6 +430,46 @@ async function receiveFromServer(packed:{
                         state.cancel();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);
+            }break;
+            case CardActionOptions.BROY_WEASLA_INCREASE:{
+                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
+                const state = new VPickCardsState(game, oldStates,
+                    [game.fieldsA, game.fieldsB].map(fields =>
+                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
+                        .flat(),
+                    (picked)=>{
+                        const state2 = new VPickCardsState(game, oldStates,
+                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
+                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                            (picked2)=>{
+                                network.sendToServer(new CardAction({
+                                    cardId:-1,
+                                    actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                                    cardData:{//todo
+                                        stat:({
+                                            temp_red:Stat.RED,
+                                            temp_yellow:Stat.YELLOW,
+                                            temp_blue:Stat.BLUE
+                                        })[picked2.logicalCard.cardData.name]!,
+                                        pos:[
+                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
+                                                .map(field=>field.getCard())
+                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
+                                            picked.logicalCard.side]
+                                    }
+                                }));
+                                state2.cancel();
+                            },EndType.NONE);
+                        game.setState(state2,oldStates[1]);
+                    },EndType.FINISH, ()=>{
+                        network.sendToServer(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                            cardData:false
+                        }));
+                        state.cancel();
+                });
+                game.setState(state, oldStates[1]);
             }break;
         }
     }

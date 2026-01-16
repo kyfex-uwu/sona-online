@@ -115,6 +115,30 @@ export function shuffleBackend(deck:Array<Card>){
     }
 }
 
+function internalScareInterrupt(cards:(Card|undefined)[], data:{
+    scared: Card
+    scarer: Card
+    stat: Stat | "card"
+    game: Game
+    origEvent: ScareAction
+}, next:(succeeded?: boolean) => void){
+    for(let i=0;i<cards.length;i++) {
+        const card = cards[i];
+        if(card===undefined) continue;
+
+        const result = card.callAction(CardActionType.INTERRUPT_SCARE, {
+            ...data,
+            self: card,
+            next: ()=>internalScareInterrupt(cards.slice(i+1), data, next)
+        });
+        switch(result){
+            case InterruptScareResult.FAIL_SCARE: next(false); return;
+            case InterruptScareResult.PREVENT_SCARE: return;
+        }
+    }
+    next();
+}
+
 /**
  * Calls any/all interrupt scares. This should be called whenever you're trying to scare a card AND the attempt would
  * succeed (the stats work, or it's a special attack)
@@ -125,20 +149,9 @@ export function shuffleBackend(deck:Array<Card>){
  * @param scareType The scare type
  * @param onPass The function to run if/when the scare passes
  */
-export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
-    // if(event.interruptScareBypass !== bypassInterruptScareMarker){
-        for(const card of [...game.fieldsA, ...game.fieldsB]) {
-            if(card===undefined) continue;
-
-            const result = card.callAction(CardActionType.INTERRUPT_SCARE,
-                { self: card, scared, scarer, game, stat: scareType, origEvent:event, next:onPass });
-            switch(result){
-                case InterruptScareResult.FAIL_SCARE: onPass(false); return;
-                case InterruptScareResult.PREVENT_SCARE: return;
-            }
-        }
-    // }
-    onPass(true);
+export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded?:boolean)=>void){
+    const cards = [...game.fieldsA, ...game.fieldsB];
+    internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event }, onPass);
 }
 
 // const bypassInterruptScareMarker = {};//todo: is this needed?
@@ -443,8 +456,8 @@ export function parseEvent(event:Event<any>):processedEvent{
                 scaredPos: event.data.scaredPos,
                 scarerPos: event.data.scarerPos,
                 attackingWith: event.data.attackingWith,
-                failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
-                    !(scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))),
+                failed: forceFailed ?? succeeded ?? (event.data.attackingWith === "card" ||
+                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))),
                 free:event.isForcedFree(),
             });
             scarer.hasAttacked = true;

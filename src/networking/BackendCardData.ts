@@ -169,8 +169,45 @@ wrap(cards["og-035"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared
     if(orig) orig({self, scared, scarer, stat, game});
 
     const target = self.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET);
+    self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,undefined);
+    if(target !== undefined)
+        delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
+});
+wrap(cards["og-035"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+});
+wrap(cards["og-029"]!, CardActionType.INTERRUPT_SCARE, (orig,
+                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+
+    if(!(game.state instanceof TurnState && //is a turn
+        game.state.turn === self.side && // is your turn
+        !sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card?.hasAttacked) && //first scare attempt
+        stat !== "card"//we can actually defend against this
+    ))
+        return InterruptScareResult.PASSTHROUGH;
+
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROY_WEASLA_INCREASE);
+    game.freeze(event=>
+        event instanceof CardAction &&
+        event.data.actionName === CardActionOptions.BROY_WEASLA_INCREASE &&
+        event.sender === game.player(self.side));
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+        cardData:false
+    }));
+
+    return InterruptScareResult.PREVENT_SCARE;
+});
+wrap(cards["og-029"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+    if(orig) orig({self, scared, scarer, stat, game});
+
+    const target = self.getMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET);
     if(target === undefined) return;
 
     delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
-    self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,undefined);
-})
+    self.setMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET,undefined);
+});

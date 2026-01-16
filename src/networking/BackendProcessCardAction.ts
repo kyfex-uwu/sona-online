@@ -9,7 +9,7 @@ import {
 import {
     type AMBER_PICK,
     AmberData,
-    type BROWNIE_DRAW,
+    type BROWNIE_DRAW, type BROY_WEASLA_INCREASE,
     type CardActionOption,
     CardActionOptions,
     type CLOUD_CAT_PICK,
@@ -496,7 +496,7 @@ export default function(event:CardAction<any>):processedEvent{
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext(!data);
+            if(scareNext) scareNext();
 
             event.game.unfreeze();
             return acceptEvent(event);
@@ -510,7 +510,8 @@ export default function(event:CardAction<any>):processedEvent{
 
             if(actor === undefined ||
                 event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.COWGIRL_COYOTE_INCREASE ||
-                actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET) === undefined)
+                actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET) === undefined ||
+                actor.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true)
                 return rejectEvent(event, "failed cowgirl check");
 
             const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData;
@@ -524,14 +525,47 @@ export default function(event:CardAction<any>):processedEvent{
                 let toSet:[number,number,number] = [0,0,0];
                 toSet[data] = 2;
                 target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![actor.cardData.name+actor.cardData.id] = toSet;
-
-                actor.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET, undefined);
             }
 
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext(!data);
+            if(scareNext) scareNext();
+
+            event.game.unfreeze();
+            return acceptEvent(event);
+        }
+        case CardActionOptions.BROY_WEASLA_INCREASE:{//og-029
+            const actor = (event.game.player(Side.A) === event.sender ?
+                event.game.fieldsA : event.game.fieldsB).find(card=>
+                card !== undefined &&
+                card.getMiscData(CardMiscDataStrings.PAUSED_SCARE) !== undefined &&
+                card.cardData.name === "og-029");
+
+            if(actor === undefined ||
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.BROY_WEASLA_INCREASE)
+                return rejectEvent(event, "failed broy weasla check");
+
+            const data = (event as CardAction<BROY_WEASLA_INCREASE>).data.cardData;
+            //do stuff
+            if(data !== false){
+                const target = sideTernary(data.pos[1], event.game.fieldsA, event.game.fieldsB)[data.pos[0]-1];
+                if(target === undefined) return rejectEvent(event, "broy weasla: tried to change nonexistent card");
+
+                if(target.stat(data.stat) === undefined)
+                    return rejectEvent(event, "failed broy weasla: stat is undefined");
+
+                let toSet:[number,number,number] = [0,0,0];
+                toSet[data.stat] = 2;
+                target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![actor.cardData.name+actor.cardData.id] = toSet;
+
+                actor.setMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET, target);
+            }
+
+            const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
+            if(scareNext) scareNext();
 
             event.game.unfreeze();
             return acceptEvent(event);

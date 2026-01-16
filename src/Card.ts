@@ -32,9 +32,10 @@ export const CardMiscDataStrings = {
     K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as CardMiscDataString<{ stat: Stat, newVal: number }>,
     CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as CardMiscDataString<boolean>,
     COWGIRL_COYOTE_TARGET: "og-035_target" as CardMiscDataString<Card>,
+    BROY_WEASLA_TARGET: "og-029_target" as CardMiscDataString<Card>,
     FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as CardMiscDataString<Set<number>>,
 
-    PAUSED_SCARE:"pausedScare" as CardMiscDataString<(succeeded: boolean) => void>,
+    PAUSED_SCARE:"pausedScare" as CardMiscDataString<() => void>,
     ALREADY_ATTACKED:"alreadyAttacked" as CardMiscDataString<boolean>,
     TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };
@@ -103,7 +104,7 @@ export default class Card implements GameElement{
     }
     stat(stat:Stat){
         return (this.callAction(CardActionType.GET_STATS, {self:this,game:this.game}) ??
-            addTempStats(this, this.cardData.stats))[stat];
+            addTempStats(this, [...this.cardData.stats]))[stat];
     }
 
     //USE WITH EXTREME CAUTION

@@ -103,29 +103,13 @@ setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
 setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE));
-setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID)//todo
-    .with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
-        if(self!==scared) return InterruptScareResult.PASSTHROUGH;
-
-        if(scarer.side === self.side){
-
-        }
-        return InterruptScareResult.PASSTHROUGH;
-    }));
+setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
 setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES));
 setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE).setFree());
 setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));
-setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE)//todo
-    .with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
-        if(self!==scared) return InterruptScareResult.PASSTHROUGH;
-
-        if(scarer.side !== self.side){
-
-        }
-        return InterruptScareResult.PASSTHROUGH;
-    }));
+setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE));
 setCard(new CardData("og-036", [7,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE));
 setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID));

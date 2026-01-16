@@ -360,12 +360,8 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     }
 
     isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
-    cancel(){//todo: make sure this doesnt break stuff
-        // let decrement=false;
+    cancel(){
         this.game.setState(this.parentState[0], this.parentState[1]);
-        // if(decrement && isDecrementable(this.parentState[0]))
-        //     (this.parentState[0] as unknown as Decrementable).decrementTurn();
-
         this.removeCards();
     }
 
