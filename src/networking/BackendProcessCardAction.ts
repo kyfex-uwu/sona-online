@@ -13,19 +13,21 @@ import {
     type CardActionOption,
     CardActionOptions,
     type CLOUD_CAT_PICK,
-    type DCW_PICK, type DCW_SCARE,
+    type DCW_PICK,
+    type DCW_SCARE,
     type FOXY_MAGICIAN_PICK,
     type FURMAKER_PICK,
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type KIBBY_SCARE,
+    type LITTLEBOSS_IMMUNITY,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
 import {CardActionType, Species} from "../CardData.js";
-import Card, {MiscDataStrings} from "../Card.js";
+import Card, {CardMiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
 import {
@@ -119,13 +121,13 @@ export default function(event:CardAction<any>):processedEvent{
             const toAttack = (event.sender === event.game.player(Side.A) ? event.game.fieldsB : event.game.fieldsA)[data.attack-1];
             if(toAttack === undefined) return rejectEvent(event, "k9 no card found");
 
-            sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
+            sender.setMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
             parseEvent(new ScareAction({
                 scarerPos:[(takeFrom.findIndex(card=>card?.id === sender.id)+1) as 1|2|3, sender.side],
                 scaredPos:[data.attack, event.sender === event.game.player(Side.A) ? Side.B : Side.A],
                 attackingWith:data.attackWith,
             }, event.game, event.sender, event.id));
-            sender.setMiscData(MiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
+            sender.setMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
             return acceptEvent(event);
         }
         case CardActionOptions.BROWNIE_DRAW: {//og-005
@@ -486,6 +488,28 @@ export default function(event:CardAction<any>):processedEvent{
                 event.game.state instanceof BeforeGameState ? "first" : pos;
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             sendToClients(event, event.sender);
+            return acceptEvent(event);
+        }
+        case CardActionOptions.LITTLEBOSS_IMMUNITY:{//og-015
+            const actor = (event.game.player(Side.A) === event.sender ?
+                event.game.fieldsA : event.game.fieldsB).find(card=>
+                    card !== undefined &&
+                    card.getMiscData(CardMiscDataStrings.PAUSED_SCARE) !== undefined &&
+                    card.cardData.name === "og-015");
+            const data = (event as CardAction<LITTLEBOSS_IMMUNITY>).data.cardData;
+
+            if(actor === undefined || event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !==
+                CardActionOptions.LITTLEBOSS_IMMUNITY)
+                return rejectEvent(event, "failed littleboss check");
+
+            actor.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, data);
+
+            const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
+            if(scareNext) scareNext(!data);
+
+            event.game.unfreeze();
             return acceptEvent(event);
         }
     }

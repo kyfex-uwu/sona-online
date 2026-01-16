@@ -260,6 +260,7 @@ async function receiveFromServer(packed:{
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
             if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         }
+        game.frozen=false;//todo: this is not how it should be solved
         if(game.state instanceof VTurnState && !event.data.free){
             game.state.decrementTurn();
         }
@@ -393,6 +394,20 @@ async function receiveFromServer(packed:{
                                         .find(card=>card.logicalCard.id === event.data.id)!);
                             }
                         });
+                        state.cancel();
+                    },EndType.NONE);
+                game.setState(state, game.getGame().state);
+            }break;
+            case CardActionOptions.LITTLEBOSS_IMMUNITY:{
+                const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                    ["temp_keep","temp_scare"].map(name => new VisualCard(game,
+                        new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                    (picked)=>{
+                        network.sendToServer(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
+                            cardData:picked.logicalCard.cardData.name === "temp_keep"
+                        }));
                         state.cancel();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);

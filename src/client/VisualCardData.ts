@@ -6,7 +6,7 @@ import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
-import Card, {MiscDataStrings, Stat} from "../Card.js";
+import Card, {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
@@ -79,7 +79,7 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-018"] = async (card) =>{
-    if(card.logicalCard.getMiscData(MiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
 
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
@@ -96,7 +96,7 @@ visualCardClientActions["og-018"] = async (card) =>{
         }
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             toReorder, (c) => {
-                card.logicalCard.setMiscData(MiscDataStrings.ALREADY_ATTACKED, true);
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
@@ -191,7 +191,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-041"] = (card)=>{
-    if(card.logicalCard.getMiscData(MiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
 
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
@@ -203,7 +203,7 @@ visualCardClientActions["og-041"] = (card)=>{
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
                 visualGame.frozen=true;
-                card.logicalCard.setMiscData(MiscDataStrings.ALREADY_ATTACKED, true);
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
@@ -317,7 +317,7 @@ wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-018"]!, CardActionType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(MiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
 });
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -438,10 +438,10 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
     });
 });
 wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
-    if(self.getMiscData(MiscDataStrings.FURMAKER_ALREADY_ASKED_FOR) === undefined)
-        self.setMiscData(MiscDataStrings.FURMAKER_ALREADY_ASKED_FOR, new Set());
+    if(self.getMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR) === undefined)
+        self.setMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR, new Set());
     if(self.side !== visualGame.getMySide()){
-        const alreadyAskedFor = self.getMiscData(MiscDataStrings.FURMAKER_ALREADY_ASKED_FOR)!;
+        const alreadyAskedFor = self.getMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR)!;
         const askFor = sideTernary(self.side, visualGame.handA, visualGame.handB).cards.filter(card=>
             !alreadyAskedFor.has(card.logicalCard.id));
         if(askFor.length>0) {
@@ -457,7 +457,7 @@ wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
 wrap(cards["og-041"]!, CardActionType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(MiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
 });
 wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -469,12 +469,12 @@ wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
             actionName:CardActionOptions.CLOUD_CAT_PICK,
             cardData:1
         }));
-        self.setMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
+        self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
     }
 });
 wrap(cards["og-043"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
-    if(self.getMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
+    if(self.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
 
 
     tempHowToUse("Cloud Cat", "Click the card to disable");

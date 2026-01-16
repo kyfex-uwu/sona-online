@@ -1,4 +1,4 @@
-import CardData, {CardActionType} from "../CardData.js";
+import CardData, {CardActionType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
@@ -6,7 +6,7 @@ import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {other, Side} from "../GameElement.js";
-import {MiscDataStrings} from "../Card.js";
+import {CardMiscDataStrings, Stat} from "../Card.js";
 
 export function loadBackendWrappers(){}
 
@@ -17,6 +17,38 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActi
     });
 }
 
+wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROWNIE_DRAW);
+});
+wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game})=>{
+    if(sideTernary(self.side, game.fieldsB, game.fieldsB)
+        .filter(card=>card !== undefined)
+        .filter(card=>(card?.cardData.stat(Stat.RED)??99)<2 ||
+            (card?.cardData.stat(Stat.BLUE)??99)<2 ||
+            (card?.cardData.stat(Stat.YELLOW)??99)<2).length<2)
+        return;
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
+});
+wrap(cards["og-015"]!, CardActionType.INTERRUPT_SCARE, (orig,
+                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(self!==scared) return InterruptScareResult.PASSTHROUGH;
+
+    if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) !== true) {
+        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.LITTLEBOSS_IMMUNITY);
+        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+
+        game.player(self.side)?.send(new CardAction({
+            cardId:-1,
+            actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
+            cardData:false
+        }));
+
+        game.freeze((event)=>
+            event.sender === game.player(self.side) &&
+            event instanceof CardAction);
+        return InterruptScareResult.PREVENT_SCARE;
+    }else return InterruptScareResult.PASSTHROUGH;
+})
 wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, stat, game})=>{
     if(orig) orig({self, scarer, stat, game});
 

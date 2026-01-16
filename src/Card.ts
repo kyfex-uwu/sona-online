@@ -25,17 +25,17 @@ export function getAttacker(stat:Stat){
 }
 
 export type MiscDataString<T> = {};
-export const MiscDataStrings = {
+export const CardMiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
-    LITTLEBOSS_IMMUNITY: "og-015_immunity" as MiscDataString<"not immune">,
+    LITTLEBOSS_IMMUNE: "og-015_immunity" as MiscDataString<boolean>,
     K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>,
     CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as MiscDataString<boolean>,
 
+    PAUSED_SCARE:"pausedScare" as MiscDataString<(succeeded: boolean) => void>,
     ALREADY_ATTACKED:"alreadyAttacked" as MiscDataString<boolean>,
-
     FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as MiscDataString<Set<number>>
 };
-verifyNoDuplicateStrVals(MiscDataStrings, "MiscDataStrings has a duplicate");
+verifyNoDuplicateStrVals(CardMiscDataStrings, "MiscDataStrings has a duplicate");
 
 //A *logical* card
 export default class Card implements GameElement{

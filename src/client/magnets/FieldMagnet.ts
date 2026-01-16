@@ -124,6 +124,7 @@ export default class FieldMagnet extends CardMagnet{
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
                                         }));
+                                        this.game.frozen=true;
                                         state.cancel();
                                         return true;
                                     }
