@@ -79,6 +79,8 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-018"] = async (card) =>{
+    if(card.logicalCard.getMiscData(MiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
     let resolve;
@@ -94,6 +96,7 @@ visualCardClientActions["og-018"] = async (card) =>{
         }
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             toReorder, (c) => {
+                card.logicalCard.setMiscData(MiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
@@ -188,6 +191,8 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-041"] = (card)=>{
+    if(card.logicalCard.getMiscData(MiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
 
@@ -198,6 +203,7 @@ visualCardClientActions["og-041"] = (card)=>{
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
                 visualGame.frozen=true;
+                card.logicalCard.setMiscData(MiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
@@ -307,6 +313,11 @@ waitToDraw(cards["og-011"]!);
 wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+});
+wrap(cards["og-018"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    self.setMiscData(MiscDataStrings.ALREADY_ATTACKED, false);
 });
 wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -443,6 +454,11 @@ wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
         }
     }
 });
+wrap(cards["og-041"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    self.setMiscData(MiscDataStrings.ALREADY_ATTACKED, false);
+});
 wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
@@ -455,7 +471,7 @@ wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
         }));
         self.setMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
     }
-})
+});
 wrap(cards["og-043"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     if(self.getMiscData(MiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;

@@ -89,10 +89,7 @@ setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE)//todo
     }));
 setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN));
 setCard(new CardData("og-017", [5,3,undefined], 1, Species.FELINE));
-setCard(new CardData("og-018", [3,1,undefined], 1, Species.CANINE)//todo
-    .with(CardActionType.ACTION, ({self, game})=>{
-
-    }));
+setCard(new CardData("og-018", [3,1,undefined], 1, Species.CANINE));
 setCard(new CardData("og-019", [undefined,3,5], 1, Species.CANINE));
 setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA)//todo
     .with(CardActionType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
