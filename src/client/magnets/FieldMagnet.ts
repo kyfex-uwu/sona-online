@@ -91,13 +91,13 @@ export default class FieldMagnet extends CardMagnet{
                             ].filter(mesh => mesh !== undefined));
 
                             if (intersects[0] !== undefined) {
-                                if (this.card.logicalCard.cardData.stat(Stat.RED) !== undefined &&
+                                if (this.card.logicalCard.stat(Stat.RED) !== undefined &&
                                         intersects[0].object === this.card.getStatModel(Stat.RED)) {
                                     state.attackData.type = Stat.RED;
-                                } else if (this.card.logicalCard.cardData.stat(Stat.BLUE) !== undefined &&
+                                } else if (this.card.logicalCard.stat(Stat.BLUE) !== undefined &&
                                         intersects[0].object === this.card.getStatModel(Stat.BLUE)) {
                                     state.attackData.type = Stat.BLUE;
-                                } else if (this.card.logicalCard.cardData.stat(Stat.YELLOW) !== undefined &&
+                                } else if (this.card.logicalCard.stat(Stat.YELLOW) !== undefined &&
                                         intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
                                     state.attackData.type = Stat.YELLOW;
                                 } else if(intersects[0].object.parent?.parent?.parent === this.card.model){

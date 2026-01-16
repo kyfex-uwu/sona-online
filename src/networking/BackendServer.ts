@@ -16,7 +16,7 @@ import {
     GameStartEventWatcher,
     InvalidEvent,
     multiClarifyFactory,
-    PassAction,
+    PassAction, PerchanceEvent,
     PlaceAction,
     RejectEvent,
     RequestSyncEvent,
@@ -127,10 +127,10 @@ export function shuffleBackend(deck:Array<Card>){
  */
 export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
     // if(event.interruptScareBypass !== bypassInterruptScareMarker){
-        for(const card of sideTernary(scared.side, game.fieldsA, game.fieldsB)) {
+        for(const card of [...game.fieldsA, ...game.fieldsB]) {
             if(card===undefined) continue;
 
-            const result = scared.callAction(CardActionType.INTERRUPT_SCARE,
+            const result = card.callAction(CardActionType.INTERRUPT_SCARE,
                 { self: card, scared, scarer, game, stat: scareType, origEvent:event, next:onPass });
             switch(result){
                 case InterruptScareResult.FAIL_SCARE: onPass(false); return;
@@ -421,25 +421,30 @@ export function parseEvent(event:Event<any>):processedEvent{
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                 scarer !== undefined && scared !== undefined &&//the cards exist
                 !scarer.hasAttacked &&//if the card hasnt scared yet
-                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
-                scarer.cardData.stat(event.data.attackingWith) !== undefined && scared.cardData.stat(getVictim(event.data.attackingWith)) !== undefined)) {//neither stat is null
-
+                event.data.attackingWith !== "card"))//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
                 return rejectEvent(event, "failed scare check");
-            }
         }else{
             scarer=scarer!;
             scared=scared!;
             forceFailed=event.data.failed;
         }
 
+        let ranRightAway=false;
         const game = event.game;
         scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=>{
+            ranRightAway=true;
+
+            if(event.data.attackingWith !== "card" &&
+                (scarer.stat(event.data.attackingWith) === undefined ||
+                scared.stat(getVictim(event.data.attackingWith)) === undefined)) //neither stat is null
+                return rejectEvent(event, "tried to attack with null stat");
+
             const toSend = new ScareAction({
                 scaredPos: event.data.scaredPos,
                 scarerPos: event.data.scarerPos,
                 attackingWith: event.data.attackingWith,
                 failed: forceFailed ?? (!succeeded || (event.data.attackingWith === "card" ||
-                    !(scarer.cardData.stat(event.data.attackingWith)! >= scared.cardData.stat(getVictim(event.data.attackingWith))!))),
+                    !(scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))),
                 free:event.isForcedFree(),
             });
             scarer.hasAttacked = true;
@@ -451,13 +456,22 @@ export function parseEvent(event:Event<any>):processedEvent{
                     sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
                 sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                scared.callAction(CardActionType.AFTER_SCARED,
-                    {self: scared, scarer, game: game, stat: event.data.attackingWith});
+                for(const card of [...game.fieldsA, ...game.fieldsB]) {
+                    if(card===undefined) continue;
+
+                    scared.callAction(CardActionType.AFTER_SCARED,
+                        {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
+                }
             }
 
             if(!event.isForcedFree()) endTurn(game);
         });
-        return acceptEvent(event);
+        if(ranRightAway)
+            return acceptEvent(event);
+        else{
+            network.replyToClient(event, new PerchanceEvent({}, undefined, undefined, event.id));
+            return processedEventMarker;
+        }
     }else if(event instanceof CardAction){
         return processCardAction(event);
     }else if(event instanceof DiscardEvent){

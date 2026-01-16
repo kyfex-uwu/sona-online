@@ -1,6 +1,6 @@
 import Card, {Stat} from "./Card.js";
 import type Game from "./Game.js";
-import {type Event} from "./networking/Events.js";
+import {ScareAction} from "./networking/Events.js";
 
 let globalID=0;
 
@@ -21,16 +21,16 @@ export class CardActionType<P extends {[k:string]:any}, R>{
         {self:Card, game:Game}, void>();
     public static readonly PLACED = new CardActionType<
         {self:Card,game:Game}, void>();
-    //Called once per scare, on the card that was scared
+    //Called once per scare
     public static readonly AFTER_SCARED = new CardActionType<
-        {self:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
     public static readonly GET_STATS = new CardActionType<
         {self:Card,game:Game}, [number|undefined,number|undefined,number|undefined]>();
     public static readonly AFTER_CRISIS = new CardActionType<
         {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardActionType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:Event<any>, next:(succeeded:boolean)=>void}, InterruptScareResult>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(succeeded:boolean)=>void}, InterruptScareResult>();
     //Returns true if can be placed
     public static readonly SPECIAL_PLACED_CHECK = new CardActionType<
         {self:Card, game:Game, normallyValid:boolean}, boolean>();
@@ -93,9 +93,6 @@ export default class CardData{
         this.id=globalID++;
         this.name=name;
         this.species=species;
-    }
-    stat(stat:Stat){
-        return this.stats[stat];
     }
 
     with<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, value:(params:P)=>R){

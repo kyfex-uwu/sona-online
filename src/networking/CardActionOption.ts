@@ -24,6 +24,7 @@ export type FOXY_MAGICIAN_GUESS=Level;
 export type DCW_GUESS=Level;
 export type DCW_SCARE={side:Side,pos:1|2|3};
 export type LITTLEBOSS_IMMUNITY=boolean;
+export type COWGIRL_COYOTE_INCREASE = false|Stat;
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -43,6 +44,7 @@ export const CardActionOptions = {
     DCW_GUESS: "og-032_guess" as CardActionOption<DCW_GUESS>,
     DCW_SCARE: "og-032_scare" as CardActionOption<DCW_SCARE>,
     LITTLEBOSS_IMMUNITY: "og-015_immunity" as CardActionOption<LITTLEBOSS_IMMUNITY>,
+    COWGIRL_COYOTE_INCREASE: "og-035_increase" as CardActionOption<COWGIRL_COYOTE_INCREASE>,
 
     //dont send this one
     CANNOT_PLAY: "cannot_play" as CardActionOption<void>

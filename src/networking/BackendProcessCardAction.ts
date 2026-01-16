@@ -13,6 +13,7 @@ import {
     type CardActionOption,
     CardActionOptions,
     type CLOUD_CAT_PICK,
+    type COWGIRL_COYOTE_INCREASE,
     type DCW_PICK,
     type DCW_SCARE,
     type FOXY_MAGICIAN_PICK,
@@ -26,7 +27,7 @@ import {
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
-import {CardActionType, Species} from "../CardData.js";
+import {Species} from "../CardData.js";
 import Card, {CardMiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
@@ -116,7 +117,7 @@ export default function(event:CardAction<any>):processedEvent{
                 return rejectEvent(event, "failed k9 check");
 
             const stat = data.canineFields.map((v,i)=>v?
-                (takeFrom[i]?.cardData.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
+                (takeFrom[i]?.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
 
             const toAttack = (event.sender === event.game.player(Side.A) ? event.game.fieldsB : event.game.fieldsA)[data.attack-1];
             if(toAttack === undefined) return rejectEvent(event, "k9 no card found");
@@ -168,25 +169,13 @@ export default function(event:CardAction<any>):processedEvent{
                 const scared = (event.sender === event.game.player(Side.A)?event.game.fieldsB:event.game.fieldsA)[data.position-1];
                 if(scared === undefined) return rejectEvent(event, "gremlin scare card doesnt exist");
 
-                const toSend = new ScareAction({
+                parseEvent(new ScareAction({
                     scaredPos:[data.position, event.sender === event.game.player(Side.A)?Side.B:Side.A],
                     scarerPos:[((event.sender === event.game.player(Side.A)?event.game.fieldsA:event.game.fieldsB).indexOf(actor) +1) as 1|2|3,
                         event.sender === event.game.player(Side.A)?Side.A:Side.B],
                     attackingWith:"card",
                     failed:false,
-                }, event.game);
-                scareInterrupt(toSend, toSend.game!, actor, scared, toSend.data.attackingWith, ()=>{
-                    sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[1]-1]!.hasAttacked=true;
-                    sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[1]-1]=undefined;
-
-                    sendToClients(toSend);
-
-                    event.game!.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                    scared.callAction(CardActionType.AFTER_SCARED, {
-                        self:sideTernary(toSend.data.scaredPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scaredPos[0]-1],
-                        scarer:sideTernary(toSend.data.scarerPos[1], toSend.game!.fieldsA, toSend.game!.fieldsB)[toSend.data.scarerPos[0]-1],
-                        game:event.game!, stat:toSend.data.attackingWith});
-                });
+                }, event.game).force().forceFree());
                 return acceptEvent(event);
             }
         }
@@ -503,6 +492,41 @@ export default function(event:CardAction<any>):processedEvent{
                 return rejectEvent(event, "failed littleboss check");
 
             actor.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, data);
+
+            const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
+            if(scareNext) scareNext(!data);
+
+            event.game.unfreeze();
+            return acceptEvent(event);
+        }
+        case CardActionOptions.COWGIRL_COYOTE_INCREASE:{//og-035
+            const actor = (event.game.player(Side.A) === event.sender ?
+                event.game.fieldsA : event.game.fieldsB).find(card=>
+                card !== undefined &&
+                card.getMiscData(CardMiscDataStrings.PAUSED_SCARE) !== undefined &&
+                card.cardData.name === "og-035");
+
+            if(actor === undefined ||
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.COWGIRL_COYOTE_INCREASE ||
+                actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET) === undefined)
+                return rejectEvent(event, "failed cowgirl check");
+
+            const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData;
+            const target = actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET)!;
+            //do stuff
+            if(data !== false){
+                actor.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
+                if(target.stat(data) === undefined)
+                    return rejectEvent(event, "failed cowgirl: stat is undefined");
+
+                let toSet:[number,number,number] = [0,0,0];
+                toSet[data] = 2;
+                target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![actor.cardData.name+actor.cardData.id] = toSet;
+
+                actor.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET, undefined);
+            }
 
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);

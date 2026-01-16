@@ -92,6 +92,9 @@ addToSerializableClasses(RejectEvent);
 //(S2C) Accepts a client-side event
 export class AcceptEvent extends Event<{}>{}
 addToSerializableClasses(AcceptEvent);
+//(S2C) Tells the client that the event hasn't been rejected... yet
+export class PerchanceEvent extends Event<{}>{}
+addToSerializableClasses(PerchanceEvent);
 
 //(C2S) Asks the server to find this client a game
 export class FindGameEvent extends Event<{

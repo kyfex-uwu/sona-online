@@ -7,6 +7,7 @@ import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {other, Side} from "../GameElement.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
+import {TurnState} from "../GameStates.js";
 
 export function loadBackendWrappers(){}
 
@@ -23,14 +24,16 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(sideTernary(self.side, game.fieldsB, game.fieldsB)
         .filter(card=>card !== undefined)
-        .filter(card=>(card?.cardData.stat(Stat.RED)??99)<2 ||
-            (card?.cardData.stat(Stat.BLUE)??99)<2 ||
-            (card?.cardData.stat(Stat.YELLOW)??99)<2).length<2)
+        .filter(card=>(card?.stat(Stat.RED)??99)<2 ||
+            (card?.stat(Stat.BLUE)??99)<2 ||
+            (card?.stat(Stat.YELLOW)??99)<2).length<2)
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
 wrap(cards["og-015"]!, CardActionType.INTERRUPT_SCARE, (orig,
                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next})
+
     if(self!==scared) return InterruptScareResult.PASSTHROUGH;
 
     if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) !== true) {
@@ -49,10 +52,10 @@ wrap(cards["og-015"]!, CardActionType.INTERRUPT_SCARE, (orig,
         return InterruptScareResult.PREVENT_SCARE;
     }else return InterruptScareResult.PASSTHROUGH;
 })
-wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, stat, game})=>{
-    if(orig) orig({self, scarer, stat, game});
+wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+    if(orig) orig({self, scarer, scared, stat, game});
 
-    draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
+    if(scared === self) draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
 });
 wrap(cards["og-024"]!, CardActionType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -135,3 +138,39 @@ wrap(cards["og-032"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.DCW));
 });
+wrap(cards["og-035"]!, CardActionType.INTERRUPT_SCARE, (orig,
+                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+
+    if(!(game.state instanceof TurnState && //is a turn
+        game.state.turn !== self.side && // is opponents turn
+        self.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) !== true &&//havent done this already
+        stat !== "card"//we can actually defend against this
+    ))
+        return InterruptScareResult.PASSTHROUGH;
+
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,
+        sideTernary(origEvent.data.scaredPos[1], game.fieldsA, game.fieldsB)[origEvent.data.scaredPos[0]-1]);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.COWGIRL_COYOTE_INCREASE);
+    game.freeze(event=>
+        event instanceof CardAction &&
+        event.data.actionName === CardActionOptions.COWGIRL_COYOTE_INCREASE &&
+        event.sender === game.player(self.side));
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+        cardData:false
+    }));
+
+    return InterruptScareResult.PREVENT_SCARE;
+});
+wrap(cards["og-035"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+    if(orig) orig({self, scared, scarer, stat, game});
+
+    const target = self.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET);
+    if(target === undefined) return;
+
+    delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
+    self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,undefined);
+})

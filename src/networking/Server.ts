@@ -1,4 +1,10 @@
-import {AcceptEvent, Event, RejectEvent, type SerializableEventData, type SerializableType,} from "./Events.js";
+import {
+    AcceptEvent,
+    Event,
+    PerchanceEvent,
+    RejectEvent,
+    type SerializableEventData,
+} from "./Events.js";
 import type Game from "../Game.js";
 
 class FlagData{
@@ -48,6 +54,8 @@ export class Replyable<T extends SerializableEventData>{
 }
 export function successOrFail(success: () => void, fail?: () => void, finaly?: () => void){
     return (event:Event<any>) =>{
+        if(event instanceof PerchanceEvent) return;
+
         if(event instanceof AcceptEvent) success();
         else if(fail !== undefined && event instanceof RejectEvent) fail();
         if(finaly !== undefined) finaly();

@@ -285,15 +285,15 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
     const target=sideTernary(self.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
     if(target.length>=2 &&//if there are at least 2 cards on opponent field
         target.some(card => //and at least one card has at least 1 stat less than 2
-            ((card.cardData.stat(Stat.RED)??99)<2 || (card.cardData.stat(Stat.BLUE)??99)<2 || (card.cardData.stat(Stat.YELLOW)??99)<2))) {
+            ((card.stat(Stat.RED)??99)<2 || (card.stat(Stat.BLUE)??99)<2 || (card.stat(Stat.YELLOW)??99)<2))) {
 
         tempHowToUse("Gremlin Kitten", "Select the card to scare");
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA).map(field=>field.getCard())
                 .filter(card => card !== undefined &&
-                        ((card.logicalCard.cardData.stat(Stat.RED)??99)<2||
-                        (card.logicalCard.cardData.stat(Stat.BLUE)??99)<2||
-                        ((card.logicalCard.cardData.stat(Stat.YELLOW)??99)<2))) as VisualCard[],
+                        ((card.logicalCard.stat(Stat.RED)??99)<2||
+                        (card.logicalCard.stat(Stat.BLUE)??99)<2||
+                        ((card.logicalCard.stat(Stat.YELLOW)??99)<2))) as VisualCard[],
             (card) => {
                 network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
                     position:(sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)

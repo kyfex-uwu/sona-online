@@ -1,7 +1,7 @@
 import CardData, {CardActionType, InterruptScareResult, Species} from "./CardData.js";
 import {sideTernary} from "./consts.js";
 import {BeforeGameState, TurnState} from "./GameStates.js";
-import {getVictim, CardMiscDataStrings, Stat} from "./Card.js";
+import Card, {getVictim, CardMiscDataStrings, Stat} from "./Card.js";
 import {flagNames, getFlag} from "./networking/Server.js";
 import {GameMiscDataStrings} from "./Game.js";
 import {CardActionOptions} from "./networking/CardActionOption.js";
@@ -11,19 +11,28 @@ const cards:{[k:string]:CardData} = {};
 
 const setCard = (data:CardData) => cards[data.name] = data;
 
+export const addTempStats = (self:Card, toAdd:[number|undefined,number|undefined,number|undefined]) =>{
+    for(const upgrade of Object.values(self.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)!))
+        for(let i=0;i<3;i++)
+            if(toAdd[i] !== undefined)
+                toAdd[i]! += upgrade[i]!;
+
+    return toAdd;
+}
+
 setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
     .with(CardActionType.GET_STATS, ({self, game})=>{
-        const toReturn = [...self.cardData.stats];
+        const toReturn:[number|undefined,number|undefined,number|undefined] = [...self.cardData.stats];
         const newStatData = self.getMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE);
         if(newStatData !== undefined)
             toReturn[newStatData?.stat]=newStatData.newVal;
-        return toReturn;
+        return addTempStats(self, toReturn);
     }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)
     .with(CardActionType.GET_STATS, ({self, game})=>{
-        return new Array(3).fill(sideTernary(self.side, game.fieldsA, game.fieldsB)
-            .filter(c=>c?.cardData.species === Species.FELINE).length*3);
+        return addTempStats(self, new Array(3).fill(sideTernary(self.side, game.fieldsA, game.fieldsB)
+            .filter(c=>c?.cardData.species === Species.FELINE).length*3) as [number,number,number]);
     }));
 setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE));
 setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE));
@@ -79,7 +88,9 @@ setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA)//todo
     }));
 setCard(new CardData("og-021", [2,1,8], 1, Species.FELINE));
 setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN)//DONE
-    .with(CardActionType.AFTER_SCARED, ({self, scarer, stat, game})=>{
+    .with(CardActionType.AFTER_SCARED, ({self, scarer, scared, stat, game})=>{
+        if(scared !== self) return;
+
         const toAdd = sideTernary(self.side, game.deckA, game.deckB).pop();
         if(toAdd !== undefined) sideTernary(self.side, game.handA, game.handB).push(toAdd);
     }));
@@ -132,8 +143,8 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
             if(scared !== self) return InterruptScareResult.PASSTHROUGH;
         }
 
-        if(stat !== "card" && scarer.cardData.stat(stat) !== undefined && scared.cardData.stat(getVictim(stat)) !== undefined){
-            return (scarer.cardData.stat(stat)! > self.cardData.stat(getVictim(stat))!) ?
+        if(stat !== "card" && scarer.stat(stat) !== undefined && scared.stat(getVictim(stat)) !== undefined){
+            return (scarer.stat(stat)! > self.stat(getVictim(stat))!) ?
                 InterruptScareResult.PASSTHROUGH : InterruptScareResult.FAIL_SCARE;
         }
         return InterruptScareResult.PASSTHROUGH;
@@ -144,8 +155,8 @@ setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)//todo
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";
         }
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.CLOUD_CAT_PICK);
-    }).with(CardActionType.AFTER_SCARED, ({self, game})=>{
-        game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = false;
+    }).with(CardActionType.AFTER_SCARED, ({self, scarer, scared, stat, game})=>{
+        if(scared===self) game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = false;
     }));
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
 

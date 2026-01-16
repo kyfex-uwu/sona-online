@@ -19,7 +19,7 @@ import {
     SyncEvent
 } from "./Events.js";
 import {game} from "../index.js";
-import Card from "../Card.js";
+import Card, {Stat} from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector3} from "three";
@@ -407,6 +407,25 @@ async function receiveFromServer(packed:{
                             cardId:-1,
                             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                             cardData:picked.logicalCard.cardData.name === "temp_keep"
+                        }));
+                        state.cancel();
+                    },EndType.NONE);
+                game.setState(state, game.getGame().state);
+            }break;
+            case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
+                const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                    ["temp_keep","temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
+                        new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                    (picked)=>{
+                        network.sendToServer(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                            cardData:({
+                                temp_keep:false,
+                                temp_red:Stat.RED,
+                                temp_yellow:Stat.YELLOW,
+                                temp_blue:Stat.BLUE
+                            })[picked.logicalCard.cardData.name]!
                         }));
                         state.cancel();
                     },EndType.NONE);

@@ -2,6 +2,7 @@ import {type GameElement, Side} from "./GameElement.js";
 import CardData, {CardActionType} from "./CardData.js";
 import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
+import {addTempStats} from "./Cards.js";
 
 //Which stat on a card
 export enum Stat{
@@ -24,16 +25,18 @@ export function getAttacker(stat:Stat){
     }
 }
 
-export type MiscDataString<T> = {};
+export type CardMiscDataString<T> = {};
 export const CardMiscDataStrings = {
-    TRASH_PANDA_IMMUNITY: "og-011_immunity" as MiscDataString<"wait"|"immune"|"not immune">,
-    LITTLEBOSS_IMMUNE: "og-015_immunity" as MiscDataString<boolean>,
-    K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as MiscDataString<{ stat: Stat, newVal: number }>,
-    CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as MiscDataString<boolean>,
+    TRASH_PANDA_IMMUNITY: "og-011_immunity" as CardMiscDataString<"wait"|"immune"|"not immune">,
+    LITTLEBOSS_IMMUNE: "og-015_immunity" as CardMiscDataString<boolean>,
+    K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as CardMiscDataString<{ stat: Stat, newVal: number }>,
+    CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as CardMiscDataString<boolean>,
+    COWGIRL_COYOTE_TARGET: "og-035_target" as CardMiscDataString<Card>,
+    FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as CardMiscDataString<Set<number>>,
 
-    PAUSED_SCARE:"pausedScare" as MiscDataString<(succeeded: boolean) => void>,
-    ALREADY_ATTACKED:"alreadyAttacked" as MiscDataString<boolean>,
-    FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as MiscDataString<Set<number>>
+    PAUSED_SCARE:"pausedScare" as CardMiscDataString<(succeeded: boolean) => void>,
+    ALREADY_ATTACKED:"alreadyAttacked" as CardMiscDataString<boolean>,
+    TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };
 verifyNoDuplicateStrVals(CardMiscDataStrings, "MiscDataStrings has a duplicate");
 
@@ -47,8 +50,8 @@ export default class Card implements GameElement{
     private readonly game:Game;
 
     private miscData: { [k: string]: any } = {};
-    public getMiscData<T>(key:MiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
-    public setMiscData<T>(key:MiscDataString<T>, val: T){ this.miscData[key as string]=val; }
+    public getMiscData<T>(key:CardMiscDataString<T>){ return this.miscData[key as string] as T|undefined; }
+    public setMiscData<T>(key:CardMiscDataString<T>, val: T){ this.miscData[key as string]=val; }
     public hasAttacked=false;
 
     /**
@@ -63,6 +66,8 @@ export default class Card implements GameElement{
         this.side=side;
         this.game=game;
         this._id=id;
+
+        this.setMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES, {});
     }
 
     private faceUp = true;
@@ -95,6 +100,10 @@ export default class Card implements GameElement{
     }
     callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
         return this.disabled() ? undefined : this.cardData.callAction(type, param);
+    }
+    stat(stat:Stat){
+        return (this.callAction(CardActionType.GET_STATS, {self:this,game:this.game}) ??
+            addTempStats(this, this.cardData.stats))[stat];
     }
 
     //USE WITH EXTREME CAUTION

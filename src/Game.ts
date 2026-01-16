@@ -1,4 +1,4 @@
-import Card, {type MiscDataString} from "./Card.js";
+import Card from "./Card.js";
 import {Side} from "./GameElement.js";
 import {Event} from "./networking/Events.js";
 import {network} from "./networking/Server.js";

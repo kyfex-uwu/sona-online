@@ -1,6 +1,6 @@
 import VisualCard from "./VisualCard.js";
-import {Mesh, Vector3} from "three";
-import Card, {type MiscDataString} from "../Card.js";
+import {Vector3} from "three";
+import Card, {type CardMiscDataString} from "../Card.js";
 
 export default class VisualCardClone extends VisualCard{
     private readonly clonedFrom;
@@ -11,7 +11,7 @@ export default class VisualCardClone extends VisualCard{
             getSide() { return this.side; },
             get id(){ return clonedFrom.logicalCard.id; },
             get miscData(){ return {}; },//dont
-            getMiscData:<T>(key:MiscDataString<T>)=>{ return clonedFrom.logicalCard.getMiscData(key);},
+            getMiscData:<T>(key:CardMiscDataString<T>)=>{ return clonedFrom.logicalCard.getMiscData(key);},
             setMiscData:()=>{},
             get hasAttacked(){ return clonedFrom.logicalCard.hasAttacked; },
             getFaceUp(){ return clonedFrom.logicalCard.getFaceUp(); },
