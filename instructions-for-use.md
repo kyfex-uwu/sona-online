@@ -1,4 +1,6 @@
 ## Setting up
+Install NodeJS https://nodejs.org/en/download
+
 Before you start the game, you need to add pictures of all the cards in `/assets/card-images`.
 I can give a zip of all the card images I've found, but it isn't the official images for each
 card. If you want to change the card images, make sure to keep the file name the same and the
@@ -67,7 +69,7 @@ of your hand, and below your crisis marker) and click the runaway pile.
 ### Winning the game
 Currently, when someone wins the game, the game just locks up. There is no visual indicator :c
 
-### Last thoughts
+## Last thoughts
 If there's anything unclear or strange, I welcome any dms :3
 
 The UI is currently VERY unpolished; currently it's just enough to be workable. The next big project
