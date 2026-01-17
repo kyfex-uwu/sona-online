@@ -500,6 +500,26 @@ async function receiveFromServer(packed:{
                     }
                 }
             }break;
+            case CardActionOptions.NOBLE_RETARGET:{
+                const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                    [new VisualCard(game, new Card(cards["og-020"]!, Side.A, game.getGame(), -1), new Vector3())],
+                    (picked) => {
+                        network.sendToServer(new CardAction({
+                            cardId: -1,
+                            actionName: CardActionOptions.NOBLE_RETARGET,
+                            cardData: true
+                        }));
+                        state.cancel();
+                    }, EndType.FINISH, () => {
+                        network.sendToServer(new CardAction({
+                            cardId: -1,
+                            actionName: CardActionOptions.NOBLE_RETARGET,
+                            cardData: false
+                        }));
+                        state.cancel();
+                    });
+                game.setState(state, game.getGame().state);
+            }break;
         }
     }
 

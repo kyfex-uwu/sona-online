@@ -21,7 +21,7 @@ import {
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type KIBBY_SCARE,
-    type LITTLEBOSS_IMMUNITY, type SONIC_STALLION_SAVE,
+    type LITTLEBOSS_IMMUNITY, type NOBLE_RETARGET, type SONIC_STALLION_SAVE,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -594,6 +594,31 @@ export default function(event:CardAction<any>):processedEvent{
             }
 
             event.game.unfreeze();
+            return acceptEvent(event);
+        }
+        case CardActionOptions.NOBLE_RETARGET:{
+            const actor = (event.game.player(Side.A) === event.sender ?
+                event.game.fieldsA : event.game.fieldsB).find(card=> card?.cardData.name === "og-020");
+
+            if(actor === undefined ||
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.NOBLE_RETARGET)
+                return rejectEvent(event, "failed noble check");
+
+            if((event as CardAction<NOBLE_RETARGET>).data.cardData){
+                const origScare = actor.getMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE);
+                if(origScare) origScare.data.scaredPos = [
+                    (sideTernary(actor.side, event.game.fieldsA, event.game.fieldsB).findIndex(card=>card?.id === actor.id)+1) as 1|2|3,
+                    actor.side
+                ];
+            }
+
+            const next = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
+            if(next) next();
+            actor.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, undefined);
+            actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            event.game.unfreeze();
+
             return acceptEvent(event);
         }
     }

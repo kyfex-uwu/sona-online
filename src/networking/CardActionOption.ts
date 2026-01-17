@@ -27,6 +27,7 @@ export type LITTLEBOSS_IMMUNITY=boolean;
 export type COWGIRL_COYOTE_INCREASE = false|Stat;
 export type BROY_WEASLA_INCREASE = false| { stat:Stat, pos:[1|2|3,Side] };
 export type SONIC_STALLION_SAVE = false | 1|2|3;
+export type NOBLE_RETARGET = boolean;
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {
@@ -49,6 +50,7 @@ export const CardActionOptions = {
     COWGIRL_COYOTE_INCREASE: "og-035_increase" as CardActionOption<COWGIRL_COYOTE_INCREASE>,
     BROY_WEASLA_INCREASE: "og-029_increase" as CardActionOption<BROY_WEASLA_INCREASE>,
     SONIC_STALLION_SAVE: "og-014_save" as CardActionOption<SONIC_STALLION_SAVE>,
+    NOBLE_RETARGET: "og-020_retarget" as CardActionOption<NOBLE_RETARGET>,
 
     //dont send this one
     CANNOT_PLAY: "cannot_play" as CardActionOption<void>

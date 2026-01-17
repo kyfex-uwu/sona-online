@@ -81,6 +81,28 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
             event instanceof CardAction);
         return InterruptScareResult.PREVENT_SCARE;
     }else return InterruptScareResult.PASSTHROUGH;
+});
+wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
+                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
+
+    if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined ||
+        self.side !== scared.side)
+        return InterruptScareResult.PASSTHROUGH;
+
+    self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_RETARGET);
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.NOBLE_RETARGET,
+        cardData:false
+    }));
+    game.freeze(event=>
+        event instanceof CardAction &&
+        event.sender === game.player(self.side) &&
+        event.data.actionName === CardActionOptions.NOBLE_RETARGET);
+    return InterruptScareResult.PREVENT_SCARE;
 })
 wrap(cards["og-022"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
     if(orig) orig({self, scarer, scared, stat, game});

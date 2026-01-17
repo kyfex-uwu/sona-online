@@ -439,7 +439,9 @@ export function parseEvent(event:Event<any>):processedEvent{
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
                 scarer !== undefined && scared !== undefined &&//the cards exist
                 !scarer.hasAttacked &&//if the card hasnt scared yet
-                event.data.attackingWith !== "card"))//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
+                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
+                scarer.stat(event.data.attackingWith) !== undefined &&
+                scared.stat(getVictim(event.data.attackingWith)) !== undefined))
                 return rejectEvent(event, "failed scare check");
         }else{
             scarer=scarer!;
@@ -449,40 +451,48 @@ export function parseEvent(event:Event<any>):processedEvent{
 
         let ranRightAway=false;
         const game = event.game;
-        scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=>{
-            ranRightAway=true;
+        scareInterrupt(event, event.game, scarer, scared, event.data.attackingWith, (succeeded)=> {
+            ranRightAway = true;
 
-            if(event.data.attackingWith !== "card" &&
+            let scarer = sideTernary(event.data.scarerPos[1], event.game!.fieldsA, event.game!.fieldsB)[event.data.scarerPos[0] - 1];
+            let scared = sideTernary(event.data.scaredPos[1], event.game!.fieldsA, event.game!.fieldsB)[event.data.scaredPos[0] - 1];
+            if (scarer === undefined || scared === undefined) {
+                console.log("some weird error");
+                return;
+            }
+
+            const autofail = (event.data.attackingWith !== "card" &&
                 (scarer.stat(event.data.attackingWith) === undefined ||
-                scared.stat(getVictim(event.data.attackingWith)) === undefined)) //neither stat is null
-                return rejectEvent(event, "tried to attack with null stat");
+                    scared.stat(getVictim(event.data.attackingWith)) === undefined));
+
 
             const toSend = new ScareAction({
                 scaredPos: event.data.scaredPos,
                 scarerPos: event.data.scarerPos,
                 attackingWith: event.data.attackingWith,
-                failed: forceFailed ?? succeeded ?? (event.data.attackingWith === "card" ||
-                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))),
-                free:event.isForcedFree(),
+                failed: forceFailed ?? succeeded ?? (autofail || (event.data.attackingWith === "card" ||
+                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)))),
+                free: event.isForcedFree(),
             });
             scarer.hasAttacked = true;
             for (const user of (usersFromGameIDs[game.gameID] || [])) {
                 user.send(toSend);
             }
-            if(!toSend.data.failed) {
+            if (!toSend.data.failed) {
                 sideTernary(scared.side, game.runawayA, game.runawayB).push(
                     sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
                 sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                for(const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
-                    if(card===undefined) continue;
+                for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
+                    if (card === undefined) continue;
 
                     card.callAction(CardTriggerType.AFTER_SCARED,
                         {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
                 }
             }
 
-            if(!event.isForcedFree()) endTurn(game);
+
+            if (!event.isForcedFree()) endTurn(game);
         });
         if(ranRightAway)
             return acceptEvent(event);
