@@ -75,25 +75,8 @@ export class TurnState extends GameState{
 
         return false;
     }
-    // serverInit(){
-    //     const hand = sideTernary((this.game.state as TurnState).turn, this.game.handA, this.game.handB);
-    //     if(hand.length>=5) return false;
-    //
-    //     const toAdd = sideTernary((this.game.state as TurnState).turn, this.game.deckA, this.game.deckB).pop();
-    //     if(toAdd===undefined) return false;
-    //
-    //     hand.push(toAdd);
-    //     return true;
-    // }
 }
 
-// export class WaitForInstructionsState extends GameState{
-//     public readonly eventConsumer:(event:Event)=>void;
-//     constructor(game:Game, eventConsumer:(event:Event)=>void) {
-//         super(game);
-//         this.eventConsumer=eventConsumer;
-//     }
-// }
 
 export class EndGameState extends GameState{
     public readonly winner:Side|undefined;

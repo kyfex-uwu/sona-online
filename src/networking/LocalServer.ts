@@ -556,7 +556,7 @@ async function receiveFromServer(packed:{
     }
 
     else if(event instanceof ServerDumpEvent){
-        console.log(event.data);
+        console.log("Server game:",event.data);
     }
 }
 

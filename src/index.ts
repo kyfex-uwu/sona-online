@@ -77,11 +77,8 @@ export const game = new VisualGame(scene);
 game.changeView(ViewType.WHOLE_BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
-        const toReturn = [
-            "og-020"
-        ];
+        const toReturn = [];
         const alreadyAdded:{[k:string]:true} = {};
-        for(const card of toReturn) alreadyAdded[card]=true;
         const cardsValues = Object.values(cards);
         let oneFlag = false;
         for(let i=0;i<20;i++) {
