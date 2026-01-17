@@ -14,6 +14,7 @@ import type CardData from "./CardData.js";
 import {network} from "./networking/Server.js";
 
 import Stats from "stats.js";
+import {tempHowToUse} from "./client/ui.js";
 
 /////
 // version 0.1.0
@@ -119,4 +120,8 @@ window.serverDump =
 console.log("important lines of code:\n\n" +
     "logGame() outputs the game as the CLIENT sees it\n\n" +
     "serverDump() outputs the game as the SERVER sees it\n\n" +
-    "showNetworkLogs=true turns on packet logging")
+    "showNetworkLogs=true turns on packet logging");
+
+tempHowToUse("Sonic Stallion", "Any time you have 0 cards on your field, you can place Sonic Stallion on your field. " +
+    "Additionally, if you have no cards on your field at the end of your opponent's turn, you have an option to place " +
+    "Sonic Stallion down. You can pick the slot to put Sonic Stallion in, or press Finish to not place Sonic Stallion.");

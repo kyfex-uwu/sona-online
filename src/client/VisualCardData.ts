@@ -113,6 +113,9 @@ visualCardClientActions["og-018"] = async (card) =>{
 visualCardClientActions["og-028"] = lastAction((card)=>{
     if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
 
+    tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
+        "to replace them with, and press Finish again.")
+
     let resolve;
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
@@ -162,6 +165,8 @@ visualCardClientActions["og-028"] = lastAction((card)=>{
     return toReturn;
 })
 visualCardClientActions["og-038"] = lastAction((card)=>{
+    tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
+
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
     let resolve;
@@ -196,6 +201,7 @@ visualCardClientActions["og-041"] = (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
 
+    tempHowToUse("Fur Maker", "Click the card to add to your hand");
     let resolve;
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
@@ -372,6 +378,8 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
+    tempHowToUse("The Foxy Magician", "Pick the card you want to potentially add to your hand.")
+
     waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
         const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
             sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
@@ -396,6 +404,8 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
+    tempHowToUse("Dark Cat Wizard", "Pick any card; your opponent will try to guess its level.")
+
     game.freeze(()=>true);
 
     waitForClarify(ClarificationJustification.DCW, ()=>{
@@ -412,6 +422,8 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 
                     waitForClarify(ClarificationJustification.DCW, (event)=>{
                         if(event instanceof ClarifyCardEvent && event.data.id === -1) {
+                            tempHowToUse("Dark Cat Wizard - Scaring", "Click the card you want to scare off.")
+
                             //scare any card
                             const state2 = new VPickCardsState(visualGame, oldStates,
                                 [...visualGame.fieldsA, ...visualGame.fieldsB].map(field=>field.getCard())
@@ -475,7 +487,6 @@ wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
 wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     if(self.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
-
 
     tempHowToUse("Cloud Cat", "Click the card to disable");
     const state = new VPickCardsState(visualGame, [visualGame.state, game.state],

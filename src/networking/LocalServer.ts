@@ -31,7 +31,7 @@ import {
     VPickCardsState,
     VTurnState
 } from "../client/VisualGameStates.js";
-import {registerDrawCallback} from "../client/ui.js";
+import {registerDrawCallback, tempHowToUse} from "../client/ui.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
@@ -326,6 +326,9 @@ async function receiveFromServer(packed:{
                     game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
             }break;
             case CardActionOptions.DCW_GUESS:{
+                tempHowToUse("Dark Cat Wizard - Guessing", "Pick the level you think the card your opponent " +
+                    "picked might be.")
+
                 const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
                 const state = new VPickCardsState(game, oldStates,
                     [1,2,3].map(level => new VisualCard(game,
@@ -373,6 +376,9 @@ async function receiveFromServer(packed:{
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.FOXY_MAGICIAN_GUESS:{
+                tempHowToUse("The Foxy Magician - Guessing", "Pick the level you think the card your opponent " +
+                    "picked might be.")
+
                 const state = new VPickCardsState(game, [game.state, game.getGame().state],
                     [1,2,3].map(level => new VisualCard(game,
                         new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
@@ -395,6 +401,7 @@ async function receiveFromServer(packed:{
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
+                tempHowToUse("Lttle Boss", "Press Keep to keep Little Boss, or press Scare to scare them off the field.");
                 const state = new VPickCardsState(game, [game.state, game.getGame().state],
                     ["temp_keep","temp_scare"].map(name => new VisualCard(game,
                         new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
@@ -409,25 +416,52 @@ async function receiveFromServer(packed:{
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
-                const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                    ["temp_keep","temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
-                        new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                tempHowToUse("Cowgirl Coyote", "Select the card who's stat you want to increase. Then, select the stat you " +
+                    "want to increase by 2.")
+
+                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
+                const state = new VPickCardsState(game, oldStates,
+                    [game.fieldsA, game.fieldsB].map(fields =>
+                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
+                        .flat(),
                     (picked)=>{
+                        const state2 = new VPickCardsState(game, oldStates,
+                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
+                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                            (picked2)=>{
+                                network.sendToServer(new CardAction({
+                                    cardId:-1,
+                                    actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                                    cardData:{
+                                        stat:({
+                                            temp_red:Stat.RED,
+                                            temp_yellow:Stat.YELLOW,
+                                            temp_blue:Stat.BLUE
+                                        })[picked2.logicalCard.cardData.name]!,
+                                        pos:[
+                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
+                                                .map(field=>field.getCard())
+                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
+                                            picked.logicalCard.side]
+                                    }
+                                }));
+                                state2.cancel();
+                            },EndType.NONE);
+                        game.setState(state2,oldStates[1]);
+                    },EndType.FINISH, ()=>{
                         network.sendToServer(new CardAction({
                             cardId:-1,
                             actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                            cardData:({
-                                temp_keep:false,
-                                temp_red:Stat.RED,
-                                temp_yellow:Stat.YELLOW,
-                                temp_blue:Stat.BLUE
-                            })[picked.logicalCard.cardData.name]!
+                            cardData:false
                         }));
                         state.cancel();
-                    },EndType.NONE);
-                game.setState(state, game.getGame().state);
+                    });
+                game.setState(state, oldStates[1]);
             }break;
             case CardActionOptions.BROY_WEASLA_INCREASE:{
+                tempHowToUse("Broy Weasla", "Select the card who's stat you want to increase. Then, select the stat you " +
+                    "want to increase by 2.")
+
                 const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
                 const state = new VPickCardsState(game, oldStates,
                     [game.fieldsA, game.fieldsB].map(fields =>
@@ -497,6 +531,8 @@ async function receiveFromServer(packed:{
                 }
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
+                tempHowToUse("Noble Rat", "Select Noble Rat if you want to retarget the opponent's attack to Noble Rat, " +
+                    "or press Finish to keep the attack as is.");
                 const state = new VPickCardsState(game, [game.state, game.getGame().state],
                     [new VisualCard(game, new Card(cards["og-020"]!, Side.A, game.getGame(), -1), new Vector3())],
                     (picked) => {

@@ -514,16 +514,19 @@ export default function(event:CardAction<any>):processedEvent{
                 return rejectEvent(event, "failed cowgirl check");
 
             const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData;
-            const target = actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET)!;
             //do stuff
             if(data !== false){
-                actor.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
-                if(target.stat(data) === undefined)
+                const target = sideTernary(data.pos[1], event.game.fieldsA, event.game.fieldsB)[data.pos[0]-1];
+                if(target === undefined) return rejectEvent(event, "cowgirl: tried to change nonexistent card");
+
+                if(target.stat(data.stat) === undefined)
                     return rejectEvent(event, "failed cowgirl: stat is undefined");
 
                 let toSet:[number,number,number] = [0,0,0];
-                toSet[data] = 2;
+                toSet[data.stat] = 2;
                 target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![actor.cardData.name+actor.cardData.id] = toSet;
+
+                actor.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET, target);
             }
 
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
