@@ -227,20 +227,20 @@ export function cardsTransform(cards:Array<IngameCard>, {cardData = true, faceUp
     return cards.map(c => card(c, {cardData, faceUp}));
 }
 
-//(C2S) A debug event that sends the entire game state as the backend knows it
-export class RequestSyncEvent extends Event<{}>{}
-addToSerializableClasses(RequestSyncEvent);
-//(S2C) A debug event that sends all the data of the game
-export class SyncEvent extends Event<{
-    fieldsA:[Card|undefined, Card|undefined, Card|undefined],
-    fieldsB:[Card|undefined, Card|undefined, Card|undefined],
-    deckA:Array<Card>,
-    deckB:Array<Card>,
-    handA:Array<Card>,
-    handB:Array<Card>,
-    runawayA:Array<Card>,
-    runawayB:Array<Card>
+export class RequestServerDumpEvent extends Event<{}>{}
+addToSerializableClasses(RequestServerDumpEvent);
+export class ServerDumpEvent extends Event<{
+    fieldsA:[string|undefined,string|undefined,string|undefined],
+    fieldsB:[string|undefined,string|undefined,string|undefined],
+    handA:string[],
+    handB:string[],
+    runawayA:string[],
+    runawayB:string[],
+    deckA:string[],
+    deckB:string[],
+    crisises:{A:number, B:number},
+
+    currTurn?:"A"|"B",
+    actionsLeft?:number,
 }>{}
-addToSerializableClasses(SyncEvent);
-export class StringReprSyncEvent extends Event<{str:string}>{}
-addToSerializableClasses(StringReprSyncEvent);
+addToSerializableClasses(ServerDumpEvent);

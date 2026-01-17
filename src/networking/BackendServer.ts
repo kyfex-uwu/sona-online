@@ -18,14 +18,11 @@ import {
     multiClarifyFactory,
     PassAction, PerchanceEvent,
     PlaceAction,
-    RejectEvent,
-    RequestSyncEvent,
+    RejectEvent, RequestServerDumpEvent,
     ScareAction,
     SerializableClasses,
-    type SerializableType,
+    type SerializableType, ServerDumpEvent,
     StartRequestEvent,
-    StringReprSyncEvent,
-    SyncEvent
 } from "./Events.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {v4 as uuid} from "uuid"
@@ -594,27 +591,27 @@ export function parseEvent(event:Event<any>):processedEvent{
         return rejectEvent(event, "no suitable cards found");
     }
 
-    //DEBUG, DONT UNCOMMENT UNLESS DEVELOPING
-    else if(event instanceof RequestSyncEvent){
-        if(event.game === undefined) return rejectEvent(event, "no game found (requestsyncevent)");
+    else if(event instanceof RequestServerDumpEvent){
+        if(event.game === undefined) return rejectEvent(event, "no game");
 
-        event.sender?.send(new SyncEvent({
-            fieldsA: cardsTransform(event.game.fieldsA as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-            fieldsB: cardsTransform(event.game.fieldsB as Array<Card>) as [Events.Card|undefined, Events.Card|undefined, Events.Card|undefined],
-            deckA: cardsTransform(event.game.deckA),
-            deckB: cardsTransform(event.game.deckB),
-            handA: cardsTransform(event.game.handA),
-            handB: cardsTransform(event.game.handB),
-            runawayA: cardsTransform(event.game.runawayA),
-            runawayB: cardsTransform(event.game.runawayB),
+        network.replyToClient(event, new ServerDumpEvent({
+            fieldsA:event.game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
+            fieldsB:event.game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
+            handA:event.game.handA.map(card=>card?.cardData.name),
+            handB:event.game.handB.map(card=>card?.cardData.name),
+            runawayA:event.game.runawayA.map(card=>card?.cardData.name),
+            runawayB:event.game.runawayB.map(card=>card?.cardData.name),
+            deckA:event.game.deckA.map(card=>card?.cardData.name),
+            deckB:event.game.deckB.map(card=>card?.cardData.name),
+
+            crisises:{A:event.game.getCrisis(Side.A), B:event.game.getCrisis(Side.B)},
+
+            ...(event.game.state instanceof TurnState?{
+                currTurn: sideTernary(event.game.state.turn, "A", "B"),
+                actionsLeft: event.game.state.actionsLeft
+            }:{})
         }));
-        network.replyToClient(event, new StringReprSyncEvent({
-            str:`${event.game.state instanceof TurnState?(event.game.state.turn+" "+event.game.state.actionsLeft):""}\n`+
-                `${event.game.deckB.length} ${event.game.handB.length} ${event.game.runawayB.length}\n`+
-                `   ${event.game.fieldsB.filter(card=>card!==undefined).length}\n`+
-                `   ${event.game.fieldsA.filter(card=>card!==undefined).length}\n`+
-                `${event.game.runawayA.length} ${event.game.handA.length} ${event.game.deckA.length}\n`
-        }, undefined, undefined, event.id));
+
         return acceptEvent(event);
     }
 
@@ -631,7 +628,7 @@ export async function receiveFromClient (packed:{
         //@ts-ignore
         packed.data,
         gamesFromUser.get(client), client, packed.id) as Event<any>;
-    if(true && !(event instanceof RequestSyncEvent)) console.log("received "+event.serialize());
+    if(true) console.log("received "+event.serialize());
 
     if(event.game !== undefined && (eventReplyIds[event.game.gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[event.game.gameID]||{})[event.id]?._callback||(()=>{}))(event);

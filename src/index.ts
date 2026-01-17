@@ -8,7 +8,7 @@ import {
 import {camera, modelLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
-import {FindGameEvent, RequestSyncEvent} from "./networking/Events.js";
+import {FindGameEvent, RequestServerDumpEvent} from "./networking/Events.js";
 import cards, {specialCards} from "./Cards.js";
 import type CardData from "./CardData.js";
 import {network} from "./networking/Server.js";
@@ -109,9 +109,14 @@ renderer.setAnimationLoop(() => {
 
 frontendInit();
 
-setInterval(()=>{
-    network.sendToServer(new RequestSyncEvent({}));
-},1000);
-
 // @ts-ignore
-window.logGame = ()=> console.log(game)
+window.logGame =
+    ()=> console.log(game);
+// @ts-ignore
+window.serverDump =
+    ()=>network.sendToServer(new RequestServerDumpEvent({}));
+
+console.log("important lines of code:\n\n" +
+    "logGame() outputs the game as the CLIENT sees it\n\n" +
+    "serverDump() outputs the game as the SERVER sees it\n\n" +
+    "showNetworkLogs=true turns on packet logging")

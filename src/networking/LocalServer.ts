@@ -11,12 +11,9 @@ import {
     MultiClarifyCardEvent,
     PassAction,
     PlaceAction,
-    RequestSyncEvent,
     ScareAction,
     SerializableClasses,
-    type SerializableType,
-    StringReprSyncEvent,
-    SyncEvent
+    type SerializableType, ServerDumpEvent,
 } from "./Events.js";
 import {game} from "../index.js";
 import Card, {Stat} from "../Card.js";
@@ -95,8 +92,7 @@ function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
 network.sendToServer = (event) => {
     websocketReady.then(()=>{
         websocket.send(event.serialize());
-        if(!(event instanceof RequestSyncEvent))
-            log("sent "+event.serialize())
+        if(true) log("sent "+event.serialize())
     });
     return new Replyable(event);
 }
@@ -138,8 +134,8 @@ async function receiveFromServer(packed:{
         //@ts-ignore
         packed.data,
         game.getGame(), null, packed.id) as Event<any>;
-    if(!(event instanceof SyncEvent || event instanceof StringReprSyncEvent))
-        log("%c -> "+packed.type+"\n"+event.serialize(), `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
+    if(true) log("%c -> "+packed.type+"\n"+event.serialize(),
+        `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
     if((eventReplyIds[game.getGame().gameID]||{})[event.id] !== undefined){
         ((eventReplyIds[game.getGame().gameID]||{})[event.id]?._callback||(()=>{}))(event);
@@ -523,17 +519,8 @@ async function receiveFromServer(packed:{
         }
     }
 
-    else if(event instanceof SyncEvent){
-        // log("fields A: "+event.data.fieldsA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("deck A: "+event.data.deckA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("runaway A: "+event.data.runawayA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("hand A: "+event.data.handA.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("fields B: "+event.data.fieldsB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("deck B: "+event.data.deckB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("runaway B: "+event.data.runawayB.map(data => data?.cardData + "-"+data?.id).join(", "));
-        // log("hand B: "+event.data.handB.map(data => data?.cardData + "-"+data?.id).join(", "));
-    }else if(event instanceof StringReprSyncEvent){
-        game.debugLast=event.data.str;
+    else if(event instanceof ServerDumpEvent){
+        console.log(event.data);
     }
 }
 
