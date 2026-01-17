@@ -9,7 +9,7 @@ import {type Decrementable, isDecrementable, StateFeatures, VAttackingState, VTu
 import {getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
-import {CardActionType} from "../../CardData.js";
+import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
 
@@ -34,7 +34,7 @@ export default class FieldMagnet extends CardMagnet{
                 if(this.game.selectedCard !== undefined && this.getSide() === this.game.getMySide() &&
                     state.canSelectHandCard(this.game.selectedCard) &&
                     (state.hasFeatures(StateFeatures.FIELDS_PLACEABLE)||
-                        this.game.selectedCard.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+                        this.game.selectedCard.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
                             {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){//todo: this is technically a bandaid fix
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
@@ -57,10 +57,10 @@ export default class FieldMagnet extends CardMagnet{
                             this.game.frozen=false;
                         }));
 
-                        card.logicalCard.callAction(CardActionType.PRE_PLACED,
+                        card.logicalCard.callAction(CardTriggerType.PRE_PLACED,
                             {self:card.logicalCard, game:game.getGame()});
-                        if(card.logicalCard.getAction(CardActionType.PLACED) !== undefined){
-                            const action = card.logicalCard.getAction(CardActionType.PLACED)!;
+                        if(card.logicalCard.getAction(CardTriggerType.PLACED) !== undefined){
+                            const action = card.logicalCard.getAction(CardTriggerType.PLACED)!;
 
                             this.storedRunnable = ()=>{
                                 action({
@@ -171,7 +171,7 @@ export default class FieldMagnet extends CardMagnet{
     shouldSnapCards(): boolean {
         return this.card === undefined &&
             (this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) ||
-                (this.game.selectedCard?.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+                (this.game.selectedCard?.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
                     {self:this.game.selectedCard.logicalCard,
                         game:this.game.selectedCard.game.getGame(),
                     normallyValid:false})??false)) &&

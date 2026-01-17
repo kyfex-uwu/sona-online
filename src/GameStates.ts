@@ -1,8 +1,7 @@
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {other, type Side} from "./GameElement.js";
 import {sideTernary} from "./consts.js";
-import type Card from "./Card.js";
-import {CardActionType} from "./CardData.js";
+import {CardTriggerType} from "./CardData.js";
 
 //A logical game state
 export abstract class GameState{
@@ -48,7 +47,7 @@ export class TurnState extends GameState{
         this.inited=true;
 
         for(const card of [...this.game.fieldsA, ...this.game.fieldsB])
-            card?.callAction(CardActionType.TURN_START, {
+            card?.callAction(CardTriggerType.TURN_START, {
                 self:card,
                 game:this.game
             });

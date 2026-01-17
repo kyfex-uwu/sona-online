@@ -18,7 +18,7 @@ import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import type {CardHoldable} from "./CardHoldable.js";
 import {sideTernary} from "../consts.js";
-import {CardActionType} from "../CardData.js";
+import {CardTriggerType} from "../CardData.js";
 
 const cardModel = (() => {
     let resolve : (v:any) => void;
@@ -209,7 +209,7 @@ export default class VisualCard extends PositionedVisualGameElement{
 
     visualTick() {
         //trust me (working with fake cards that are naughty)
-        if(this._logicalCard.callAction) this._logicalCard.callAction(CardActionType.VISUAL_TICK, {self:this._logicalCard});
+        if(this._logicalCard.callAction) this._logicalCard.callAction(CardTriggerType.VISUAL_TICK, {self:this._logicalCard});
 
         let targetPos = this.position.clone();
         const targetRot = this.rotation.clone();

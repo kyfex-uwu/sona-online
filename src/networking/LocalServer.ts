@@ -44,7 +44,7 @@ import {
     type BROWNIE_DRAW,
     CardActionOptions,
     type CLOUD_CAT_PICK,
-    type FURMAKER_PICK,
+    type FURMAKER_PICK, type SONIC_STALLION_SAVE,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -470,6 +470,35 @@ async function receiveFromServer(packed:{
                         state.cancel();
                 });
                 game.setState(state, oldStates[1]);
+            }break;
+            case CardActionOptions.SONIC_STALLION_SAVE:{
+                if((event as CardAction<SONIC_STALLION_SAVE>).data.cardData === false) {
+                    const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                        [1, 2, 3].map(level => new VisualCard(game,
+                            new Card(cards["temp_lv" + level]!, Side.A, game.getGame(), -1), new Vector3())),
+                        (picked) => {
+                            network.sendToServer(new CardAction({
+                                cardId: -1,
+                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
+                                cardData: picked.logicalCard.cardData.level
+                            }));
+                            state.cancel();
+                        }, EndType.FINISH, () => {
+                            network.sendToServer(new CardAction({
+                                cardId: -1,
+                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
+                                cardData: false
+                            }));
+                            state.cancel();
+                        });
+                    game.setState(state, game.getGame().state);
+                }else{
+                    if(game.state instanceof VTurnState && game.state.getNonVisState().crisis){
+                        game.setState(new VTurnState(game.state.currTurn, game),
+                            new TurnState(game.getGame(), game.state.currTurn, false));
+                        game.getGame().setCrisis(game.state.currTurn, game.getGame().getCrisis(game.state.currTurn)-1);
+                    }
+                }
             }break;
         }
     }

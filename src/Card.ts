@@ -1,5 +1,5 @@
 import {type GameElement, Side} from "./GameElement.js";
-import CardData, {CardActionType} from "./CardData.js";
+import CardData, {CardTriggerType} from "./CardData.js";
 import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {addTempStats} from "./Cards.js";
@@ -96,14 +96,14 @@ export default class Card implements GameElement{
         }
         return false;
     }
-    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
+    getAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>):((params:P)=>R)|undefined{
         return this.disabled() ? undefined : this.cardData.getAction(type);
     }
-    callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
+    callAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>, param:P){
         return this.disabled() ? undefined : this.cardData.callAction(type, param);
     }
     stat(stat:Stat){
-        return (this.callAction(CardActionType.GET_STATS, {self:this,game:this.game}) ??
+        return (this.callAction(CardTriggerType.GET_STATS, {self:this,game:this.game}) ??
             addTempStats(this, [...this.cardData.stats]))[stat];
     }
 
@@ -118,10 +118,10 @@ export default class Card implements GameElement{
 
     //@return if this card is free by way of having "Can be placed for Free" text
     isAlwaysFree(){
-        return this.getAction(CardActionType.IS_FREE) !== undefined;
+        return this.getAction(CardTriggerType.IS_FREE) !== undefined;
     }
     //@return if this card should decrement the turn when placed
     isFreeNow(){
-        return this.callAction(CardActionType.IS_SOMETIMES_FREE, {self:this, game:this.game})??false;
+        return this.callAction(CardTriggerType.IS_SOMETIMES_FREE, {self:this, game:this.game})??false;
     }
 }

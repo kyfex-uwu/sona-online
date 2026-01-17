@@ -1,4 +1,4 @@
-import CardData, {CardActionType, Species} from "../CardData.js";
+import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
 import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
@@ -225,21 +225,21 @@ visualCardClientActions["og-041"] = (card)=>{
 
 //--
 
-function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActionType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
+function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardTriggerType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
     const oldAction = data.getAction(action);
     data.with(action, (args: P) => {
         return wrapper(oldAction, args);
     });
 }
 function waitToDraw(data:CardData){
-    wrap(data, CardActionType.PRE_PLACED, (orig, {self, game})=>{
+    wrap(data, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
         if(orig) orig({self, game});
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)!.waiting=true;
     });
 }
 
 waitToDraw(cards["og-005"]!);
-wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     tempHowToUse("Brownie","Click the card you want to add to your hand")
@@ -279,7 +279,7 @@ wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
     }));
 });
 waitToDraw(cards["og-009"]!);
-wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
+wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game}) =>{
     if(orig) orig({self, game});
 
     const target=sideTernary(self.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
@@ -310,16 +310,16 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game}) =>{
     }
 });
 waitToDraw(cards["og-011"]!);
-wrap(cards["og-011"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-011"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
 });
-wrap(cards["og-018"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+wrap(cards["og-018"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
 });
-wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     tempHowToUse("Yashi MauMau", "Select your three cards, then press Finish. "+
@@ -369,7 +369,7 @@ wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
     });
     visualGame.frozen=true;
 });
-wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
@@ -393,7 +393,7 @@ wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
         visualGame.setState(state, game.state);
     });
 });
-wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.freeze(()=>true);
@@ -437,7 +437,7 @@ wrap(cards["og-032"]!, CardActionType.PLACED, (orig, {self, game})=>{
         visualGame.setState(state, game.state);
     });
 });
-wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
+wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
     if(self.getMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR) === undefined)
         self.setMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR, new Set());
     if(self.side !== visualGame.getMySide()){
@@ -454,12 +454,12 @@ wrap(cards["og-041"]!, CardActionType.VISUAL_TICK, (_, {self})=>{
         }
     }
 });
-wrap(cards["og-041"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+wrap(cards["og-041"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
 });
-wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
+wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     if(game.state instanceof BeforeGameState){
@@ -472,7 +472,7 @@ wrap(cards["og-043"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
         self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
     }
 });
-wrap(cards["og-043"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
     if(self.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
 

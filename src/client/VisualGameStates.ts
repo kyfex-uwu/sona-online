@@ -10,7 +10,7 @@ import {camera, clickListener, removeClickListener} from "./clientConsts.js";
 import {Euler, Group, Quaternion, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
-import {CardActionType} from "../CardData.js";
+import {CardTriggerType} from "../CardData.js";
 
 export enum StateFeatures{
     FIELDS_PLACEABLE,
@@ -145,20 +145,6 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready && this.canInit) {
-            // const firstTurnAwaiter = this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER);
-            // if(!firstTurnAwaiter?.waiting)
-            //     firstTurnAwaiter?.resolve();
-
-            // if (this.currTurn === this.game.getMySide()) {
-            //     //dont even think about uncommenting this unless youre gonna fix brownie
-            //     // this.game.getGame().getMiscData(GameMiscDataStrings.FIRST_TURN_WAITER)!.then(()=>{
-            //     //     sideTernary(this.currTurn, this.game.deckA, this.game.deckB).drawCard();
-            //     //     network.sendToServer(new DrawAction({}));
-            //     // });
-            // }
-            // if (!sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(card => card !== undefined)) {
-            //     //something something crisis mode
-            // }
             this.initedAlready=true;
         }
     }
@@ -205,7 +191,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         const toReturn = card.logicalCard.cardData.level === 1 ||
             sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
                 (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
-        if(card.logicalCard.callAction(CardActionType.SPECIAL_PLACED_CHECK,
+        if(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
             {self:card.logicalCard, game:card.game.getGame(), normallyValid:toReturn})??false) return true;
         return toReturn;
     }

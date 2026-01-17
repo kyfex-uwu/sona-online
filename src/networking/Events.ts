@@ -132,44 +132,7 @@ export class DetermineStarterEvent extends Event<{
 addToSerializableClasses(DetermineStarterEvent);
 
 //An event that constitutes an action
-export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends Event<T>{}
-
-//Draws a card. S2C needs side, C2S does not
-export class DrawAction extends ActionEvent<{
-    side?:Side,
-    isAction?:boolean,//default true
-}>{}
-addToSerializableClasses(DrawAction);
-
-//Places a card in a specific slot
-export class PlaceAction extends ActionEvent<{
-    cardId:number,
-    position:1|2|3,
-    side:Side,
-    faceUp:boolean,
-    forFree?:boolean//default false
-}>{
-    private forceMarker?:{};
-    //Forces the scare through
-    force(){
-        this.forceMarker = backendMarker;
-        return this;
-    }
-    isForced(){
-        return this.forceMarker === backendMarker;
-    }
-}
-addToSerializableClasses(PlaceAction);
-
-const backendMarker = {};
-//Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
-export class ScareAction extends ActionEvent<{
-    scarerPos:[1|2|3, Side],
-    scaredPos:[1|2|3, Side],
-    attackingWith:Stat|"card",
-    failed?:boolean,
-    free?:boolean,
-}>{
+export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends Event<T>{
     private forceMarker?:{};
     private freeMarker?:{};
     //Forces the scare through
@@ -188,23 +151,34 @@ export class ScareAction extends ActionEvent<{
         return this.freeMarker === backendMarker;
     }
 }
+
+//Draws a card. S2C needs side, C2S does not
+export class DrawAction extends ActionEvent<{
+    side?:Side,
+    isAction?:boolean,//default true
+}>{}
+addToSerializableClasses(DrawAction);
+
+//Places a card in a specific slot
+export class PlaceAction extends ActionEvent<{
+    cardId:number,
+    position:1|2|3,
+    side:Side,
+    faceUp:boolean,
+    forFree?:boolean//default false
+}>{}
+addToSerializableClasses(PlaceAction);
+
+const backendMarker = {};
+//Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
+export class ScareAction extends ActionEvent<{
+    scarerPos:[1|2|3, Side],
+    scaredPos:[1|2|3, Side],
+    attackingWith:Stat|"card",
+    failed?:boolean,
+    free?:boolean,
+}>{}
 addToSerializableClasses(ScareAction);
-// export const internalCardScareMarker={};
-// export class InternalCardScareAction extends ScareAction{
-//     public readonly valid;
-//     constructor(params:{
-//         scarerPos:1|2|3,
-//         scaredPos:1|2|3,
-//         failed?:boolean,
-//         scaredSide:Side,
-//     }, marker:{}) {
-//         super({
-//             ...params,
-//             attackingWith:Stat.RED,
-//         });
-//         this.valid=marker===internalCardScareMarker;
-//     }
-// }
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{

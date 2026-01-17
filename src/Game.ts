@@ -76,6 +76,9 @@ export default class Game{
     public crisis(side:Side){
         this._crisises[side]++;
     }
+    public setCrisis(side:Side, amt:number){
+        this._crisises[side]=amt;
+    }
 
     private playerA:Client|undefined=undefined;
     private playerB:Client|undefined=undefined;

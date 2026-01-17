@@ -1,6 +1,13 @@
-import CardData, {CardActionType, InterruptScareResult} from "../CardData.js";
+import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
+import {
+    CardAction,
+    ClarificationJustification,
+    ClarifyCardEvent,
+    multiClarifyFactory,
+    PlaceAction,
+    ScareAction
+} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
@@ -11,17 +18,17 @@ import {TurnState} from "../GameStates.js";
 
 export function loadBackendWrappers(){}
 
-function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardActionType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
+function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardTriggerType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
     const oldAction = data.getAction(action);
     data.with(action, (args: P) => {
         return wrapper(oldAction, args);
     });
 }
 
-wrap(cards["og-005"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROWNIE_DRAW);
 });
-wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(sideTernary(self.side, game.fieldsB, game.fieldsB)
         .filter(card=>card !== undefined)
         .filter(card=>(card?.stat(Stat.RED)??99)<2 ||
@@ -30,9 +37,32 @@ wrap(cards["og-009"]!, CardActionType.PLACED, (orig, {self, game})=>{
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
-wrap(cards["og-015"]!, CardActionType.INTERRUPT_SCARE, (orig,
-                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent, next})
+wrap(cards["og-014"]!, CardTriggerType.AFTER_ACTION, (orig, {self, game})=>{
+    if(orig) orig({self, game});
+
+    if(sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card!==undefined) ||
+        !(game.state instanceof TurnState) ||
+        game.state.actionsLeft !== 1 ||
+        game.state.turn === self.side)
+        return InterruptScareResult.PASSTHROUGH;
+
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.SONIC_STALLION_SAVE);
+    game.freeze(event=>
+        (event instanceof CardAction &&
+        event.sender === game.player(self.side) &&
+        event.data.actionName === CardActionOptions.SONIC_STALLION_SAVE) ||
+        (event instanceof PlaceAction && event.isForced()));
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.SONIC_STALLION_SAVE,
+        cardData:false
+    }));
+
+    return InterruptScareResult.PREVENT_SCARE;
+})
+wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
+                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
 
     if(self!==scared) return InterruptScareResult.PASSTHROUGH;
 
@@ -52,17 +82,17 @@ wrap(cards["og-015"]!, CardActionType.INTERRUPT_SCARE, (orig,
         return InterruptScareResult.PREVENT_SCARE;
     }else return InterruptScareResult.PASSTHROUGH;
 })
-wrap(cards["og-022"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+wrap(cards["og-022"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
     if(orig) orig({self, scarer, scared, stat, game});
 
     if(scared === self) draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
 });
-wrap(cards["og-024"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-024"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
 });
-wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     const card = sideTernary(self.side, game.deckA, game.deckB).shift();
@@ -79,21 +109,58 @@ wrap(cards["og-025"]!, CardActionType.PLACED, (orig, {self, game})=>{
         }));
     }
 });
-wrap(cards["og-027"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
 });
-wrap(cards["og-030"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
+                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+
+    if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined)
+        return InterruptScareResult.PASSTHROUGH;
+
+    if(!(game.state instanceof TurnState && //is a turn
+        game.state.turn === self.side && // is your turn
+        !sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card?.hasAttacked) && //first scare attempt
+        stat !== "card"//we can actually defend against this
+    ))
+        return InterruptScareResult.PASSTHROUGH;
+
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROY_WEASLA_INCREASE);
+    game.freeze(event=>
+        event instanceof CardAction &&
+        event.data.actionName === CardActionOptions.BROY_WEASLA_INCREASE &&
+        event.sender === game.player(self.side));
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+        cardData:false
+    }));
+
+    return InterruptScareResult.PREVENT_SCARE;
+});
+wrap(cards["og-029"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+    if(orig) orig({self, scared, scarer, stat, game});
+
+    const target = self.getMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET);
+    if(target === undefined) return;
+
+    delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
+    self.setMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET,undefined);
+});
+wrap(cards["og-030"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     for(const side of [Side.A, Side.B])
         for (let i = sideTernary(side, game.handA, game.handB).length; i < 5; i++)
             draw(game, undefined, side, false, game.player(side));
 });
-wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
+wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.FOXY_MAGICIAN_PICK);
@@ -113,7 +180,7 @@ wrap(cards["og-031"]!, CardActionType.PLACED, (orig, {self, game})=>{
         ClarificationJustification.FOXY_MAGICIAN));
 });
 //has to be preplaced because first turn waiter pushes it to next frame
-wrap(cards["og-032"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
+wrap(cards["og-032"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);
@@ -138,9 +205,12 @@ wrap(cards["og-032"]!, CardActionType.PRE_PLACED, (orig, {self, game})=>{
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.DCW));
 });
-wrap(cards["og-035"]!, CardActionType.INTERRUPT_SCARE, (orig,
-                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
+wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
+                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+
+    if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined)
+        return InterruptScareResult.PASSTHROUGH;
 
     if(!(game.state instanceof TurnState && //is a turn
         game.state.turn !== self.side && // is opponents turn
@@ -165,7 +235,7 @@ wrap(cards["og-035"]!, CardActionType.INTERRUPT_SCARE, (orig,
 
     return InterruptScareResult.PREVENT_SCARE;
 });
-wrap(cards["og-035"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
+wrap(cards["og-035"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
     if(orig) orig({self, scared, scarer, stat, game});
 
     const target = self.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET);
@@ -173,41 +243,7 @@ wrap(cards["og-035"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared
     if(target !== undefined)
         delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
 });
-wrap(cards["og-035"]!, CardActionType.TURN_START, (orig, {self, game})=>{
+wrap(cards["og-035"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
     self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
-});
-wrap(cards["og-029"]!, CardActionType.INTERRUPT_SCARE, (orig,
-                                                        {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
-
-    if(!(game.state instanceof TurnState && //is a turn
-        game.state.turn === self.side && // is your turn
-        !sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card?.hasAttacked) && //first scare attempt
-        stat !== "card"//we can actually defend against this
-    ))
-        return InterruptScareResult.PASSTHROUGH;
-
-    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
-    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROY_WEASLA_INCREASE);
-    game.freeze(event=>
-        event instanceof CardAction &&
-        event.data.actionName === CardActionOptions.BROY_WEASLA_INCREASE &&
-        event.sender === game.player(self.side));
-    game.player(self.side)?.send(new CardAction({
-        cardId:-1,
-        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-        cardData:false
-    }));
-
-    return InterruptScareResult.PREVENT_SCARE;
-});
-wrap(cards["og-029"]!, CardActionType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
-    if(orig) orig({self, scared, scarer, stat, game});
-
-    const target = self.getMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET);
-    if(target === undefined) return;
-
-    delete target.getMiscData(CardMiscDataStrings.TEMP_STAT_UPGRADES)![self.cardData.name+self.cardData.id];
-    self.setMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET,undefined);
 });

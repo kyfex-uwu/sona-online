@@ -21,7 +21,7 @@ import {
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type KIBBY_SCARE,
-    type LITTLEBOSS_IMMUNITY,
+    type LITTLEBOSS_IMMUNITY, type SONIC_STALLION_SAVE,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -275,8 +275,7 @@ export default function(event:CardAction<any>):processedEvent{
                     position:(i+1) as 1|2|3,
                     side:actor.side,
                     faceUp:true,
-                    forFree:true,
-                }, event.game).force());
+                }, event.game).force().forceFree());
             }
             return acceptEvent(event);
         }
@@ -566,6 +565,33 @@ export default function(event:CardAction<any>):processedEvent{
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
             if(scareNext) scareNext();
+
+            event.game.unfreeze();
+            return acceptEvent(event);
+        }
+        case CardActionOptions.SONIC_STALLION_SAVE:{
+            const actor = (event.game.player(Side.A) === event.sender ?
+                event.game.handA : event.game.handB).find(card=> card.cardData.name === "og-014");
+
+            if(actor === undefined ||
+                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.SONIC_STALLION_SAVE)
+                return rejectEvent(event, "failed sonic check");
+
+            const data = (event as CardAction<SONIC_STALLION_SAVE>).data.cardData;
+            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
+            if(data !== false){
+                parseEvent(new PlaceAction({
+                    cardId:actor.id,
+                    position:data,
+                    side:actor.side,
+                    faceUp:true
+                }, event.game).force().forceFree());
+                sendToClients(new CardAction({
+                    cardId:-1,
+                    actionName:CardActionOptions.SONIC_STALLION_SAVE,
+                    cardData:1
+                }, event.game));
+            }
 
             event.game.unfreeze();
             return acceptEvent(event);

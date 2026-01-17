@@ -10,40 +10,41 @@ export enum InterruptScareResult{
     FAIL_SCARE,//a turn is consumed, but the scare does not happen
 }
 
-export class CardActionType<P extends {[k:string]:any}, R>{
+export class CardTriggerType<P extends {[k:string]:any}, R>{
     private static nextId=0;
-    public readonly id=CardActionType.nextId++;
+    public readonly id=CardTriggerType.nextId++;
     private constructor() {}
 
-    public static readonly ACTION = new CardActionType<
+    public static readonly ACTION = new CardTriggerType<
         {self:Card,game:Game}, void>();
-    public static readonly PRE_PLACED = new CardActionType<
+    public static readonly PRE_PLACED = new CardTriggerType<
         {self:Card, game:Game}, void>();
-    public static readonly PLACED = new CardActionType<
+    public static readonly PLACED = new CardTriggerType<
         {self:Card,game:Game}, void>();
-    //Called once per scare
-    public static readonly AFTER_SCARED = new CardActionType<
+    public static readonly AFTER_SCARED = new CardTriggerType<
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
-    public static readonly GET_STATS = new CardActionType<
+    public static readonly AFTER_ACTION = new CardTriggerType<
+        {self:Card, game:Game}, void>();
+    public static readonly GET_STATS = new CardTriggerType<
         {self:Card,game:Game}, [number|undefined,number|undefined,number|undefined]>();
-    public static readonly AFTER_CRISIS = new CardActionType<
+    public static readonly AFTER_CRISIS = new CardTriggerType<
         {self:Card,game:Game}, void>();
-    public static readonly INTERRUPT_SCARE = new CardActionType<
+    public static readonly INTERRUPT_SCARE = new CardTriggerType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(succeeded?:boolean)=>void}, InterruptScareResult>();
     //Returns true if can be placed
-    public static readonly SPECIAL_PLACED_CHECK = new CardActionType<
+    public static readonly SPECIAL_PLACED_CHECK = new CardTriggerType<
         {self:Card, game:Game, normallyValid:boolean}, boolean>();
-    public static readonly TURN_START = new CardActionType<
+    public static readonly TURN_START = new CardTriggerType<
         {self:Card,game:Game}, void>();
-    public static readonly IS_FREE = new CardActionType<{}, void>();
-    public static readonly IS_SOMETIMES_FREE = new CardActionType<
+    public static readonly IS_FREE = new CardTriggerType<{}, void>();
+    public static readonly IS_SOMETIMES_FREE = new CardTriggerType<
         {self:Card,game:Game}, boolean>();
-    public static readonly SHOULD_SHOW_HAND = new CardActionType<
+    public static readonly SHOULD_SHOW_HAND = new CardTriggerType<
         {self:Card,game:Game}, boolean>();
 
     //Only for use on the client
-    public static readonly VISUAL_TICK = new CardActionType<{self:Card}, void>();
+    public static readonly VISUAL_TICK = new CardTriggerType<{self:Card}, void>();
 }
 
 export enum Species{
@@ -95,19 +96,19 @@ export default class CardData{
         this.species=species;
     }
 
-    with<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, value:(params:P)=>R){
+    with<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>, value:(params:P)=>R){
         this.cardActions[type.id]=value;
         return this;
     }
     setFree(){
-        return this.with(CardActionType.IS_FREE, ()=>{});
+        return this.with(CardTriggerType.IS_FREE, ()=>{});
     }
     //{@link Card.getAction} should be preferred
-    getAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>):((params:P)=>R)|undefined{
+    getAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];
     }
     //{@link Card.callAction} should be preferred
-    callAction<P extends { [k: string]: any; }, R>(type:CardActionType<P, R>, param:P){
+    callAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>, param:P){
         const action = this.getAction(type);
         if(action !== undefined)
             return action(param);
