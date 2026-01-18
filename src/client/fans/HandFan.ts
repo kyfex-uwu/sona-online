@@ -4,7 +4,7 @@ import {Euler, Quaternion, Vector3} from "three";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {sideTernary} from "../../consts.js";
-import {game} from "../../index.js";
+import {gameScene} from "../scenes/GameScene.js";
 
 export default class HandFan extends VisualCardFan{
     private defaultRotation;
@@ -52,7 +52,7 @@ export default class HandFan extends VisualCardFan{
 
         //og-041
         const shouldShow = this.getSide() !== this.game.getMySide() &&
-            sideTernary(this.getSide(), game.fieldsA, game.fieldsB).some(field=>
+            sideTernary(this.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB).some(field=>
             field.getCard()?.logicalCard.cardData.name === "og-041");
         this.rotation = shouldShow ? this.rotatedRotation : this.defaultRotation;
     }

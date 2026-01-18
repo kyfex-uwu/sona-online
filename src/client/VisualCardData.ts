@@ -1,6 +1,5 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
-import {game as visualGame} from "../index.js";
 import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
@@ -14,6 +13,7 @@ import {GameMiscDataStrings} from "../Game.js";
 import {Side} from "../GameElement.js";
 import {waitForClarify} from "../networking/LocalServer.js";
 import {tempHowToUse} from "./ui.js";
+import {gameScene} from "./scenes/GameScene.js";
 
 export function loadFrontendWrappers(){}
 
@@ -21,7 +21,7 @@ export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<bool
 
 function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
     return (card:VisualCard)=> {
-        if (visualGame.state instanceof VAttackingState && visualGame.state.parentState.getActionsLeft() === 1) {
+        if (gameScene.game.state instanceof VAttackingState && gameScene.game.state.parentState.getActionsLeft() === 1) {
             return callback(card);
         }
         return new Promise<boolean>(r=>r(false));
@@ -29,40 +29,40 @@ function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
 }
 
 visualCardClientActions["og-001"] = lastAction((card)=>{
-    const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
+    const oldStates:[VisualGameState<any>, GameState] = [gameScene.game.state, gameScene.game.getGame().state];
     let picked = new Set<Card>();
     let resolve:(val:boolean)=>void;
     const toReturn = new Promise<boolean>(r=>resolve=r);
     tempHowToUse("K9 Agent Alpha", "Select all the canines you want to use, then press Finish. " +
         "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.")
-    visualGame.setState(new VPickCardsState(visualGame, oldStates,
-            sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
+    gameScene.game.setState(new VPickCardsState(gameScene.game, oldStates,
+            sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB).map(field => field.getCard())
                 .filter(card => card !== undefined)
                 .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
                 .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
                 if(picked.has(toAttackWith.logicalCard)) picked.delete(toAttackWith.logicalCard);
                 else picked.add(toAttackWith.logicalCard);
             }, EndType.BOTH, ()=>{
-                visualGame.setState(new VPickCardsState(visualGame, oldStates,
-                    sideTernary(card.getSide(), visualGame.fieldsB, visualGame.fieldsA).map(field => field.getCard())
+                gameScene.game.setState(new VPickCardsState(gameScene.game, oldStates,
+                    sideTernary(card.getSide(), gameScene.game.fieldsB, gameScene.game.fieldsA).map(field => field.getCard())
                         .filter(card => card !== undefined),
                     (toAttack)=>{
                         let thirdState:VPickCardsState;
                         const statCards = [
-                            new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                            new VisualCard(gameScene.game, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                            new VisualCard(gameScene.game, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
+                            new VisualCard(gameScene.game, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
                         ];
-                        visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates, statCards,
+                        gameScene.game.setState(thirdState=new VPickCardsState(gameScene.game, oldStates, statCards,
                             (attackStat)=>{
                                 thirdState.cancel();
                                 network.sendToServer(new CardAction({
                                     cardId:card.logicalCard.id,
                                     actionName:CardActionOptions.K9_ALPHA,
                                     cardData:{
-                                        canineFields:sideTernary(card.getSide(), visualGame.getGame().fieldsA, visualGame.getGame().fieldsB)
+                                        canineFields:sideTernary(card.getSide(), gameScene.game.getGame().fieldsA, gameScene.game.getGame().fieldsB)
                                             .map(card => card !== undefined && picked.has(card)),
-                                        attack:sideTernary(card.getSide(), visualGame.getGame().fieldsB, visualGame.getGame().fieldsA).indexOf(toAttack.logicalCard)+1 as 1|2|3,
+                                        attack:sideTernary(card.getSide(), gameScene.game.getGame().fieldsB, gameScene.game.getGame().fieldsA).indexOf(toAttack.logicalCard)+1 as 1|2|3,
                                         attackWith:{
                                             "temp_red":Stat.RED,
                                             "temp_blue":Stat.BLUE,
@@ -81,7 +81,7 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
 visualCardClientActions["og-018"] = async (card) =>{
     if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
 
-    const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
+    const toReorder = sideTernary(card.getSide(), gameScene.game.deckA, gameScene.game.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
     let resolve;
     const toReturn = new Promise<boolean>(r=>resolve=r);
@@ -94,7 +94,7 @@ visualCardClientActions["og-018"] = async (card) =>{
         if(toReorder.length === 1){
             toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
         }
-        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+        gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
             toReorder, (c) => {
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
@@ -105,7 +105,7 @@ visualCardClientActions["og-018"] = async (card) =>{
                     }
                 }));
                 resolve!(true);
-            }, EndType.NONE), visualGame.getGame().state);
+            }, EndType.NONE), gameScene.game.getGame().state);
 
     });
     return toReturn;
@@ -120,23 +120,23 @@ visualCardClientActions["og-028"] = lastAction((card)=>{
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
     const toScare = new Set<number>();
-    const fields = sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB);
-    const oldStates:[VisualGameState<any>, GameState]=[visualGame.state, visualGame.getGame().state];
-    const state = new VPickCardsState(visualGame, oldStates,
+    const fields = sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB);
+    const oldStates:[VisualGameState<any>, GameState]=[gameScene.game.state, gameScene.game.getGame().state];
+    const state = new VPickCardsState(gameScene.game, oldStates,
         fields.map(field=>field.getCard()).filter(card=>card!==undefined),
         (picked)=>{
             if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
             else toScare.add(picked.logicalCard.id);
 
-            state.endType = (toScare.size <= sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+            state.endType = (toScare.size <= sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
                 .filter(card=>card.logicalCard.cardData.level === 3).length &&
                 toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
         }, EndType.CANCEL, ()=>{
             if(toScare.size===0) return resolve!(true);
 
             const toReplace:number[] = [];
-            const state2 = new VPickCardsState(visualGame, oldStates,
-                sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+            const state2 = new VPickCardsState(gameScene.game, oldStates,
+                sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
                     .filter(card=>card.logicalCard.cardData.level === 3),
                 (picked)=>{
                     if(toReplace.indexOf(picked.logicalCard.id) !== -1)
@@ -158,16 +158,16 @@ visualCardClientActions["og-028"] = lastAction((card)=>{
                     }));
                     resolve!(true);
                 });
-            visualGame.setState(state2, visualGame.getGame().state);
+            gameScene.game.setState(state2, gameScene.game.getGame().state);
         });
-    visualGame.setState(state, visualGame.getGame().state);
+    gameScene.game.setState(state, gameScene.game.getGame().state);
 
     return toReturn;
 })
 visualCardClientActions["og-038"] = lastAction((card)=>{
     tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
 
-    const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
+    const cards = sideTernary(card.getSide(), gameScene.game.runawayA, gameScene.game.runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
     let resolve;
     const toReturn = new Promise<boolean>(r=>resolve=r);
@@ -175,9 +175,9 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
         resolve!(false);
         return toReturn;
     }
-    visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+    gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
             cards, (picked)=>{
-                    visualGame.frozen=true;
+                    gameScene.game.frozen=true;
                     network.sendToServer(new CardAction({
                         cardId:card.logicalCard.id,
                         actionName:CardActionOptions.WORICK_RESCUE,
@@ -185,14 +185,14 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
                             id:picked.logicalCard.id
                         }
                     })).onReply(successOrFail(()=>{
-                        sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(picked);
-                        (visualGame.state as VPickCardsState).cancel();
+                        sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).addCard(picked);
+                        (gameScene.game.state as VPickCardsState).cancel();
                     },()=>{},()=>{
-                        visualGame.frozen=false;
+                        gameScene.game.frozen=false;
                         resolve!(true);
                     }));
             }, EndType.BOTH),
-        visualGame.getGame().state);
+        gameScene.game.getGame().state);
     return toReturn;
 });
 visualCardClientActions["og-041"] = (card)=>{
@@ -206,19 +206,19 @@ visualCardClientActions["og-041"] = (card)=>{
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
     waitForClarify(ClarificationJustification.FURMAKER, ()=>{
-        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
+        gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
             sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
-                visualGame.frozen=true;
+                gameScene.game.frozen=true;
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
                     cardData: {id:picked.logicalCard.id},
                 })).onReply(successOrFail(()=>{},()=>{},()=>{
-                    visualGame.frozen=false;
+                    gameScene.game.frozen=false;
                     resolve!(true);
                 }));
-            }, EndType.NONE), visualGame.getGame().state);
+            }, EndType.NONE), gameScene.game.getGame().state);
     });
 
     network.sendToServer(new ClarifyCardEvent({
@@ -255,20 +255,20 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     })).onReply(successOrFail(()=>{
         const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
             card.cardData.level === 1 && card.isAlwaysFree());
-        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, (game.state as TurnState)], visualGame.elements.filter(element =>
+        gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, (game.state as TurnState)], gameScene.game.elements.filter(element =>
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 
-            const state = visualGame.state as VPickCardsState;
+            const state = gameScene.game.state as VPickCardsState;
             state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
 
-            const deck = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB);
+            const deck = sideTernary(card.getSide(), gameScene.game.deckA, gameScene.game.deckB);
             const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);
             if(toRemove) {
                 deck.removeCard(toRemove);
                 toRemove.setRealPosition(card.position.clone());
                 toRemove.setRealRotation(card.rotation.clone());
                 toRemove.flipFaceup();
-                sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(toRemove);
+                sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).addCard(toRemove);
                 network.sendToServer(new CardAction({
                     cardId:self.id,
                     actionName: CardActionOptions.BROWNIE_DRAW,
@@ -294,15 +294,15 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game}) =>{
             ((card.stat(Stat.RED)??99)<2 || (card.stat(Stat.BLUE)??99)<2 || (card.stat(Stat.YELLOW)??99)<2))) {
 
         tempHowToUse("Gremlin Kitten", "Select the card to scare");
-        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
-            sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA).map(field=>field.getCard())
+        gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
+            sideTernary(self.side, gameScene.game.fieldsB, gameScene.game.fieldsA).map(field=>field.getCard())
                 .filter(card => card !== undefined &&
                         ((card.logicalCard.stat(Stat.RED)??99)<2||
                         (card.logicalCard.stat(Stat.BLUE)??99)<2||
                         ((card.logicalCard.stat(Stat.YELLOW)??99)<2))) as VisualCard[],
             (card) => {
                 network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
-                    position:(sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)
+                    position:(sideTernary(self.side, gameScene.game.fieldsB, gameScene.game.fieldsA)
                         .findIndex(field => field.getCard()?.logicalCard === card.logicalCard)+1) as 1|2|3
                 }}));
             }, EndType.CANCEL, ()=>{
@@ -310,7 +310,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game}) =>{
                     .onReply(successOrFail(()=>{
                         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
-            }), visualGame.getGame().state);
+            }), gameScene.game.getGame().state);
     }else{
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     }
@@ -332,12 +332,12 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         "Click the cards in order of top to bottom: the first card will be on top of " +
         "the deck and the last card will be third (or second or whatever)");
     waitForClarify(ClarificationJustification.YASHI, ()=>{
-        visualGame.frozen=false;
+        gameScene.game.frozen=false;
 
         let toSend:[number?,number?,number?] = [];
-        const origState = visualGame.state;
-        const firstState = new VPickCardsState(visualGame, [origState, game.state],
-            sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+        const origState = gameScene.game.state;
+        const firstState = new VPickCardsState(gameScene.game, [origState, game.state],
+            sideTernary(self.side, gameScene.game.deckA, gameScene.game.deckB).getCards(),
             (picked)=>{
                 const index = toSend.indexOf(picked.logicalCard.id);
                 if(index !== -1)
@@ -350,8 +350,8 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                 firstState.endType = toSend.length > 0 ? EndType.FINISH : EndType.NONE;
             }, EndType.NONE, ()=>{
                 let newOrder:[number?,number?,number?]=[];
-                const toCancel = new VPickCardsState(visualGame, [origState, game.state],
-                    sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards()
+                const toCancel = new VPickCardsState(gameScene.game, [origState, game.state],
+                    sideTernary(self.side, gameScene.game.deckA, gameScene.game.deckB).getCards()
                         .filter(card=>toSend.indexOf(card.logicalCard.id) !== -1),
                     (picked)=>{
                         const index = newOrder.indexOf(picked.logicalCard.id);
@@ -369,11 +369,11 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                             toCancel.cancel();
                         }
                     },EndType.NONE);
-                visualGame.setState(toCancel, game.state);
+                gameScene.game.setState(toCancel, game.state);
             })
-        visualGame.setState(firstState, game.state);
+        gameScene.game.setState(firstState, game.state);
     });
-    visualGame.frozen=true;
+    gameScene.game.frozen=true;
 });
 wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -381,8 +381,8 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     tempHowToUse("The Foxy Magician", "Pick the card you want to potentially add to your hand.")
 
     waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
-        const state = new VPickCardsState(visualGame, [visualGame.state,game.state],
-            sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+        const state = new VPickCardsState(gameScene.game, [gameScene.game.state,game.state],
+            sideTernary(self.side, gameScene.game.deckA, gameScene.game.deckB).getCards(),
             (picked)=>{
                 network.sendToServer(new CardAction({
                     cardId:self.id,
@@ -394,11 +394,11 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                 waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
                     if(event instanceof ClarifyCardEvent && event.data.id === picked.logicalCard.id) {
                         picked.flipFaceup();
-                        sideTernary(self.side, visualGame.handA, visualGame.handB).addCard(picked);
+                        sideTernary(self.side, gameScene.game.handA, gameScene.game.handB).addCard(picked);
                     }
                 });
             },EndType.NONE);
-        visualGame.setState(state, game.state);
+        gameScene.game.setState(state, game.state);
     });
 });
 wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
@@ -409,9 +409,9 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     game.freeze(()=>true);
 
     waitForClarify(ClarificationJustification.DCW, ()=>{
-        const oldStates:[VisualGameState<any>,GameState]=[visualGame.state,game.state];
-        const state = new VPickCardsState(visualGame, oldStates,
-            sideTernary(self.side, visualGame.deckA, visualGame.deckB).getCards(),
+        const oldStates:[VisualGameState<any>,GameState]=[gameScene.game.state,game.state];
+        const state = new VPickCardsState(gameScene.game, oldStates,
+            sideTernary(self.side, gameScene.game.deckA, gameScene.game.deckB).getCards(),
                 (picked)=>{
                     network.sendToServer(new CardAction({
                         cardId:self.id,
@@ -425,8 +425,8 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                             tempHowToUse("Dark Cat Wizard - Scaring", "Click the card you want to scare off.")
 
                             //scare any card
-                            const state2 = new VPickCardsState(visualGame, oldStates,
-                                [...visualGame.fieldsA, ...visualGame.fieldsB].map(field=>field.getCard())
+                            const state2 = new VPickCardsState(gameScene.game, oldStates,
+                                [...gameScene.game.fieldsA, ...gameScene.game.fieldsB].map(field=>field.getCard())
                                     .filter(card=>card !== undefined),
                                 (picked2)=>{
                                     network.sendToServer(new CardAction({
@@ -434,7 +434,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                         actionName:CardActionOptions.DCW_SCARE,
                                         cardData:{
                                             side:picked2.getSide(),
-                                            pos:sideTernary(picked2.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                                            pos:sideTernary(picked2.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB)
                                                 .findIndex(field=>field.getCard()?.logicalCard.id === picked2.logicalCard.id) + 1
                                         }
                                     })).onReply(successOrFail(()=>{
@@ -442,19 +442,19 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                     },()=>{},()=>{}));
                                     state2.cancel();
                                 },EndType.NONE);
-                            visualGame.setState(state2, oldStates[1]);
+                            gameScene.game.setState(state2, oldStates[1]);
                         }
                     });
                 },EndType.NONE);
-        visualGame.setState(state, game.state);
+        gameScene.game.setState(state, game.state);
     });
 });
 wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
     if(self.getMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR) === undefined)
         self.setMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR, new Set());
-    if(self.side !== visualGame.getMySide()){
+    if(self.side !== gameScene.game.getMySide()){
         const alreadyAskedFor = self.getMiscData(CardMiscDataStrings.FURMAKER_ALREADY_ASKED_FOR)!;
-        const askFor = sideTernary(self.side, visualGame.handA, visualGame.handB).cards.filter(card=>
+        const askFor = sideTernary(self.side, gameScene.game.handA, gameScene.game.handB).cards.filter(card=>
             !alreadyAskedFor.has(card.logicalCard.id));
         if(askFor.length>0) {
             for(const card of askFor)
@@ -489,19 +489,19 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(self.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
 
     tempHowToUse("Cloud Cat", "Click the card to disable");
-    const state = new VPickCardsState(visualGame, [visualGame.state, game.state],
-        sideTernary(self.side, visualGame.fieldsB, visualGame.fieldsA)
+    const state = new VPickCardsState(gameScene.game, [gameScene.game.state, game.state],
+        sideTernary(self.side, gameScene.game.fieldsB, gameScene.game.fieldsA)
             .map(magnet=>magnet.getCard())
             .filter(card=>card!==undefined),
         (card)=>{
             network.sendToServer(new CardAction({
                 cardId:self.id,
                 actionName:CardActionOptions.CLOUD_CAT_PICK,
-                cardData:sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                cardData:sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB)
                     .map(magnet=>magnet.getCard())
                     .findIndex(mCard=>mCard?.logicalCard.id === card.logicalCard.id)+1
             }));
             state.cancel();
         }, EndType.NONE);
-    visualGame.setState(state, game.state);
+    gameScene.game.setState(state, game.state);
 });

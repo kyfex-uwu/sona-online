@@ -15,7 +15,6 @@ import {
     SerializableClasses,
     type SerializableType, ServerDumpEvent,
 } from "./Events.js";
-import {game} from "../index.js";
 import Card, {Stat} from "../Card.js";
 import VisualCard from "../client/VisualCard.js";
 import cards from "../Cards.js";
@@ -46,6 +45,7 @@ import {
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
+import {gameScene} from "../client/scenes/GameScene.js";
 
 //@ts-ignore
 window.showNetworkLogs=false;
@@ -57,7 +57,6 @@ const log = (...data: any) => {
 }
 
 export function frontendInit(){
-    network.clientGame=game.getGame();
     loadFrontendWrappers();
     log("network initialized :D")
 }
@@ -73,20 +72,20 @@ websocketReady.then(() => {
 })
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
-    const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
+    const visualCard = gameScene.game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
     if(visualCard === undefined || visualCard.logicalCard.id<0) return;
     if(cardDataName !== undefined)
         visualCard.logicalCard.setCardData(cards[cardDataName]!);
 
     if(cardDataName !== undefined){
-        game.getGame().cards.delete(visualCard.logicalCard);
+        gameScene.game.getGame().cards.delete(visualCard.logicalCard);
         visualCard.repopulate(visualCard.logicalCard);
     }
 
     if(faceUp !== undefined && faceUp !== visualCard.logicalCard.getFaceUp())
         visualCard[faceUp ? "flipFaceup" : "flipFacedown"]();
 
-    game.getGame().cards.add(visualCard.logicalCard);
+    gameScene.game.getGame().cards.add(visualCard.logicalCard);
 }
 
 network.sendToServer = (event) => {
@@ -129,6 +128,12 @@ async function receiveFromServer(packed:{
     data:SerializableType,
     id:string,
 }) {
+    const game = gameScene.game;
+    if(game === undefined) {
+        console.log("roaches in the cereal???");
+        return;
+    }
+
     //todo: this smells like vulnerability (but less!)
     const event = new (SerializableClasses[packed.type] || InvalidEvent)(
         //@ts-ignore

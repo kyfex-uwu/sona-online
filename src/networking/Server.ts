@@ -37,7 +37,7 @@ export class Replyable<T extends SerializableEventData>{
     }
     onReply(callback:(event:Event<any>)=>void){
         if(this.source.game === undefined){
-            console.trace("tried to add a reply callback to a message not in a game");
+            console.trace(this, "tried to add a reply callback to a message not in a game");
             return;
         }
         if(this._callback !== undefined){
