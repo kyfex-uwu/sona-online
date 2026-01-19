@@ -1,50 +1,6 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
 type checking for all packets (need to write some separate thing)
 scared still fires when cloud catted
 faceup (on placeaction) is evil and needs to be removed
 fix dcw (and foxy?) being silly. to do this you need to implement client side placed event for opponent
+shuffle everywhere!

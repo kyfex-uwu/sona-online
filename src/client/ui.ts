@@ -5,6 +5,8 @@ const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
 /**
  * Registers a drawing callback to be called at the specified z index
+ *
+ * scale = min(width/4, height/3);
  * @param layer The specific z index to call this callback at. Lower layers get draws under (called before) higher layers
  * @param callback The function to call
  */

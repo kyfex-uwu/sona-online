@@ -198,18 +198,8 @@ export function parseEvent(event:Event<any>):processedEvent{
             waiter.then((other) => {
                 let id=0;
 
-                //debug code
-                const firstCard = event.data.deck[0];
-                const firstCardB = other.data.deck[0];
-
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
-
-                //debug code
-                if(firstCard !== undefined)
-                    deckA.push(deckA.splice(deckA.findIndex(card => card.type === firstCard), 1)[0]!);
-                if(firstCardB !== undefined)
-                    deckB.push(deckB.splice(deckB.findIndex(card => card.type === firstCardB), 1)[0]!);
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;
