@@ -36,6 +36,7 @@ scene.add(camera);
 
 modelLoader.load("/assets/board.glb", model => {
     model.scene.scale.set(10,10,10);
+    model.scene.position.set(0,-10,0);
     scene.add(model.scene);
 });
 

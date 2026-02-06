@@ -357,8 +357,7 @@ export function parseEvent(event:Event<any>):processedEvent{
         sideTernary(event.data.side, event.game.fieldsA, event.game.fieldsB)[event.data.position-1] =
             event.game.cards.values().find(card => card.id === event.data.cardId);
 
-        const placedForFree = event.isForcedFree() ||
-            (card.callAction(CardTriggerType.IS_SOMETIMES_FREE, {self:card, game:event.game}) ?? false);
+        const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
 
         for(const user of (usersFromGameIDs[event.game.gameID]||[])){
             if(user === event.sender) continue;
