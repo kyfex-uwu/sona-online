@@ -6,7 +6,7 @@ import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {type Decrementable, isDecrementable, StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
-import {getVictim, Stat} from "../../Card.js";
+import {CardMiscDataStrings, getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
@@ -76,7 +76,10 @@ export default class FieldMagnet extends CardMagnet{
                 }else if(state.hasFeatures(StateFeatures.FIELDS_SELECTABLE) && this.getSide() === this.game.getMySide() ||
                         state.hasFeatures(StateFeatures.ALL_FIELDS_SELECTABLE)){
                     if(state instanceof VTurnState){
-                        if(this.card === undefined || this.card.logicalCard.hasAttacked) return false;
+                        if(this.card === undefined || (
+                            this.card.logicalCard.hasAttacked &&
+                            (this.card.logicalCard.getAction(CardTriggerType.ACTION) != null &&
+                                !this.card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED)))) return false;
                         this.game.setState(new VAttackingState(this.which, this.game), state.getNonVisState());
                         return true;
                     }
@@ -84,9 +87,9 @@ export default class FieldMagnet extends CardMagnet{
                             this.card !== undefined) {
                         if(this.getSide() === this.game.getMySide()) {
                             const intersects = this.game.raycaster.intersectObjects([
-                                this.card.getStatModel(Stat.RED),
+                                ...(this.card.logicalCard.hasAttacked?[]:[this.card.getStatModel(Stat.RED),
                                 this.card.getStatModel(Stat.BLUE),
-                                this.card.getStatModel(Stat.YELLOW),
+                                this.card.getStatModel(Stat.YELLOW)]),
                                 this.card.model
                             ].filter(mesh => mesh !== undefined));
 

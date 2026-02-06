@@ -38,7 +38,7 @@ export const CardMiscDataStrings = {
     NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<ScareAction>,
 
     PAUSED_SCARE:"pausedScare" as CardMiscDataString<() => void>,
-    ALREADY_ATTACKED:"alreadyAttacked" as CardMiscDataString<boolean>,
+    ALREADY_ACTIONED:"alreadyAttacked" as CardMiscDataString<boolean>,
     TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };
 verifyNoDuplicateStrVals(CardMiscDataStrings, "MiscDataStrings has a duplicate");

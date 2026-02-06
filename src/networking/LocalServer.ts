@@ -256,6 +256,8 @@ async function receiveFromServer(packed:{
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
             if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
         }
+        const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsB, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
+        if(maybeAttacked) maybeAttacked.hasAttacked=true;
         game.frozen=false;//todo: this is not how it should be solved
         if(game.state instanceof VTurnState && !event.data.free){
             game.state.decrementTurn();

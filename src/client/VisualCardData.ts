@@ -79,7 +79,7 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-018"] = async (card) =>{
-    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
     const toReorder = sideTernary(card.getSide(), visualGame.deckA, visualGame.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
@@ -96,7 +96,7 @@ visualCardClientActions["og-018"] = async (card) =>{
         }
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             toReorder, (c) => {
-                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
@@ -196,7 +196,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
     return toReturn;
 });
 visualCardClientActions["og-041"] = (card)=>{
-    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
@@ -209,7 +209,7 @@ visualCardClientActions["og-041"] = (card)=>{
         visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
             sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
                 visualGame.frozen=true;
-                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
@@ -323,7 +323,7 @@ wrap(cards["og-011"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-018"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
 wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -469,7 +469,7 @@ wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
 wrap(cards["og-041"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
 wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});

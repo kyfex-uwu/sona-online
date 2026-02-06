@@ -515,7 +515,7 @@ export default function(event:CardAction<any>):processedEvent{
             if(actor === undefined ||
                 event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.COWGIRL_COYOTE_INCREASE ||
                 actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET) === undefined ||
-                actor.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true)
+                actor.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true)
                 return rejectEvent(event, "failed cowgirl check");
 
             const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData;

@@ -236,7 +236,7 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 
     if(!(game.state instanceof TurnState && //is a turn
         game.state.turn !== self.side && // is opponents turn
-        self.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) !== true &&//havent done this already
+        self.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) !== true &&//havent done this already
         stat !== "card"//we can actually defend against this
     ))
         return InterruptScareResult.PASSTHROUGH;
@@ -267,5 +267,5 @@ wrap(cards["og-035"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scare
 });
 wrap(cards["og-035"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
