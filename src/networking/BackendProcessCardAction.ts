@@ -37,7 +37,8 @@ import {
     type processedEvent,
     rejectEvent,
     scareInterrupt,
-    sendToClients
+    sendToClients,
+    shuffleBackend
 } from "./BackendServer.js";
 
 function defaultIsValid<T extends SerializableType>(event:CardAction<T>, cardName:string, optData:{
@@ -150,6 +151,7 @@ export default function(event:CardAction<any>):processedEvent{
             }, event.game), event.sender);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
             event.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+            shuffleBackend(sideTernary(card.side, event.game.deckA, event.game.deckB));
             return acceptEvent(event);
         }
         case CardActionOptions.GREMLIN_SCARE:{//og-009
@@ -327,6 +329,7 @@ export default function(event:CardAction<any>):processedEvent{
                 actionName:CardActionOptions.DCW_GUESS,
                 cardData:1
             }));
+            shuffleBackend(sideTernary(actor.side, event.game.deckA, event.game.deckB));
             return acceptEvent(event);
         }
         case CardActionOptions.FOXY_MAGICIAN_GUESS:{
@@ -355,6 +358,7 @@ export default function(event:CardAction<any>):processedEvent{
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.A], undefined);
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
             event.game.unfreeze();
+            shuffleBackend(sideTernary(guesserSide, event.game.deckB, event.game.deckA));
             return acceptEvent(event);
         }
         case CardActionOptions.DCW_GUESS:{
@@ -455,6 +459,7 @@ export default function(event:CardAction<any>):processedEvent{
                     side:actor.side
                 }
             }, event.game));
+            shuffleBackend(sideTernary(actor.side, event.game.deckA, event.game.deckB));
             return acceptEvent(event);
         }
         case CardActionOptions.CLOUD_CAT_PICK: {//og-043
