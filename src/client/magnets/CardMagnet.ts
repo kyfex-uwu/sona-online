@@ -53,6 +53,7 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
 
             const dist = this.game.cursorPos.distanceTo(this.position);
             if (dist <= this.radius) {
+                for(const listener of this.listeners) listener();
                 return this.onClick();
             }
             return false;
@@ -93,6 +94,12 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
         super.visualTick();
         this.utilityCard.position.copy(this.position);
         this.utilityCard.rotation.copy(this.rotation);
+    }
+
+    private listeners:Set<()=>void>=new Set();
+    addClickListener(listener:()=>void){
+        this.listeners.add(listener);
+        return ()=> {this.listeners.delete(listener);}
     }
 }
 updateOrder[CardMagnet.name] = 1;

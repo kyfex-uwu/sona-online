@@ -21,6 +21,7 @@ export const GameMiscDataStrings = {
         [Side.B]: "BnextActionShould" as GameMiscDataString<CardActionOption<any> | undefined>,
     },
     FROZEN: "frozen" as GameMiscDataString<{isFrozen:boolean, queue:(()=>void)[], allowThrough:(event:Event<any>)=>boolean}>,
+    LAST_ACTIONED: "lastActioned" as GameMiscDataString<boolean>,
 
     CLOUD_CAT_DISABLED:"cloudCatDisabled" as GameMiscDataString<{
         [Side.A]: 1|2|3|"first"|false,
@@ -114,6 +115,7 @@ export default class Game{
         this.setMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER, {wait, resolve, waiting:false});
         this.setMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED, {[Side.A]:false, [Side.B]:false});
         this.setMiscData(GameMiscDataStrings.FROZEN, {isFrozen:false, queue:[], allowThrough:()=>true});
+        this.setMiscData(GameMiscDataStrings.LAST_ACTIONED, false);
 
         for(const card of this.deckA) this.cards.add(card);
         for(const card of this.deckB) this.cards.add(card);

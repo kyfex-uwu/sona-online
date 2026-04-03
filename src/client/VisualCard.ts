@@ -1,14 +1,13 @@
 import {
     BoxGeometry,
-    Color,
     CylinderGeometry,
     Euler,
-    Group,
+    Group, Material,
     Mesh,
     MeshBasicMaterial,
-    MeshPhongMaterial,
+    MirroredRepeatWrapping,
     type Object3D,
-    Quaternion,
+    Quaternion, RepeatWrapping, ShaderMaterial,
     Texture,
     Vector3
 } from "three";
@@ -37,15 +36,75 @@ const cardModel = (() => {
 
     return promise;
 })();
-const cardMat = new MeshPhongMaterial({
-    alphaMap: textureLoader.load("/assets/card-images/card_shape.png"),
-    transparent: true,
-    emissive: new Color(0x000000),
-    specular: new Color(0xffffff),
-    shininess: 150,
-});
+const cardMat = new ShaderMaterial( {
+    uniforms: {
+        highlight: { value: new Vector3(0,0,0) },
+        time:{value:0},
+        cardTexture: { value: textureLoader.load("/assets/card-images/card_shape.png") },
+        alphaTexture: { value: textureLoader.load("/assets/card-images/card_shape.png") },
+        highlightT1: { value:textureLoader.load(`/assets/card-images/highlight1.png`) },
+        highlightT2: { value:textureLoader.load(`/assets/card-images/highlight2.png`) },
+        highlightT3: { value:textureLoader.load(`/assets/card-images/highlight3.png`) },
+        highlightTex: { value:(()=>{
+            const toReturn = textureLoader.load(`/assets/card-images/card_shine.png`);
+            toReturn.wrapT = MirroredRepeatWrapping;
+            toReturn.wrapS = RepeatWrapping;
+            return toReturn;
+        })() },
+        visible:{ value:1 },
+    },
+    transparent:true,
+    vertexShader: `
+        varying vec2 vUv; 
+    
+        void main() {
+            vUv = uv;
+            
+            vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * modelViewPosition; 
+        }
+      `,
+    fragmentShader: `
+        varying vec2 vUv; 
+        uniform sampler2D cardTexture;
+        uniform sampler2D alphaTexture;
+        uniform sampler2D highlightT1;
+        uniform sampler2D highlightT2;
+        uniform sampler2D highlightT3;
+        uniform sampler2D highlightTex;
+        uniform vec3 highlight;
+        uniform float visible;
+        uniform float time;
+        
+        void main() { 
+            vec4 color = texture(cardTexture, vUv.xy);
+            vec4 shinePos1 = texture(highlightT1, vUv.xy) + vec4(0,0,0,0);
+            vec4 shineColor1 = texture(highlightTex, shinePos1.gr * (1.-shinePos1.b));
+            vec4 shinePos2 = texture(highlightT2, vUv.xy) + vec4(0,0,0,0);
+            vec4 shineColor2 = texture(highlightTex, shinePos2.gr * (1.-shinePos2.b));
+            vec4 shinePos3 = texture(highlightT3, vUv.xy) + vec4(0,0,0,0);
+            vec4 shineColor3 = texture(highlightTex, shinePos3.gr * (1.-shinePos3.b));
+            
+            color = color + shineColor1 * shineColor1.a * highlight.x;
+            color = color + shineColor2 * shineColor2.a * highlight.y;
+            color = color + shineColor3 * shineColor3.a * highlight.z;
+            
+            gl_FragColor = vec4(color.r+time, color.g, color.b, texture(alphaTexture, vUv.xy).r * visible);
+        }`,
+} );
+const oldCopy = cardMat.copy;
+cardMat.copy = (source:Material) => {
+    const toReturn = oldCopy(source);
+    if(source instanceof ShaderMaterial) {
+        toReturn.uniforms = {...source.uniforms};
+        toReturn.uniforms.highlight = {value:new Vector3(0,0,0)}
+        toReturn.uniforms.visible = {value:1}
+    }
+    return toReturn;
+}
+
 const cardBackMat = cardMat.clone();
-cardBackMat.map = textureLoader.load( "/assets/card-images/card_back.jpg");
+cardBackMat.uniforms.cardTexture!.value = textureLoader.load( "/assets/card-images/card_back.jpg");
 
 const cardHighlight = new Mesh(new BoxGeometry(75*1.3,0,100*1.3), new MeshBasicMaterial({
     map:textureLoader.load("/assets/card-images/card_highlight.jpg"),
@@ -54,6 +113,7 @@ const cardHighlight = new Mesh(new BoxGeometry(75*1.3,0,100*1.3), new MeshBasicM
     depthWrite:false,
 }));
 cardHighlight.position.set(0,-1,0);
+cardHighlight.visible=false;
 
 //A *visual* card. This wraps a logical {@link Card}
 export default class VisualCard extends PositionedVisualGameElement{
@@ -63,17 +123,16 @@ export default class VisualCard extends PositionedVisualGameElement{
     }
     public readonly model: Group = new Group();
     private readonly flipGroup: Group = new Group();
-    private _enabledMaterial:MeshPhongMaterial|undefined;
-    private materialListeners:((material:MeshPhongMaterial|undefined)=>void)[] = [];
-    public addMaterialListener(listener:(material:MeshPhongMaterial|undefined)=>void){
+    private _material:ShaderMaterial|undefined;
+    private materialListeners:((material:ShaderMaterial|undefined)=>void)[] = [];
+    public addMaterialListener(listener:(material:ShaderMaterial|undefined)=>void){
         this.materialListeners.push(listener);
     }
-    public get enabledMaterial(){return this._enabledMaterial;}
-    private set enabledMaterial(material:MeshPhongMaterial|undefined){
-        this._enabledMaterial = material;
-        for(const listener of this.materialListeners) listener(this._enabledMaterial);
+    public get material(){return this._material;}
+    private set material(material:ShaderMaterial|undefined){
+        this._material = material;
+        for(const listener of this.materialListeners) listener(this._material);
     }
-    private disabledMaterial:MeshPhongMaterial|undefined;
     private readonly highlightObj = cardHighlight.clone();
 
     /**
@@ -88,7 +147,6 @@ export default class VisualCard extends PositionedVisualGameElement{
         this._logicalCard=card;
         this.model.add(this.flipGroup);
         this.model.add(this.highlightObj);
-        this.highlight(false);
         this.populate(card);
 
         this.game.scene.add(this.model);
@@ -102,8 +160,7 @@ export default class VisualCard extends PositionedVisualGameElement{
         this._logicalCard=card;
         this.flipGroup.clear();
         this.model.userData.card=this;
-        this.enabledMaterial?.dispose();
-        this.disabledMaterial?.dispose();
+        this.material?.dispose();
         await this.createModel();
     }
 
@@ -123,12 +180,9 @@ export default class VisualCard extends PositionedVisualGameElement{
 
         //if(this.flipGroup.children[0] !== actualModel) return;
 
-        this.enabledMaterial = cardMat.clone();
-        this.enabledMaterial.map = texture!;
-        this.disabledMaterial= cardMat.clone();
-        this.disabledMaterial.map = texture!;
-        this.disabledMaterial.color = new Color(0x777777);
-        (this.flipGroup.children[0]!.children[0] as Mesh).material = this.enabledMaterial;
+        this.material = cardMat.clone();
+        this.material.uniforms.cardTexture!.value = texture!;
+        (this.flipGroup.children[0]!.children[0] as Mesh).material = this.material;
     }
 
     private loadingModel=false;
@@ -140,9 +194,8 @@ export default class VisualCard extends PositionedVisualGameElement{
         let actualModel = (await cardModel).clone();
         this.flipGroup.add(actualModel);
 
-        this.enabledMaterial = cardMat.clone();
-        this.disabledMaterial = cardMat.clone();
-        (actualModel.children[0] as Mesh).material = this.enabledMaterial;
+        this.material = cardMat.clone();
+        (actualModel.children[0] as Mesh).material = this.material;
         (actualModel.children[1] as Mesh).material = cardBackMat;
 
         this.model.userData.redStat = new Mesh(new CylinderGeometry(7.777,7.777), new MeshBasicMaterial({
@@ -166,12 +219,10 @@ export default class VisualCard extends PositionedVisualGameElement{
         textureLoader.loadAsync(`/assets/card-images/${this.logicalCard.cardData.imagePath}`).then((texture)=>{
             if(this.flipGroup.children[0] !== actualModel) return;
 
-            this.enabledMaterial= cardMat.clone();
-            this.enabledMaterial.map = texture!;
-            this.disabledMaterial= cardMat.clone();
-            this.disabledMaterial.map = texture!;
-            this.disabledMaterial.color = new Color(0x777777);
-            (actualModel.children[0] as Mesh).material = this.enabledMaterial;
+            this.material= cardMat.clone();
+            this.material.uniforms.cardTexture!.value = texture!;
+            this.material.uniforms.visible!.value = this.logicalCard.cardData.name === "utility"?0:1;
+            (actualModel.children[0] as Mesh).material = this.material;
             this.loadingModel=false;
             resolve!();
         });
@@ -281,8 +332,14 @@ export default class VisualCard extends PositionedVisualGameElement{
         this.holder=undefined;
     }
 
-    highlight(isHighlighted:boolean){
-        this.highlightObj.visible=isHighlighted;
+    private highlightLocks:Set<number> = new Set();
+    highlight(isHighlighted:boolean, lock:number){
+        if(isHighlighted) this.highlightLocks.add(lock);
+        else this.highlightLocks.delete(lock);
+        this.updateHighlights();
+    }
+    private updateHighlights(){
+        this.highlightObj.visible=this.highlightLocks.size>0;
     }
 
     static getExactVisualCard(obj:any){
@@ -290,3 +347,8 @@ export default class VisualCard extends PositionedVisualGameElement{
     }
 }
 updateOrder[VisualCard.name] = 0;
+
+let lock=0;
+export function newHighlightLock(){
+    return lock++;
+}

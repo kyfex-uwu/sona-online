@@ -19,9 +19,12 @@ export class BeforeGameState extends GameState{}
 //During a player's turn
 export class TurnState extends GameState{
     public readonly turn;
-    public readonly crisis;
+    public get crisis(){ return this._crisis; }
+    private _crisis:boolean|undefined=undefined;
     public actionsLeft=2;
-    constructor(game:Game, turn:Side, crisis?:boolean){
+    private _drawnToStart=false;
+    public get drawnToStart(){ return this._drawnToStart; }
+    constructor(game:Game, turn:Side){
         super(game);
         this.turn=turn;
 
@@ -32,10 +35,18 @@ export class TurnState extends GameState{
         if(!firstTurnAwaiter?.waiting)
             firstTurnAwaiter?.resolve();
 
-        this.crisis=crisis ?? !sideTernary(turn, game.fieldsA, game.fieldsB).some(card => card !== undefined);
+        if(sideTernary(this.turn, this.game.handA, this.game.handB).length>=5) {
+            this.setDrawnToStart();
+        }
+    }
+    setDrawnToStart(){
+        if(this.crisis !== undefined) return;
+
+        this._drawnToStart = true;
+        this._crisis=!sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card => card !== undefined);
         if(this.crisis){
             this.actionsLeft=3;
-            game.crisis(turn);
+            this.game.crisis(this.turn);
         }
     }
     swapAway() {
@@ -55,12 +66,14 @@ export class TurnState extends GameState{
 
     /**
      * @param suppressChanges Should this call refrain from making setting the state (useful for managing game state from visual game)
+     * @param toNextTurn Should this call change the turn
      * @return If the turn should change/did change
      */
-    decrementTurn(suppressChanges=false){
+    decrementAction(suppressChanges=false, toNextTurn=false){
         this.actionsLeft--;
-        if(this.actionsLeft<=0){
+        if(this.actionsLeft<0||toNextTurn){
             this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
+            this.game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, false);
             if(!suppressChanges) {
                 this.game.state = new TurnState(this.game, other(this.turn));
 

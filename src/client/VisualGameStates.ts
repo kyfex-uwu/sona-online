@@ -1,9 +1,9 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
-import {button, buttonId, registerDrawCallback} from "./ui.js";
-import {DrawAction, StartRequestEvent} from "../networking/Events.js";
+import {assets, button, buttonId, registerDrawCallback, textHeight} from "./ui.js";
+import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
-import VisualCard from "./VisualCard.js";
+import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import type {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
@@ -40,6 +40,9 @@ export abstract class VisualGameState<T extends GameState>{
     }
     addFeatures(...features:StateFeatures[]){
         for(const feature of features) this.features.add(feature);
+    }
+    deleteFeatures(...features:StateFeatures[]){
+        for(const feature of features) this.features.delete(feature);
     }
     canSelectHandCard(card:VisualCard){
         return true;
@@ -123,6 +126,7 @@ export interface Decrementable{
 }
 export const isDecrementable = (state:VisualGameState<any>) => (state as unknown as Decrementable).__isDecrementableInterface !== undefined;
 
+export const canSelectCardHighlight = newHighlightLock();
 /**
  * During this state, the player can place a card, draw a card, attack, do a card action, or pass
  *
@@ -147,36 +151,60 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         if(!this.initedAlready && this.canInit) {
             this.initedAlready=true;
         }
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
     }
 
     visualTick(): void {
-        if(this.game.getMySide() === this.currTurn){
+        if(this.game.getMySide() === this.currTurn && this.getActionsLeft()>0){
             const handSize=sideTernary(this.game.getMySide(), this.game.getGame().handA, this.game.getGame().handB).length + (this.game.selectedCard !== undefined ? 1 : 0 );
             if(handSize > 5){
                 this.features.clear();
                 this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
             }else{
                 this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
-                this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
-                    StateFeatures.FIELDS_PLACEABLE,
-                    StateFeatures.DECK_DRAWABLE);
+
+                const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
+                if(!this.getNonVisState().drawnToStart){
+                    this.deleteFeatures(StateFeatures.FIELDS_SELECTABLE,
+                        StateFeatures.FIELDS_PLACEABLE);
+                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                        card.highlight(false, canSelectCardHighlight);
+                    }
+                }else {
+                    this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
+                        StateFeatures.FIELDS_PLACEABLE);
+                    let maxLevel = fieldCards.map(field => field.getCard())
+                        .filter(card => card !== undefined)
+                        .reduce((a,c)=>Math.max(a,c.logicalCard.cardData.level),0)+1;
+                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                        if(card.logicalCard.cardData.level <= maxLevel || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+                            {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
+                            card.highlight(true, canSelectCardHighlight);
+                        }
+                    }
+                }
             }
-            if(handSize > 4){
+            if(handSize >= 5){
                 this.features.delete(StateFeatures.DECK_DRAWABLE);
             }else{
                 this.features.add(StateFeatures.DECK_DRAWABLE);
             }
         }else{
             this.features.clear();
+
+            for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+                    {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})??false, canSelectCardHighlight);
+            }
         }
     }
     readonly __isDecrementableInterface=true;
-    decrementTurn(){
+    decrementTurn(toNextTurn=false){
         this.game.getGame().freezableAction(()=>{
             const state = this.game.getGame().state;
             if(state instanceof TurnState) {
                 this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-                if(state.decrementTurn(true)){
+                if(state.decrementAction(true, toNextTurn)){
                     this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
                 }
             }
@@ -199,9 +227,9 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
 //todo: i think theres only gonna be 2 cancellable states? (attacking and pick+subclasses) so do we really need this
 export interface Cancellable{
     isCancellable():boolean;
-    cancel():void;
+    end():void;
 }
-export const isCancellable = (inst:any) => inst.isCancellable instanceof Function && inst.cancel instanceof Function;
+export const isCancellable = (inst:any) => inst.isCancellable instanceof Function && inst.end instanceof Function;
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
 export class VAttackingState extends VisualGameState<TurnState> implements Cancellable, Decrementable{
@@ -229,7 +257,7 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     }
 
     isCancellable(){ return true; }
-    cancel(){
+    end(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
     canSelectHandCard(card: VisualCard): boolean {
@@ -346,7 +374,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     }
 
     isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
-    cancel(){
+    end(){
         this.game.setState(this.parentState[0], this.parentState[1]);
         this.removeCards();
     }
@@ -369,3 +397,111 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
 
     }
 }
+
+const vGuiButton1 = buttonId();
+const vGuiButton2 = buttonId();
+export class VGuiState extends VisualGameState<TurnState>{
+    private parentState: [VisualGameState<any>, GameState];
+    private endFunc: (self: VGuiState) => void;
+    private initFunc: (self: VGuiState) => void;
+    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState],
+            data:{
+                onEnd:(self:VGuiState)=>void,
+                init:(self:VGuiState)=>void
+            }) {
+        super(game);
+        this.parentState=parentState;
+        this.endFunc=data.onEnd;
+        this.initFunc = data.init;
+    }
+    private readonly cardsListeners:number[] = [];
+    addCards(cards:{card:VisualCard, position:Vector3}[], onPick:(card:VisualCard)=>void){
+        this.cardsListeners.push(clickListener(() => {
+            const intersects = this.game.raycaster.intersectObjects(cards
+                .map(data => data.card.model).filter(model => model !== undefined));
+            if (intersects[0] !== undefined) {
+                onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card);
+            }
+
+            return false;
+        }));
+
+        for (let i = 0; i < cards.length; i++) {
+            const newCard = new VisualCardClone(cards[i]!.card);
+            this.game.addElement(newCard);
+            newCard.populate(newCard.logicalCard);
+            newCard.createModel().then(()=>{
+                camera.add(newCard.model);
+            });
+
+            newCard.flipFaceup();
+            newCard.position.copy(cards[i]!.position);
+            newCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
+            // newCard.scale = new Vector3(scale, scale, scale);
+        }
+
+        return this;
+    }
+    init() {
+        super.init();
+        this.initFunc(this);
+    }
+
+    end() {
+        this.endFunc(this);
+        this.game.setState(this.parentState[0], this.parentState[1]);
+    }
+
+    canSelectHandCard(_card:VisualCard){
+        return false;
+    }
+
+    button(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean){
+        const width = scale * 1.3;
+        const height = scale * 0.4;
+
+        button(p5, p5.width/2-width/2, p5.height - height - scale * 0.1, width, height, text,
+            onClick, scale, vGuiButton1, disabled);
+    }
+    cancelButton(p5:any, scale:number, disabled:boolean){
+        this.button(p5, scale, ()=>this.end(), "Cancel", disabled);
+    }
+    twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled:boolean},
+               button2:{onClick:()=>void, text:string, disabled:boolean}){
+        const width = scale * 1.3;
+        const height = scale * 0.4;
+        let splitMaybeWidth = scale * 0.8;
+        let splitMaybeX = p5.width/2-scale*0.9;
+
+        button(p5, p5.width/2+scale*0.1, p5.height - height - scale * 0.1, splitMaybeWidth, height, button1.text,
+            button1.onClick, scale, vGuiButton1, button1.disabled);
+        button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, button2.text,
+            button2.onClick, scale, vGuiButton2, button2.disabled);
+    }
+    buttonAndCancel(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean){
+        this.twoButtons(p5, scale, {onClick, text, disabled},
+            {onClick:()=>this.end(), text:"Cancel", disabled:cancelDisabled})
+    }
+
+    infoText(p5:any, scale:number, text:string){
+        p5.image(assets.info, p5.width/2+scale, p5.height - scale*0.6, scale*0.3, scale*0.3);
+        currentInfoText=text;
+    }
+}
+let currentInfoText = "";
+registerDrawCallback(0, (p5, scale) => {
+    if(currentInfoText !== "" && p5.mouseX>p5.width/2+scale && p5.mouseY>p5.height - scale*0.6 &&
+        p5.mouseX<p5.width/2+scale*1.3 && p5.mouseY<p5.height - scale*0.3) {
+        const padding = p5.width*0.005;
+
+        p5.push();
+        p5.fill(0,0,0,200);
+        p5.noStroke();
+        p5.rect(p5.width/6, scale, p5.width*2/3, textHeight(p5, currentInfoText, p5.width*2/3-padding*2)+padding);
+        p5.fill(255, 255, 255);
+        p5.textAlign(p5.CENTER, p5.TOP);
+        p5.text(currentInfoText, p5.width/6+padding, scale+padding, p5.width*2/3-padding*2);
+        p5.pop();
+    }
+    currentInfoText="";
+})

@@ -21,7 +21,7 @@ import {
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type KIBBY_SCARE,
-    type LITTLEBOSS_IMMUNITY, type NOBLE_RETARGET, type SONIC_STALLION_SAVE,
+    type LITTLEBOSS_IMMUNITY, type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -114,7 +114,7 @@ export default function(event:CardAction<any>):processedEvent{
             if(!(event.game.state instanceof TurnState && event.game.player(event.game.state.turn) === event.sender &&//its the senders turn
                 sender !== undefined && sender!.cardData.name === "og-001" &&//atttacking card is k9
                 takeFrom.map(card=>card?.cardData.species === Species.CANINE)//all cards are canines
-                    .reduce((a,c)=>a&&c)))
+                    .reduce((a,c)=>a&&c, true)))
                 return rejectEvent(event, "failed k9 check");
 
             const stat = data.canineFields.map((v,i)=>v?
@@ -134,7 +134,7 @@ export default function(event:CardAction<any>):processedEvent{
         }
         case CardActionOptions.BROWNIE_DRAW: {//og-005
             const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
-            const card = event.game.cards.values().find(card => card.id === id);
+            const card = [...event.game.cards.values()].find(card => card.id === id);
 
             if (!(card && event.game.player(card.side) === event.sender &&//card exists and card belongs to sender
                 card.cardData.level === 1 && card.isAlwaysFree() &&//and card is level 1 and card is free
@@ -573,33 +573,6 @@ export default function(event:CardAction<any>):processedEvent{
             event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
             if(scareNext) scareNext();
-
-            event.game.unfreeze();
-            return acceptEvent(event);
-        }
-        case CardActionOptions.SONIC_STALLION_SAVE:{
-            const actor = (event.game.player(Side.A) === event.sender ?
-                event.game.handA : event.game.handB).find(card=> card.cardData.name === "og-014");
-
-            if(actor === undefined ||
-                event.game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.SONIC_STALLION_SAVE)
-                return rejectEvent(event, "failed sonic check");
-
-            const data = (event as CardAction<SONIC_STALLION_SAVE>).data.cardData;
-            event.game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
-            if(data !== false){
-                parseEvent(new PlaceAction({
-                    cardId:actor.id,
-                    position:data,
-                    side:actor.side,
-                    faceUp:true
-                }, event.game).force().forceFree());
-                sendToClients(new CardAction({
-                    cardId:-1,
-                    actionName:CardActionOptions.SONIC_STALLION_SAVE,
-                    cardData:1
-                }, event.game));
-            }
 
             event.game.unfreeze();
             return acceptEvent(event);

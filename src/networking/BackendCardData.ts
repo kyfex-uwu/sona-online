@@ -37,29 +37,6 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
-wrap(cards["og-014"]!, CardTriggerType.AFTER_ACTION, (orig, {self, game})=>{
-    if(orig) orig({self, game});
-
-    if(sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card!==undefined) ||
-        !(game.state instanceof TurnState) ||
-        game.state.actionsLeft !== 1 ||
-        game.state.turn === self.side)
-        return InterruptScareResult.PASSTHROUGH;
-
-    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.SONIC_STALLION_SAVE);
-    game.freeze(event=>
-        (event instanceof CardAction &&
-        event.sender === game.player(self.side) &&
-        event.data.actionName === CardActionOptions.SONIC_STALLION_SAVE) ||
-        (event instanceof PlaceAction && event.isForced()));
-    game.player(self.side)?.send(new CardAction({
-        cardId:-1,
-        actionName:CardActionOptions.SONIC_STALLION_SAVE,
-        cardData:false
-    }));
-
-    return InterruptScareResult.PREVENT_SCARE;
-})
 wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});

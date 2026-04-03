@@ -1,11 +1,11 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
-import VisualCard from "./VisualCard.js";
+import {EndType, VAttackingState, VGuiState, VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, PassAction,} from "../networking/Events.js";
 import Card, {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
@@ -13,7 +13,8 @@ import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {Side} from "../GameElement.js";
 import {waitForClarify} from "../networking/LocalServer.js";
-import {tempHowToUse} from "./ui.js";
+import {assets, button, buttonId, invisibleButton, registerDrawCallback, tempHowToUse} from "./ui.js";
+import {ViewType} from "./VisualGame.js";
 
 export function loadFrontendWrappers(){}
 
@@ -21,61 +22,115 @@ export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<bool
 
 function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
     return (card:VisualCard)=> {
-        if (visualGame.state instanceof VAttackingState && visualGame.state.parentState.getActionsLeft() === 1) {
+        if (visualGame.state instanceof VAttackingState) {
             return callback(card);
         }
         return new Promise<boolean>(r=>r(false));
     }
 }
 
+const og001Stats = {
+    [Stat.RED]:buttonId(),
+    [Stat.BLUE]:buttonId(),
+    [Stat.YELLOW]:buttonId(),
+}
+const og001Highlight = newHighlightLock();
 visualCardClientActions["og-001"] = lastAction((card)=>{
+    let endSignal: (value: boolean | PromiseLike<boolean>) => void;
+    const toReturn = new Promise<boolean>(r=>endSignal=r);
     const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
-    let picked = new Set<Card>();
-    let resolve:(val:boolean)=>void;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
     tempHowToUse("K9 Agent Alpha", "Select all the canines you want to use, then press Finish. " +
-        "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.")
-    visualGame.setState(new VPickCardsState(visualGame, oldStates,
-            sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB).map(field => field.getCard())
-                .filter(card => card !== undefined)
-                .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
-                .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
-                if(picked.has(toAttackWith.logicalCard)) picked.delete(toAttackWith.logicalCard);
-                else picked.add(toAttackWith.logicalCard);
-            }, EndType.BOTH, ()=>{
-                visualGame.setState(new VPickCardsState(visualGame, oldStates,
-                    sideTernary(card.getSide(), visualGame.fieldsB, visualGame.fieldsA).map(field => field.getCard())
-                        .filter(card => card !== undefined),
-                    (toAttack)=>{
-                        let thirdState:VPickCardsState;
-                        const statCards = [
-                            new VisualCard(visualGame, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(visualGame, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(visualGame, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                        ];
-                        visualGame.setState(thirdState=new VPickCardsState(visualGame, oldStates, statCards,
-                            (attackStat)=>{
-                                thirdState.cancel();
-                                network.sendToServer(new CardAction({
-                                    cardId:card.logicalCard.id,
-                                    actionName:CardActionOptions.K9_ALPHA,
-                                    cardData:{
-                                        canineFields:sideTernary(card.getSide(), visualGame.getGame().fieldsA, visualGame.getGame().fieldsB)
-                                            .map(card => card !== undefined && picked.has(card)),
-                                        attack:sideTernary(card.getSide(), visualGame.getGame().fieldsB, visualGame.getGame().fieldsA).indexOf(toAttack.logicalCard)+1 as 1|2|3,
-                                        attackWith:{
-                                            "temp_red":Stat.RED,
-                                            "temp_blue":Stat.BLUE,
-                                            "temp_yellow":Stat.YELLOW,
-                                        }[attackStat.logicalCard.cardData.name]!
-                                    }
-                                }));
-                                resolve(true);
-                                //why arent cards removing
-                            }, EndType.NONE), oldStates[1]);
-                    },EndType.CANCEL), oldStates[1]);
-            }),
-        oldStates[1]);
+        "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.");
+
+    const toRemove: (() => void)[] = [];
+    const attackWith:Set<VisualCard> = new Set([card]);
+    card.highlight(true, og001Highlight);
+    let attacking:VisualCard|undefined=undefined;
+    let attackStat:Stat|undefined=undefined;
+    let drawCallback: () => void;
+
+    const end = ()=>{
+        visualGame.changeView(sideTernary(card.getSide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        for(const remove of toRemove) remove();
+        drawCallback();
+
+        for(const field of [...visualGame.fieldsA, ...visualGame.fieldsB])
+            field.getCard()?.highlight(false, og001Highlight);
+        attacking?.highlight(false, og001Highlight);
+    }
+    visualGame.setState(new VGuiState(visualGame, oldStates, {
+        onEnd: (self: VGuiState) => {},
+        init: (self: VGuiState) => {
+            visualGame.changeView(sideTernary(card.getSide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+
+            for(const field of sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB)){
+                toRemove.push(field.addClickListener(()=>{
+                    const card = field.getCard();
+                    if(card !== undefined && card.logicalCard.cardData.species === Species.CANINE && !attackWith.delete(card)) {
+                        attackWith.add(card);
+                        card.highlight(true, og001Highlight);
+                    }else if(card !== undefined){
+                        card.highlight(false, og001Highlight);
+                    }
+                }));
+            }
+            for(const field of sideTernary(card.getSide(), visualGame.fieldsB, visualGame.fieldsA)){
+                toRemove.push(field.addClickListener(()=>{
+                    if(attacking) attacking.highlight(false, og001Highlight);
+                    attacking = field.getCard();
+                    if(attacking) attacking.highlight(true, og001Highlight);
+                }));
+            }
+
+            drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                let height=scale*0.4;
+
+                p5.fill(0);
+                for(let i=0;i<3;i++){
+                    invisibleButton(p5, scale/4, p5.height/2-height/2+(i-1)*height*1.3, height, height, ()=>{
+                        attackStat = i;
+                    }, og001Stats[i as Stat],(isIn)=>{
+                        const image = assets[{
+                            0:"statRed",
+                            1:"statBlue",
+                            2:"statYellow"
+                        }[i]!+(isIn||attackStat === i ? "S":"")];
+                        if(image) {
+                            p5.image(image, scale/4, p5.height / 2 - height / 2+(i-1)*height*1.3, height, height);
+                            p5.stroke(255);
+                            p5.strokeWeight(p5.textSize()/15);
+                            p5.text([...attackWith.values()].map(card=>card.logicalCard
+                                .stat(i) ?? 0).reduce((a,c)=>a+c,0),
+                                scale/4+height/2, p5.height / 2 - height / 2+(i-1)*height*1.3+height/2);
+                            p5.noStroke();
+                        }
+                    });
+                }
+
+                self.buttonAndCancel(p5, scale, ()=>{
+                    network.sendToServer(new CardAction({
+                        cardId:card.logicalCard.id,
+                        actionName:CardActionOptions.K9_ALPHA,
+                        cardData:{
+                            canineFields:sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                                .map(field => attackWith.has(field.getCard()!)),
+                            attack:sideTernary(card.getSide(), visualGame.getGame().fieldsB, visualGame.getGame().fieldsA)
+                                .indexOf(attacking!.logicalCard)+1 as 1|2|3,
+                            attackWith:attackStat
+                        }
+                    })).onReply(successOrFail(()=>{
+
+                    },()=>{},()=>{
+                        end();
+                        endSignal(true);
+                    }));
+                }, "Attack", attacking===undefined || attackStat === undefined, false);
+                self.infoText(p5, scale, "Select any number of your Canine cards to attack with, select a stat to attack with," +
+                    "and select which of the opponent's cards to attack. ");
+            })
+        },
+    }), oldStates[1]);
+
     return toReturn;
 });
 visualCardClientActions["og-018"] = async (card) =>{
@@ -186,7 +241,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
                         }
                     })).onReply(successOrFail(()=>{
                         sideTernary(card.getSide(), visualGame.handA, visualGame.handB).addCard(picked);
-                        (visualGame.state as VPickCardsState).cancel();
+                        (visualGame.state as VPickCardsState).end();
                     },()=>{},()=>{
                         visualGame.frozen=false;
                         resolve!(true);
@@ -280,7 +335,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                 }));
             }
 
-            state.cancel();
+            state.end();
         }, EndType.NONE), game.state);
     }));
 });
@@ -366,7 +421,7 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                 actionName:CardActionOptions.YASHI_REORDER,
                                 cardData:{cards:newOrder},
                             }));
-                            toCancel.cancel();
+                            toCancel.end();
                         }
                     },EndType.NONE);
                 visualGame.setState(toCancel, game.state);
@@ -389,7 +444,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                     actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
                     cardData:picked.logicalCard.id
                 }));
-                state.cancel();
+                state.end();
 
                 waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
                     if(event instanceof ClarifyCardEvent && event.data.id === picked.logicalCard.id) {
@@ -418,7 +473,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                         actionName:CardActionOptions.DCW_PICK,
                         cardData:picked.logicalCard.id
                     }));
-                    state.cancel();
+                    state.end();
 
                     waitForClarify(ClarificationJustification.DCW, (event)=>{
                         if(event instanceof ClarifyCardEvent && event.data.id === -1) {
@@ -440,7 +495,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                     })).onReply(successOrFail(()=>{
                                         game.unfreeze();
                                     },()=>{},()=>{}));
-                                    state2.cancel();
+                                    state2.end();
                                 },EndType.NONE);
                             visualGame.setState(state2, oldStates[1]);
                         }
@@ -501,7 +556,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                     .map(magnet=>magnet.getCard())
                     .findIndex(mCard=>mCard?.logicalCard.id === card.logicalCard.id)+1
             }));
-            state.cancel();
+            state.end();
         }, EndType.NONE);
     visualGame.setState(state, game.state);
 });

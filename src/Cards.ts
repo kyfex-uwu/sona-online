@@ -27,7 +27,10 @@ setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
         if(newStatData !== undefined)
             toReturn[newStatData?.stat]=newStatData.newVal;
         return addTempStats(self, toReturn);
-    }));
+    }))
+    .with(CardTriggerType.ACTION, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
+    });
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)
     .with(CardTriggerType.GET_STATS, ({self, game})=>{
@@ -61,7 +64,7 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
     });
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
-setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)//todo
+setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)
     .with(CardTriggerType.SPECIAL_PLACED_CHECK, ({self, game, normallyValid})=>{
         if(game.state instanceof TurnState &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
@@ -73,7 +76,7 @@ setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)//todo
             sideTernary(self.side, game.fieldsA, game.fieldsB)
                 .filter(card => card !== undefined && card !== self)
                 .length === 0 && (game.state.turn !== self.side ||
-                    game.state.actionsLeft === 3);
+                    game.state.drawnToStart === false);
     }));
 setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE));
 setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN));
@@ -102,7 +105,10 @@ setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardTriggerType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
-setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE));
+setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE))
+    .with(CardTriggerType.ACTION, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
+    });
 setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
 setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES));
@@ -112,7 +118,10 @@ setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN));
 setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE));
 setCard(new CardData("og-036", [7,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE));
-setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID));
+setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID))
+    .with(CardTriggerType.ACTION, ({self, game})=>{
+        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
+    });
 setCard(new CardData("og-039", [5,7,undefined], 2, Species.FELINE));
 setCard(new CardData("og-040", [undefined,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN)//todo
@@ -154,13 +163,13 @@ function setSpecialCard(data:CardData){
 }
 setSpecialCard(new CardData("unknown", [0,0,0], 1, Species.UNKNOWN));
 setSpecialCard(new CardData("utility", [0,0,0], 1, Species.UNKNOWN, "utility.png"));
-setSpecialCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_lv1", [0,0,0], 1, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_lv2", [0,0,0], 2, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_lv3", [0,0,0], 3, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_keep", [0,0,0], 1, Species.UNKNOWN));
-setSpecialCard(new CardData("temp_scare", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_lv1", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_lv2", [0,0,0], 2, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_lv3", [0,0,0], 3, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_keep", [0,0,0], 1, Species.UNKNOWN));
+// setSpecialCard(new CardData("temp_scare", [0,0,0], 1, Species.UNKNOWN));
 
 export default cards;

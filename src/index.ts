@@ -22,7 +22,7 @@ import {tempHowToUse} from "./client/ui.js";
 
 const stats = new Stats();
 stats.showPanel(0);
-document.getElementById("stats")!.appendChild(stats.dom);
+// document.getElementById("stats")!.appendChild(stats.dom);
 
 // Init scene
 const scene = new Scene();
@@ -78,8 +78,8 @@ export const game = new VisualGame(scene);
 game.changeView(ViewType.WHOLE_BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
-        const toReturn = [];
-        const alreadyAdded:{[k:string]:true} = {};
+        const toReturn = ["og-014"];
+        const alreadyAdded:{[k:string]:true} = Object.fromEntries(toReturn.map(v=>[v,true]));
         const cardsValues = Object.values(cards);
         let oneFlag = false;
         for(let i=0;i<20;i++) {

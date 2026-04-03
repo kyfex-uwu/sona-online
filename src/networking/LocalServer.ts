@@ -41,7 +41,7 @@ import {
     type BROWNIE_DRAW,
     CardActionOptions,
     type CLOUD_CAT_PICK,
-    type FURMAKER_PICK, type SONIC_STALLION_SAVE,
+    type FURMAKER_PICK,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -200,7 +200,7 @@ async function receiveFromServer(packed:{
             const finish = ()=>{
                 game.cursorActive=true;
                 game.setState(new VTurnState(event.data.starter, game, false),
-                    new TurnState(game.getGame(), event.data.starter, false));
+                    new TurnState(game.getGame(), event.data.starter));
                 (game.state as VTurnState).canInit=true;//top 10 worst things
 
                 for(const field of game.fieldsA) {
@@ -249,7 +249,7 @@ async function receiveFromServer(packed:{
         }
     }else if(event instanceof PassAction){
         if(game.state instanceof VTurnState){
-            game.state.decrementTurn();
+            game.state.decrementTurn(true);
         }
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
@@ -341,7 +341,7 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.DCW_GUESS,
                             cardData:picked.logicalCard.cardData.level
                         }));
-                        state.cancel();
+                        state.end();
 
                         waitForClarify(ClarificationJustification.DCW, (event)=>{
                             if(event instanceof ClarifyCardEvent && event.data.cardDataName === ""){
@@ -366,7 +366,7 @@ async function receiveFromServer(packed:{
                                             cardData:picked2.logicalCard.cardData.level
                                         }));
                                         game.getGame().unfreeze();
-                                        state.cancel();
+                                        state.end();
                                     },EndType.NONE);
                                 game.setState(state2, oldStates[1]);
                             }else if(event instanceof ClarifyCardEvent){
@@ -398,7 +398,7 @@ async function receiveFromServer(packed:{
                                         .find(card=>card.logicalCard.id === event.data.id)!);
                             }
                         });
-                        state.cancel();
+                        state.end();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
@@ -413,7 +413,7 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                             cardData:picked.logicalCard.cardData.name === "temp_keep"
                         }));
-                        state.cancel();
+                        state.end();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
@@ -447,7 +447,7 @@ async function receiveFromServer(packed:{
                                             picked.logicalCard.side]
                                     }
                                 }));
-                                state2.cancel();
+                                state2.end();
                             },EndType.NONE);
                         game.setState(state2,oldStates[1]);
                     },EndType.FINISH, ()=>{
@@ -456,7 +456,7 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                             cardData:false
                         }));
-                        state.cancel();
+                        state.end();
                     });
                 game.setState(state, oldStates[1]);
             }break;
@@ -490,7 +490,7 @@ async function receiveFromServer(packed:{
                                             picked.logicalCard.side]
                                     }
                                 }));
-                                state2.cancel();
+                                state2.end();
                             },EndType.NONE);
                         game.setState(state2,oldStates[1]);
                     },EndType.FINISH, ()=>{
@@ -499,38 +499,9 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                             cardData:false
                         }));
-                        state.cancel();
+                        state.end();
                 });
                 game.setState(state, oldStates[1]);
-            }break;
-            case CardActionOptions.SONIC_STALLION_SAVE:{
-                if((event as CardAction<SONIC_STALLION_SAVE>).data.cardData === false) {
-                    const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                        [1, 2, 3].map(level => new VisualCard(game,
-                            new Card(cards["temp_lv" + level]!, Side.A, game.getGame(), -1), new Vector3())),
-                        (picked) => {
-                            network.sendToServer(new CardAction({
-                                cardId: -1,
-                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
-                                cardData: picked.logicalCard.cardData.level
-                            }));
-                            state.cancel();
-                        }, EndType.FINISH, () => {
-                            network.sendToServer(new CardAction({
-                                cardId: -1,
-                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
-                                cardData: false
-                            }));
-                            state.cancel();
-                        });
-                    game.setState(state, game.getGame().state);
-                }else{
-                    if(game.state instanceof VTurnState && game.state.getNonVisState().crisis){
-                        game.setState(new VTurnState(game.state.currTurn, game),
-                            new TurnState(game.getGame(), game.state.currTurn, false));
-                        game.getGame().setCrisis(game.state.currTurn, game.getGame().getCrisis(game.state.currTurn)-1);
-                    }
-                }
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
                 tempHowToUse("Noble Rat", "Select Noble Rat if you want to retarget the opponent's attack to Noble Rat, " +
@@ -543,14 +514,14 @@ async function receiveFromServer(packed:{
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: true
                         }));
-                        state.cancel();
+                        state.end();
                     }, EndType.FINISH, () => {
                         network.sendToServer(new CardAction({
                             cardId: -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: false
                         }));
-                        state.cancel();
+                        state.end();
                     });
                 game.setState(state, game.getGame().state);
             }break;

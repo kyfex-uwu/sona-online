@@ -17,7 +17,7 @@ export function registerDrawCallback(layer:number, callback:(p5:any, scale:numbe
     }
 }
 
-const assets:{[k:string]:p5.Image} = {};
+export const assets:{[k:string]:p5.Image} = {};
 
 //top 10 worst code snippets ever
 const oldLog = console.log;
@@ -41,6 +41,7 @@ new p5(p => {
         p.createCanvas(p.windowWidth, p.windowHeight);
 
         p.textFont("Red Rose");
+
         p.loadImage(`/assets/button.png`, (image:p5.Image) => {
             assets["button"] = image;
         });
@@ -50,6 +51,15 @@ new p5(p => {
         p.loadImage(`/assets/button_disabled.png`, (image:p5.Image) => {
             assets["button_disabled"] = image;
         });
+
+        p.loadImage(`/assets/stat_red.png`, (image:p5.Image) => assets.statRed = image);
+        p.loadImage(`/assets/stat_blue.png`, (image:p5.Image) => assets.statBlue = image);
+        p.loadImage(`/assets/stat_yellow.png`, (image:p5.Image) => assets.statYellow = image);
+        p.loadImage(`/assets/stat_red_s.png`, (image:p5.Image) => assets.statRedS = image);
+        p.loadImage(`/assets/stat_blue_s.png`, (image:p5.Image) => assets.statBlueS = image);
+        p.loadImage(`/assets/stat_yellow_s.png`, (image:p5.Image) => assets.statYellowS = image);
+
+        p.loadImage(`/assets/info.png`, (image:p5.Image) => assets.info = image);
     };
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
@@ -102,36 +112,46 @@ const buttons:{x:number,y:number,w:number,h:number,id:number,onClick:()=>void}[]
  */
 export function button(p5:any, x:number,y:number,w:number,h:number,text:string,onClick:()=>void, scale:number, buttonId:number, disabled:boolean=false){
     if(assets.button === undefined || assets.button_pressed === undefined || assets.button_disabled === undefined) return;
+
+    scale=scale/128/2.5;
+
+    invisibleButton(p5, x, y, w, h, onClick, buttonId, (isIn)=>{
+        const buttonImage = disabled ? assets.button_disabled : (isIn ?
+            assets.button_pressed : assets.button);
+
+        //center
+        p5.image(buttonImage, x+24*scale-1, y+24*scale-1, w-48*scale+2, h-48*scale+2, 24,24,80,80);
+
+        //edges
+        p5.image(buttonImage, x+24*scale-1, y, w-48*scale+2, 24*scale, 24,0,80,24);
+        p5.image(buttonImage, x+24*scale-1, y+h-24*scale, w-48*scale+2, 24*scale, 24,104,80,24);
+        p5.image(buttonImage, x, y+24*scale-1, 24*scale, h-48*scale+2, 0,24,24,80);
+        p5.image(buttonImage, x+w-24*scale, y+24*scale-1, 24*scale, h-48*scale+2, 104,24,24,80);
+
+        //corners
+        p5.image(buttonImage, x,y,24*scale,24*scale,0,0,24,24);
+        p5.image(buttonImage, x+w-24*scale,y,24*scale,24*scale,104,0,24,24);
+        p5.image(buttonImage, x,y+h-24*scale,24*scale,24*scale,0,104,24,24);
+        p5.image(buttonImage, x+w-24*scale,y+h-24*scale,24*scale,24*scale,104,104,24,24);
+
+        p5.fill(!disabled?255:200);
+        p5.textSize(scale*50);
+        p5.textAlign(p5.CENTER,p5.CENTER);
+        const textWidth = p5.textWidth(text);
+        if(textWidth>w-52*scale)
+            p5.textSize(scale*50*(w-52*scale)/textWidth);
+        p5.text(text,x+w/2,y+h/2);
+    },disabled);
+}
+
+export function invisibleButton(p5:any, x:number, y:number, w:number, h:number, onClick:()=>void, buttonId:number,
+                                render:(isIn:boolean)=>void, disabled:boolean=false){
     if(buttonData[buttonId] === undefined)
         buttonData[buttonId]=false;
 
-    scale=scale/128/2.5;
     const isIn=p5.mouseX>=x&&p5.mouseX<=x+w&&p5.mouseY>=y&&p5.mouseY<=y+h;
-    const buttonImage = disabled ? assets.button_disabled : (isIn ?
-        assets.button_pressed : assets.button);
 
-    //center
-    p5.image(buttonImage, x+24*scale-1, y+24*scale-1, w-48*scale+2, h-48*scale+2, 24,24,80,80);
-
-    //edges
-    p5.image(buttonImage, x+24*scale-1, y, w-48*scale+2, 24*scale, 24,0,80,24);
-    p5.image(buttonImage, x+24*scale-1, y+h-24*scale, w-48*scale+2, 24*scale, 24,104,80,24);
-    p5.image(buttonImage, x, y+24*scale-1, 24*scale, h-48*scale+2, 0,24,24,80);
-    p5.image(buttonImage, x+w-24*scale, y+24*scale-1, 24*scale, h-48*scale+2, 104,24,24,80);
-
-    //corners
-    p5.image(buttonImage, x,y,24*scale,24*scale,0,0,24,24);
-    p5.image(buttonImage, x+w-24*scale,y,24*scale,24*scale,104,0,24,24);
-    p5.image(buttonImage, x,y+h-24*scale,24*scale,24*scale,0,104,24,24);
-    p5.image(buttonImage, x+w-24*scale,y+h-24*scale,24*scale,24*scale,104,104,24,24);
-
-    p5.fill(!disabled?255:200);
-    p5.textSize(scale*50);
-    p5.textAlign(p5.CENTER,p5.CENTER);
-    const textWidth = p5.textWidth(text);
-    if(textWidth>w-52*scale)
-        p5.textSize(scale*50*(w-52*scale)/textWidth);
-    p5.text(text,x+w/2,y+h/2);
+    render(isIn);
 
     if(!disabled){
         buttons.push({
@@ -140,4 +160,24 @@ export function button(p5:any, x:number,y:number,w:number,h:number,text:string,o
     }
     if(isIn && !mouseData.wasDown && mouseData.down) buttonData[buttonId]=true;
     if(!isIn) buttonData[buttonId]=false;
+}
+
+export function textHeight(p5:any, text:string, maxWidth:number) {
+    const words = text.split(' ');
+    let line = '';
+    let h = p5.textLeading();
+
+    for (let i = 0; i < words.length; i++) {
+        let testLine = line + words[i] + ' ';
+        let testWidth = p5.textWidth(testLine);
+
+        if (testWidth > maxWidth && i > 0) {
+            line = words[i] + ' ';
+            h += p5.textLeading();
+        } else {
+            line = testLine;
+        }
+    }
+
+    return h;
 }

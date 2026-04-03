@@ -4,7 +4,7 @@ import {updateOrder} from "../clientConsts.js";
 import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
-import VisualCard from "../VisualCard.js";
+import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {StateFeatures, VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
@@ -33,8 +33,10 @@ export default class DeckMagnet extends CardMagnet{
                     this.game.frozen=true;
                     this.game.sendEvent(new DrawAction({})).onReply(successOrFail(()=>{
                         this.drawCard();
-                        if(this.game.state instanceof VTurnState)
+                        if(this.game.state instanceof VTurnState) {
                             this.game.state.decrementTurn();
+                            this.game.state.getNonVisState().setDrawnToStart();
+                        }
                     },undefined,()=>{
                         this.game.frozen=false;
                     }));
@@ -107,7 +109,9 @@ export default class DeckMagnet extends CardMagnet{
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) &&
             this.getSide() === this.game.getMySide() &&
             this.game.selectedCard === undefined &&
-            sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5);
+            sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5,
+            highlightLock);
     }
 }
+const highlightLock = newHighlightLock();
 updateOrder[DeckMagnet.name] = CardMagnet.updateOrder;

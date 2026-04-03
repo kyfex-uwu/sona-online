@@ -10,14 +10,13 @@ import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {DrawAction, Event, PassAction} from "../networking/Events.js";
-import {button, buttonId, registerDrawCallback} from "./ui.js";
-import type Card from "../Card.js";
+import {assets, button, buttonId, invisibleButton, registerDrawCallback} from "./ui.js";
+import Card, {Stat} from "../Card.js";
 import p5 from "p5";
 import {
     type Cancellable,
     EndType,
     isCancellable,
-    VAttackingState,
     VBeforeGameState,
     type VisualGameState,
     VPickCardsState,
@@ -27,7 +26,7 @@ import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
-import {specialCards} from "../Cards.js";
+import cards, {specialCards} from "../Cards.js";
 
 const pointer = new Vector2();
 
@@ -141,6 +140,7 @@ export default class VisualGame {
         this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
             if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide()){
                 this.sendEvent(new DrawAction({}));
+                this.state.getNonVisState().setDrawnToStart();
             }
         })
 
@@ -148,7 +148,15 @@ export default class VisualGame {
 
         this.passButtonId = buttonId();
         this.finishButtonId = buttonId();
+
+        // const spinner = this.addElement(new VisualCard(this,
+        //     new Card(cards["og-001"]!, Side.A, this.game, -1), new Vector3(0,200,0)))
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
+
+            // spinner.rotation.setFromEuler(new Euler(p5.frameCount*0.01, p5.frameCount*0.006,0))
+            // for(const card of this.elements.filter(e=>e instanceof VisualCard))
+            //     card.material!.uniforms.time!.value=p5.frameCount;
+
             if(this.previewCard !== undefined && this.drawPreviewCard) {
                 if (previewImages[this.previewCard.cardData.imagePath] !== undefined) {
                     if (previewImages[this.previewCard.cardData.imagePath] !== true) {
@@ -167,14 +175,16 @@ export default class VisualGame {
             if(this.state instanceof VTurnState && this.state.getNonVisState().turn === this.getMySide()){
                 let width=scale*1.3;
                 let height=scale*0.4;
-                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
+                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
+                        this.state.getActionsLeft() === 0 ? "End Turn" : "Pass", ()=>{
                     this.frozen=true;
                     this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
-                        (this.state as VTurnState).decrementTurn();
-                    },undefined,()=>{
+                        (this.state as VTurnState).decrementTurn(true);
+                    },()=>{},()=>{
                         this.frozen=false;
                     }));
-                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 && !this.frozen);
+                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 ||
+                    this.frozen || !this.state.getNonVisState().drawnToStart);
             }
 
             const width = scale * 1.3;
@@ -194,7 +204,7 @@ export default class VisualGame {
                     }, scale, this.finishButtonId, this.frozen);
                 }
                 button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Cancel", () => {
-                    (this.state as unknown as Cancellable).cancel();//trust
+                    (this.state as unknown as Cancellable).end();//trust
                 }, scale, this.passButtonId, this.frozen);
             }
             if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
@@ -205,24 +215,24 @@ export default class VisualGame {
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
-            p5.push();
-            p5.fill(255,0,0);
-            p5.textSize(scale*0.1);
-            p5.textAlign(p5.RIGHT,p5.TOP);
-            if(this.state instanceof VTurnState){
-                p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
-current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
-actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
-            }
-            if(this.state instanceof VAttackingState){
-                p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
-                    .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
-            }
-
-            p5.textAlign(p5.LEFT,p5.BOTTOM);
-            p5.text(this.debugLast, 0,p5.height);
-
-            p5.pop();
+//             p5.push();
+//             p5.fill(255,0,0);
+//             p5.textSize(scale*0.1);
+//             p5.textAlign(p5.RIGHT,p5.TOP);
+//             if(this.state instanceof VTurnState){
+//                 p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
+// current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
+// actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
+//             }
+//             if(this.state instanceof VAttackingState){
+//                 p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
+//                     .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
+//             }
+//
+//             p5.textAlign(p5.LEFT,p5.BOTTOM);
+//             p5.text(this.debugLast, 0,p5.height);
+//
+//             p5.pop();
         });
     }
     private readonly releaseDrawCallback;

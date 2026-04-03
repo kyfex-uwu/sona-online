@@ -5,7 +5,14 @@ import {other, Side} from "../../GameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
-import {type Decrementable, isDecrementable, StateFeatures, VAttackingState, VTurnState} from "../VisualGameStates.js";
+import {
+    canSelectCardHighlight,
+    type Decrementable,
+    isDecrementable,
+    StateFeatures,
+    VAttackingState,
+    VTurnState
+} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
@@ -38,6 +45,7 @@ export default class FieldMagnet extends CardMagnet{
                             {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){//todo: this is technically a bandaid fix
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
+                        card.highlight(false, canSelectCardHighlight);
                         this.game.selectedCard = undefined;
 
                         this.game.frozen=true;
@@ -106,7 +114,7 @@ export default class FieldMagnet extends CardMagnet{
                                 } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card).then((cancel)=>{
-                                            if(cancel) state.cancel();
+                                            if(cancel) state.end();
                                         });
                                         return true;
                                     }
@@ -128,7 +136,7 @@ export default class FieldMagnet extends CardMagnet{
                                             attackingWith: state.attackData.type,
                                         }));
                                         this.game.frozen=true;
-                                        state.cancel();
+                                        state.end();
                                         return true;
                                     }
                                 }
