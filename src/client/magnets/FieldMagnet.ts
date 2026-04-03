@@ -41,8 +41,8 @@ export default class FieldMagnet extends CardMagnet{
                 if(this.game.selectedCard !== undefined && this.getSide() === this.game.getMySide() &&
                     state.canSelectHandCard(this.game.selectedCard) &&
                     (state.hasFeatures(StateFeatures.FIELDS_PLACEABLE)||
-                        this.game.selectedCard.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
-                            {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){//todo: this is technically a bandaid fix
+                        this.game.selectedCard.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                            {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
                         card.highlight(false, canSelectCardHighlight);
@@ -182,7 +182,7 @@ export default class FieldMagnet extends CardMagnet{
     shouldSnapCards(): boolean {
         return this.card === undefined &&
             (this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) ||
-                (this.game.selectedCard?.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+                (this.game.selectedCard?.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
                     {self:this.game.selectedCard.logicalCard,
                         game:this.game.selectedCard.game.getGame(),
                     normallyValid:false})??false)) &&

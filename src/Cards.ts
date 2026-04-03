@@ -65,7 +65,7 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
 setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)
-    .with(CardTriggerType.SPECIAL_PLACED_CHECK, ({self, game, normallyValid})=>{
+    .with(CardTriggerType.SPECIAL_PLACEABLE_CHECK, ({self, game, normallyValid})=>{
         if(game.state instanceof TurnState &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
             .filter(card=>card!==undefined)

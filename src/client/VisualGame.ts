@@ -16,7 +16,7 @@ import p5 from "p5";
 import {
     type Cancellable,
     EndType,
-    isCancellable,
+    isCancellable, VAttackingState,
     VBeforeGameState,
     type VisualGameState,
     VPickCardsState,

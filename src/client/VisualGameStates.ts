@@ -177,7 +177,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                         .filter(card => card !== undefined)
                         .reduce((a,c)=>Math.max(a,c.logicalCard.cardData.level),0)+1;
                     for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                        if(card.logicalCard.cardData.level <= maxLevel || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+                        if(card.logicalCard.cardData.level <= maxLevel || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
                             {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
                             card.highlight(true, canSelectCardHighlight);
                         }
@@ -193,7 +193,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             this.features.clear();
 
             for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+                card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
                     {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})??false, canSelectCardHighlight);
             }
         }
@@ -219,7 +219,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         const toReturn = card.logicalCard.cardData.level === 1 ||
             sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
                 (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
-        if(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACED_CHECK,
+        if(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
             {self:card.logicalCard, game:card.game.getGame(), normallyValid:toReturn})??false) return true;
         return toReturn;
     }

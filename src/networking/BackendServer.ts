@@ -342,14 +342,14 @@ export function parseEvent(event:Event<any>):processedEvent{
                         .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1) &&//placed card's level is at most 1 above all other cards
                     event.game.state.drawnToStart &&//player has already started turn
                     !event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED)))) { //player has not last actioned
-                if (!(card.callAction(CardTriggerType.SPECIAL_PLACED_CHECK, {
+                if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
                     self: card,
                     game: event.game,
                     normallyValid: false
                 }) ?? false)) {
                     return rejectEvent(event, "failed place check");
                 }
-            } else if (!(card.callAction(CardTriggerType.SPECIAL_PLACED_CHECK, {
+            } else if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
                 self: card,
                 game: event.game,
                 normallyValid: true

@@ -40,7 +40,7 @@ export class TurnState extends GameState{
         }
     }
     setDrawnToStart(){
-        if(this.crisis !== undefined) return;
+        if(this.crisis !== undefined || this._drawnToStart) return;
 
         this._drawnToStart = true;
         this._crisis=!sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card => card !== undefined);

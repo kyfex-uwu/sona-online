@@ -34,7 +34,9 @@ export default class DeckMagnet extends CardMagnet{
                     this.game.sendEvent(new DrawAction({})).onReply(successOrFail(()=>{
                         this.drawCard();
                         if(this.game.state instanceof VTurnState) {
-                            this.game.state.decrementTurn();
+                            if (this.game.state.getNonVisState().drawnToStart) {
+                                this.game.state.decrementTurn();
+                            }
                             this.game.state.getNonVisState().setDrawnToStart();
                         }
                     },undefined,()=>{

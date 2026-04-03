@@ -33,7 +33,7 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(succeeded?:boolean)=>void}, InterruptScareResult>();
     //Returns true if can be placed
-    public static readonly SPECIAL_PLACED_CHECK = new CardTriggerType<
+    public static readonly SPECIAL_PLACEABLE_CHECK = new CardTriggerType<
         {self:Card, game:Game, normallyValid:boolean}, boolean>();
     public static readonly TURN_START = new CardTriggerType<
         {self:Card,game:Game}, void>();

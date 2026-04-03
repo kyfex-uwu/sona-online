@@ -71,7 +71,7 @@ export default class RunawayMagnet extends CardMagnet{
         const takeFrom = sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB);
         const index = card === undefined ?
             takeFrom.length-1 : takeFrom.findIndex(c=>c.id === card.logicalCard.id);
-
+        if(index !== -1) return false;
         takeFrom.splice(index,1);
         this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
