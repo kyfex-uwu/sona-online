@@ -9,7 +9,8 @@ import {
 import {
     type AMBER_PICK,
     AmberData,
-    type BROWNIE_DRAW, type BROY_WEASLA_INCREASE,
+    type BROWNIE_DRAW,
+    type BROY_WEASLA_INCREASE,
     type CardActionOption,
     CardActionOptions,
     type CLOUD_CAT_PICK,
@@ -21,7 +22,8 @@ import {
     type GREMLIN_SCARE,
     type K9_ALPHA,
     type KIBBY_SCARE,
-    type LITTLEBOSS_IMMUNITY, type NOBLE_RETARGET,
+    type LITTLEBOSS_IMMUNITY,
+    type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -36,7 +38,6 @@ import {
     parseEvent,
     type processedEvent,
     rejectEvent,
-    scareInterrupt,
     sendToClients,
     shuffleBackend
 } from "./BackendServer.js";

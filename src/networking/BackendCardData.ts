@@ -1,13 +1,6 @@
 import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
-import {
-    CardAction,
-    ClarificationJustification,
-    ClarifyCardEvent,
-    multiClarifyFactory,
-    PlaceAction,
-    ScareAction
-} from "./Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";

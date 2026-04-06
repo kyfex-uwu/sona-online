@@ -13,7 +13,8 @@ import {
     PlaceAction,
     ScareAction,
     SerializableClasses,
-    type SerializableType, ServerDumpEvent,
+    type SerializableType,
+    ServerDumpEvent,
 } from "./Events.js";
 import {game} from "../index.js";
 import Card, {Stat} from "../Card.js";
@@ -26,7 +27,8 @@ import {sideTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
     EndType,
-    VChoosingStartState, VGuiState,
+    VChoosingStartState,
+    VGuiState,
     VisualGameState,
     VPickCardsState,
     VTurnState

@@ -10,13 +10,13 @@ import type {VisualGameElement} from "./VisualGameElement.js";
 import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {DrawAction, Event, PassAction} from "../networking/Events.js";
-import {assets, button, buttonId, invisibleButton, registerDrawCallback} from "./ui.js";
-import Card, {Stat} from "../Card.js";
+import {button, buttonId, registerDrawCallback} from "./ui.js";
+import Card from "../Card.js";
 import p5 from "p5";
 import {
     type Cancellable,
     EndType,
-    isCancellable, VAttackingState,
+    isCancellable,
     VBeforeGameState,
     type VisualGameState,
     VPickCardsState,
@@ -26,7 +26,7 @@ import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
-import cards, {specialCards} from "../Cards.js";
+import {specialCards} from "../Cards.js";
 
 const pointer = new Vector2();
 

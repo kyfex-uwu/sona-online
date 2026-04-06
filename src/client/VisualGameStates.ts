@@ -1,5 +1,5 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
-import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox, textHeight} from "./ui.js";
+import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox} from "./ui.js";
 import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";

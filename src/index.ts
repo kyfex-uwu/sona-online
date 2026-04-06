@@ -1,10 +1,4 @@
-import {
-    AmbientLight,
-    Color,
-    CubeTextureLoader,
-    Scene,
-    WebGLRenderer
-} from "three";
+import {AmbientLight, Color, CubeTextureLoader, Scene, WebGLRenderer} from "three";
 import {camera, modelLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";

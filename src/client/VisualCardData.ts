@@ -1,19 +1,18 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VAttackingState, VGuiState, VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import {EndType, VAttackingState, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {sideTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, PassAction,} from "../networking/Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import Card, {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
-import {Side} from "../GameElement.js";
 import {waitForClarify} from "../networking/LocalServer.js";
-import {assets, button, buttonId, invisibleButton, registerDrawCallback, tempHowToUse} from "./ui.js";
+import {buttonId, registerDrawCallback, tempHowToUse} from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 
 export function loadFrontendWrappers(){}

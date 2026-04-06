@@ -2,12 +2,15 @@ import {
     BoxGeometry,
     CylinderGeometry,
     Euler,
-    Group, Material,
+    Group,
+    Material,
     Mesh,
     MeshBasicMaterial,
     MirroredRepeatWrapping,
     type Object3D,
-    Quaternion, RepeatWrapping, ShaderMaterial,
+    Quaternion,
+    RepeatWrapping,
+    ShaderMaterial,
     Texture,
     Vector3
 } from "three";

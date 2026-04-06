@@ -1,7 +1,7 @@
 import CardData, {CardTriggerType, InterruptScareResult, Species} from "./CardData.js";
 import {sideTernary} from "./consts.js";
 import {BeforeGameState, TurnState} from "./GameStates.js";
-import Card, {getVictim, CardMiscDataStrings, Stat} from "./Card.js";
+import Card, {CardMiscDataStrings, getVictim} from "./Card.js";
 import {flagNames, getFlag} from "./networking/Server.js";
 import {GameMiscDataStrings} from "./Game.js";
 import {CardActionOptions} from "./networking/CardActionOption.js";
