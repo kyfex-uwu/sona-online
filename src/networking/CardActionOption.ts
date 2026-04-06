@@ -24,8 +24,8 @@ export type FOXY_MAGICIAN_GUESS=Level;
 export type DCW_GUESS=Level;
 export type DCW_SCARE={side:Side,pos:1|2|3};
 export type LITTLEBOSS_IMMUNITY=boolean;
-export type COWGIRL_COYOTE_INCREASE =  false| { stat:Stat, pos:[1|2|3,Side] };
-export type BROY_WEASLA_INCREASE = false| { stat:Stat, pos:[1|2|3,Side] };
+export type COWGIRL_COYOTE_INCREASE =  false| { stat:Stat, pos:[1|2|3,Side], otherPos?:[1|2|3,Side] };
+export type BROY_WEASLA_INCREASE = false| { stat:Stat, pos:[1|2|3,Side], otherPos?:[1|2|3,Side] };
 export type NOBLE_RETARGET = boolean;
 
 export type CardActionOption<T> = {};

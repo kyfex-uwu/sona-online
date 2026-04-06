@@ -83,29 +83,11 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
             }
 
             drawCallback = registerDrawCallback(0, (p5, scale)=>{
-                let height=scale*0.4;
-
-                p5.fill(0);
-                for(let i=0;i<3;i++){
-                    invisibleButton(p5, scale/4, p5.height/2-height/2+(i-1)*height*1.3, height, height, ()=>{
-                        attackStat = i;
-                    }, og001Stats[i as Stat],(isIn)=>{
-                        const image = assets[{
-                            0:"statRed",
-                            1:"statBlue",
-                            2:"statYellow"
-                        }[i]!+(isIn||attackStat === i ? "S":"")];
-                        if(image) {
-                            p5.image(image, scale/4, p5.height / 2 - height / 2+(i-1)*height*1.3, height, height);
-                            p5.stroke(255);
-                            p5.strokeWeight(p5.textSize()/15);
-                            p5.text([...attackWith.values()].map(card=>card.logicalCard
-                                .stat(i) ?? 0).reduce((a,c)=>a+c,0),
-                                scale/4+height/2, p5.height / 2 - height / 2+(i-1)*height*1.3+height/2);
-                            p5.noStroke();
-                        }
-                    });
-                }
+                self.statButtons(p5, scale,
+                    (stat)=>attackStat=stat,
+                    (stat)=>attackStat === stat,
+                    (stat)=>[...attackWith.values()].map(card=>card.logicalCard
+                        .stat(stat) ?? 0).reduce((a,c)=>a+c,0).toString());
 
                 self.buttonAndCancel(p5, scale, ()=>{
                     network.sendToServer(new CardAction({

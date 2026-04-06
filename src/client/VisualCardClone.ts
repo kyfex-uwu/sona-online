@@ -3,7 +3,7 @@ import {Vector3} from "three";
 import Card, {type CardMiscDataString} from "../Card.js";
 
 export default class VisualCardClone extends VisualCard{
-    private readonly clonedFrom;
+    public readonly clonedFrom;
     constructor(clonedFrom:VisualCard) {
         super(clonedFrom.game, {
             get cardData(){ return clonedFrom.logicalCard.cardData; },

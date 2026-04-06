@@ -1,13 +1,13 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
-import {assets, button, buttonId, registerDrawCallback, textHeight} from "./ui.js";
+import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox, textHeight} from "./ui.js";
 import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import type {Stat} from "../Card.js";
+import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
-import {Euler, Group, Quaternion, Vector3} from "three";
+import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {CardTriggerType} from "../CardData.js";
@@ -51,16 +51,26 @@ export abstract class VisualGameState<T extends GameState>{
 
 //During this, the player chooses a lv1 card to place. After it's placed, change to {@link VChoosingStartState}
 export class VBeforeGameState extends VisualGameState<BeforeGameState>{
+    private drawCallback: () => void = ()=>{};
     init() {
         super.init();
         this.addFeatures(StateFeatures.FIELDS_PLACEABLE);
+
+        this.drawCallback = registerDrawCallback(0, (p5, scale)=>{
+            p5.fill(255,255,255);
+            textBox(p5, scale, "Place your starting level 1 card onto the field");
+        });
     }
 
     visualTick() {
         if(sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(v=>v.getCard()!==undefined)){
             this.game.setState(new VChoosingStartState(this.game), this.game.getGame().state);
-            //draw overlay (? what)
         }
+    }
+
+    swapAway() {
+        super.swapAway();
+        this.drawCallback();
     }
 
     canSelectHandCard(card: VisualCard): boolean {
@@ -198,6 +208,14 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             }
         }
     }
+    swapAway() {
+        super.swapAway();
+
+        for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+            card.highlight(false, canSelectCardHighlight);
+        }
+    }
+
     readonly __isDecrementableInterface=true;
     decrementTurn(toNextTurn=false){
         this.game.getGame().freezableAction(()=>{
@@ -398,8 +416,15 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     }
 }
 
+const bgPlane = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({color:new Color(0,0,0), opacity:0.5, transparent:true}));
+bgPlane.position.set(0,0,-30);
 const vGuiButton1 = buttonId();
 const vGuiButton2 = buttonId();
+const vGuiStates = {
+    [Stat.RED]:buttonId(),
+    [Stat.BLUE]:buttonId(),
+    [Stat.YELLOW]:buttonId(),
+}
 export class VGuiState extends VisualGameState<TurnState>{
     private parentState: [VisualGameState<any>, GameState];
     private endFunc: (self: VGuiState) => void;
@@ -415,12 +440,16 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.initFunc = data.init;
     }
     private readonly cardsListeners:number[] = [];
-    addCards(cards:{card:VisualCard, position:Vector3}[], onPick:(card:VisualCard)=>void){
+    private readonly cards:VisualCard[]=[];
+    addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCard)=>void){
+        const newModels:VisualCardClone[] = [];
         this.cardsListeners.push(clickListener(() => {
-            const intersects = this.game.raycaster.intersectObjects(cards
-                .map(data => data.card.model).filter(model => model !== undefined));
+            const intersects = this.game.raycaster.intersectObjects(newModels
+                .map(card=>card.model));
             if (intersects[0] !== undefined) {
-                onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card);
+                onPick(newModels.find(card=>card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
+                    .userData.card.logicalCard.id)!);
+                return true;
             }
 
             return false;
@@ -435,9 +464,12 @@ export class VGuiState extends VisualGameState<TurnState>{
             });
 
             newCard.flipFaceup();
-            newCard.position.copy(cards[i]!.position);
+            newCard.position.copy(new Vector3(cards[i]!.position.x, cards[i]!.position.y, -20));
             newCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
-            // newCard.scale = new Vector3(scale, scale, scale);
+            newCard.scale = new Vector3(cards[i]!.scale??1,cards[i]!.scale??1,cards[i]!.scale??1).multiplyScalar(0.05);
+
+            this.cards.push(newCard);
+            newModels.push(newCard);
         }
 
         return this;
@@ -468,7 +500,6 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
     twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled:boolean},
                button2:{onClick:()=>void, text:string, disabled:boolean}){
-        const width = scale * 1.3;
         const height = scale * 0.4;
         let splitMaybeWidth = scale * 0.8;
         let splitMaybeX = p5.width/2-scale*0.9;
@@ -482,26 +513,52 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.twoButtons(p5, scale, {onClick, text, disabled},
             {onClick:()=>this.end(), text:"Cancel", disabled:cancelDisabled})
     }
+    statButtons(p5:any, scale:number, onClick:(stat:Stat)=>void, shouldHighlight:(stat:Stat)=>boolean, text:(stat:Stat)=>string){
+        const height = scale*0.4;
+        p5.fill(0);
+        for(let i=0;i<3;i++) {
+            invisibleButton(p5, scale / 4, p5.height / 2 - height / 2 + (i - 1) * height * 1.3, height, height, () =>
+                onClick(i), vGuiStates[i as Stat], (isIn) => {
+                const image = assets[{
+                    0: "statRed",
+                    1: "statBlue",
+                    2: "statYellow"
+                }[i]! + (isIn || shouldHighlight(i) ? "S" : "")];
+                if (image) {
+                    p5.image(image, scale / 4, p5.height / 2 - height / 2 + (i - 1) * height * 1.3, height, height);
+                    p5.stroke(255);
+                    p5.strokeWeight(p5.textSize() / 15);
+                    p5.text(text(i),
+                        scale / 4 + height / 2, p5.height / 2 - height / 2 + (i - 1) * height * 1.3 + height / 2);
+                    p5.noStroke();
+                }
+            });
+        }
+    }
 
     infoText(p5:any, scale:number, text:string){
         p5.image(assets.info, p5.width/2+scale, p5.height - scale*0.6, scale*0.3, scale*0.3);
         currentInfoText=text;
+    }
+
+    blackBg(shouldShow:boolean){
+        if(shouldShow)
+            camera.add(bgPlane);
+        else
+            bgPlane.removeFromParent();
+    }
+
+    swapAway() {
+        super.swapAway();
+        for(const card of this.cards) card.removeFromGame();
+        bgPlane.removeFromParent();
     }
 }
 let currentInfoText = "";
 registerDrawCallback(0, (p5, scale) => {
     if(currentInfoText !== "" && p5.mouseX>p5.width/2+scale && p5.mouseY>p5.height - scale*0.6 &&
         p5.mouseX<p5.width/2+scale*1.3 && p5.mouseY<p5.height - scale*0.3) {
-        const padding = p5.width*0.005;
-
-        p5.push();
-        p5.fill(0,0,0,200);
-        p5.noStroke();
-        p5.rect(p5.width/6, scale, p5.width*2/3, textHeight(p5, currentInfoText, p5.width*2/3-padding*2)+padding);
-        p5.fill(255, 255, 255);
-        p5.textAlign(p5.CENTER, p5.TOP);
-        p5.text(currentInfoText, p5.width/6+padding, scale+padding, p5.width*2/3-padding*2);
-        p5.pop();
+        textBox(p5, scale, currentInfoText);
     }
     currentInfoText="";
 })

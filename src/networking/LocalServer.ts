@@ -1,4 +1,4 @@
-import {eventReplyIds, network, Replyable} from "./Server.js";
+import {eventReplyIds, network, Replyable, successOrFail} from "./Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -17,16 +17,16 @@ import {
 } from "./Events.js";
 import {game} from "../index.js";
 import Card, {Stat} from "../Card.js";
-import VisualCard from "../client/VisualCard.js";
+import VisualCard, {newHighlightLock} from "../client/VisualCard.js";
 import cards from "../Cards.js";
-import {Euler, Quaternion, Vector3} from "three";
+import {Euler, Quaternion, Vector2, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
 import {sideTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
     EndType,
-    VChoosingStartState,
+    VChoosingStartState, VGuiState,
     VisualGameState,
     VPickCardsState,
     VTurnState
@@ -418,88 +418,144 @@ async function receiveFromServer(packed:{
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
-                tempHowToUse("Cowgirl Coyote", "Select the card who's stat you want to increase. Then, select the stat you " +
-                    "want to increase by 2.")
-
                 const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-                const state = new VPickCardsState(game, oldStates,
-                    [game.fieldsA, game.fieldsB].map(fields =>
-                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
-                        .flat(),
-                    (picked)=>{
-                        const state2 = new VPickCardsState(game, oldStates,
-                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
-                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                            (picked2)=>{
-                                network.sendToServer(new CardAction({
-                                    cardId:-1,
-                                    actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                                    cardData:{
-                                        stat:({
-                                            temp_red:Stat.RED,
-                                            temp_yellow:Stat.YELLOW,
-                                            temp_blue:Stat.BLUE
-                                        })[picked2.logicalCard.cardData.name]!,
-                                        pos:[
-                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
+
+                let drawCallback;
+                const state = new VGuiState(game, oldStates, {
+                    onEnd:(self)=>{
+                        drawCallback!();
+                        self.blackBg(false);
+                    },
+                    init: (self: VGuiState) => {
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        self.blackBg(true);
+
+                        let selectedCard:VisualCard|undefined;
+                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
+                            // .filter(card=>card !== undefined)
+                            .map((card,i, arr)=>{
+                                return card === undefined ? undefined : {
+                                    card,
+                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
+                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
+                                }}).filter(data=>data!==undefined), (card)=>{
+                            selectedCard?.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard?.highlight(true, og029Highlight);
+                        });
+
+                        let selectedStat:Stat|undefined=undefined;
+                        drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                            self.statButtons(p5, scale,
+                                (stat)=>selectedStat=stat,
+                                (stat)=>selectedStat === stat,
+                                (stat)=>"+2");
+                            self.twoButtons(p5, scale, {
+                                onClick:()=>{
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                                        cardData:{
+                                            stat:selectedStat!,
+                                            pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
                                                 .map(field=>field.getCard())
-                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
-                                            picked.logicalCard.side]
-                                    }
-                                }));
-                                state2.end();
-                            },EndType.NONE);
-                        game.setState(state2,oldStates[1]);
-                    },EndType.FINISH, ()=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                            cardData:false
-                        }));
-                        state.end();
-                    });
+                                                .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
+                                                selectedCard!.getSide()]
+                                        }
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end();
+                                    }));
+                                },
+                                text:"Increase",
+                                disabled:selectedStat===undefined||selectedCard===undefined
+                            }, {
+                                onClick:()=> {
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                                        cardData:false
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end();
+                                    }));
+                                },
+                                text:"Pass",
+                                disabled:false
+                            });
+                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                                "want to increase by 2");
+                        });
+                    },
+                });
                 game.setState(state, oldStates[1]);
             }break;
             case CardActionOptions.BROY_WEASLA_INCREASE:{
-                tempHowToUse("Broy Weasla", "Select the card who's stat you want to increase. Then, select the stat you " +
-                    "want to increase by 2.")
-
                 const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-                const state = new VPickCardsState(game, oldStates,
-                    [game.fieldsA, game.fieldsB].map(fields =>
-                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
-                        .flat(),
-                    (picked)=>{
-                        const state2 = new VPickCardsState(game, oldStates,
-                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
-                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                            (picked2)=>{
-                                network.sendToServer(new CardAction({
-                                    cardId:-1,
-                                    actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                                    cardData:{//todo
-                                        stat:({
-                                            temp_red:Stat.RED,
-                                            temp_yellow:Stat.YELLOW,
-                                            temp_blue:Stat.BLUE
-                                        })[picked2.logicalCard.cardData.name]!,
-                                        pos:[
-                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
+
+                let drawCallback;
+                const state = new VGuiState(game, oldStates, {
+                    onEnd:(self)=>{
+                        drawCallback!();
+                        self.blackBg(false);
+                    },
+                    init: (self: VGuiState) => {
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        self.blackBg(true);
+
+                        let selectedCard:VisualCard|undefined;
+                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
+                            // .filter(card=>card !== undefined)
+                            .map((card,i, arr)=>{
+                                return card === undefined ? undefined : {
+                                    card,
+                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
+                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
+                            }}).filter(data=>data!==undefined), (card)=>{
+                            selectedCard?.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard?.highlight(true, og029Highlight);
+                        });
+
+                        let selectedStat:Stat|undefined=undefined;
+                        drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                            self.statButtons(p5, scale,
+                                (stat)=>selectedStat=stat,
+                                (stat)=>selectedStat === stat,
+                                (stat)=>"+2");
+                            self.twoButtons(p5, scale, {
+                                onClick:()=>{
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                                        cardData:{
+                                            stat:selectedStat!,
+                                            pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
                                                 .map(field=>field.getCard())
-                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
-                                            picked.logicalCard.side]
-                                    }
-                                }));
-                                state2.end();
-                            },EndType.NONE);
-                        game.setState(state2,oldStates[1]);
-                    },EndType.FINISH, ()=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                            cardData:false
-                        }));
-                        state.end();
+                                                .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
+                                                selectedCard!.getSide()]
+                                        }
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end();
+                                    }));
+                                },
+                                text:"Increase",
+                                disabled:selectedStat===undefined||selectedCard===undefined
+                            }, {
+                                onClick:()=> {
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                                        cardData:false
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end();
+                                    }));
+                                },
+                                text:"Pass",
+                                disabled:false
+                            });
+                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                                    "want to increase by 2");
+                        });
+                    },
                 });
                 game.setState(state, oldStates[1]);
             }break;
@@ -535,3 +591,5 @@ async function receiveFromServer(packed:{
 
 //@ts-ignore
 window.requestSync = ()=> game.sendEvent(new RequestSyncEvent({}));
+
+const og029Highlight = newHighlightLock();

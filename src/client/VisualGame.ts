@@ -269,9 +269,9 @@ export default class VisualGame {
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.elements.filter(element => VisualCard.getExactVisualCard(element)
-                && !specialCards.has((element as VisualCard).logicalCard.cardData.name)
-                && (element as VisualCard).logicalCard.getFaceUp()
+            ...this.elements.filter(element => //VisualCard.getExactVisualCard(element) &&
+                !specialCards.has((element as VisualCard).logicalCard?.cardData.name ?? "")
+                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true)
             )
                 .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));

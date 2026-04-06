@@ -181,3 +181,17 @@ export function textHeight(p5:any, text:string, maxWidth:number) {
 
     return h;
 }
+
+export function textBox(p5:any, scale:any, text:string){
+    const padding = p5.width*0.005;
+
+    p5.push();
+    p5.fill(0,0,0,200);
+    p5.noStroke();
+    p5.textSize(scale*0.15);
+    p5.rect(p5.width/6, scale/2, p5.width*2/3, textHeight(p5, text, p5.width*2/3-padding*2)+padding);
+    p5.fill(255, 255, 255);
+    p5.textAlign(p5.CENTER, p5.TOP);
+    p5.text(text, p5.width/6+padding, scale/2+padding, p5.width*2/3-padding*2);
+    p5.pop();
+}

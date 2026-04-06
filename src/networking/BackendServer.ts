@@ -287,11 +287,8 @@ export function parseEvent(event:Event<any>):processedEvent{
                 flippedCoin=false;
                 if(playerAStartReq === "nopref"){
                     startingSide = playerBStartReq === "first" ? Side.B : Side.A;
-                }else if(playerBStartReq === "nopref"){
+                }else{//b nopref OR first and second
                     startingSide = playerAStartReq === "first" ? Side.A : Side.B;
-                }else{
-                    //first and second
-                    startingSide = playerBStartReq === "first" ? Side.B : Side.A;
                 }
             }
 

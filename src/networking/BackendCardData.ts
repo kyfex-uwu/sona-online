@@ -138,7 +138,11 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-        cardData:false
+        cardData:{
+            stat,
+            pos:origEvent.data.scarerPos,
+            otherPos:origEvent.data.scaredPos,
+        }
     }));
 
     return InterruptScareResult.PREVENT_SCARE;
@@ -229,7 +233,11 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-        cardData:false
+        cardData:{
+            stat,
+            pos:origEvent.data.scaredPos,
+            otherPos:origEvent.data.scarerPos,
+        }
     }));
 
     return InterruptScareResult.PREVENT_SCARE;
