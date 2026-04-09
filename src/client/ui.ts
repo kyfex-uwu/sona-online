@@ -1,5 +1,7 @@
 import p5 from "p5";
-import {clickListener} from "./clientConsts.js";
+import {clickListener, textureLoader} from "./clientConsts.js";
+import {Sprite, SpriteMaterial, Vector3} from "three";
+import {game} from "../index.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
@@ -194,4 +196,75 @@ export function textBox(p5:any, scale:any, text:string){
     p5.textAlign(p5.CENTER, p5.TOP);
     p5.text(text, p5.width/6+padding, scale/2+padding, p5.width*2/3-padding*2);
     p5.pop();
+}
+
+export const particles:{
+    sprite:Sprite,
+    velocity:Vector3,
+    drag:number,
+    time:number,
+    index:number,
+    dead:boolean,
+    data:{
+        time:number,
+        timeIndex:number,
+        size:number,
+        opacity:number,
+    }[]
+}[] = [];
+const spriteMaterial = new SpriteMaterial({
+    map:textureLoader.load("/assets/particle.png"),
+    transparent:true,
+});
+export function lerp(a:number,b:number,delta:number){ return a*delta+b*(1-delta); }
+export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
+    time:number,
+    size:number,
+    opacity:number,
+}[]){
+    const sprite = new Sprite(spriteMaterial.clone());
+    sprite.position.copy(pos);
+    game.scene.add(sprite);
+    particles.push({
+        sprite,
+        data:data.map((state,i)=>{return{
+            ...state,
+            timeIndex:data.slice(0,i+1).reduce((a,c)=>a+c.time,0),
+        }}),
+        velocity,
+        drag,
+        time:0,
+        index:0,
+        dead:false,
+    });
+}
+export function particleStreak(startPos:Vector3, endPos:Vector3){
+    let pos = startPos.clone();
+    const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
+    let timeout=0;
+    while(pos.distanceTo(endPos)>18){//sqrt 3 * 10
+        const lerpDelta= 1/(1+pos.distanceTo(endPos)*0.01/timeout);
+        const target = aboveEnd.clone().sub(pos).lerp(endPos.clone().sub(pos),lerpDelta);
+        const thisPos = pos.clone().add(new Vector3(Math.random()*20-10,Math.random()*20-10,Math.random()*20-10));
+        setTimeout(()=>{
+            particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
+                {
+                    time:0,
+                    size:5+Math.random()*10,
+                    opacity:1,
+                },
+                {
+                    time:500,
+                    size:0,
+                    opacity:0.5,
+                },
+            ]);
+        },timeout*10);
+
+        pos.add(target.normalize().multiplyScalar(5+Math.random()*5));
+        timeout++;
+    }
+    return new Promise(r=>{
+        setTimeout(r, timeout*10);
+    });
 }

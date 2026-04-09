@@ -1,4 +1,4 @@
-import {AmbientLight, Color, CubeTextureLoader, Scene, WebGLRenderer} from "three";
+import {AmbientLight, Color, CubeTextureLoader, Scene, Vector3, WebGLRenderer} from "three";
 import {camera, modelLoader} from "./client/clientConsts.js";
 import VisualGame, {ViewType} from "./client/VisualGame.js";
 import {frontendInit} from "./networking/LocalServer.js";
@@ -8,7 +8,7 @@ import type CardData from "./CardData.js";
 import {network} from "./networking/Server.js";
 
 import Stats from "stats.js";
-import {tempHowToUse} from "./client/ui.js";
+import {lerp, particles, tempHowToUse} from "./client/ui.js";
 
 /////
 // version 0.1.0
@@ -92,12 +92,54 @@ game.sendEvent(new FindGameEvent({
     })(),
 }, undefined));
 
-renderer.setAnimationLoop(() => {
+let lastTime=0;
+renderer.setAnimationLoop((time) => {
     stats.begin();
+
     game.tick();
     game.visualTick();
+
+    const deltaTime = time-lastTime;
+    for(const particle of particles){
+        particle.sprite.position.add(particle.velocity);
+        particle.velocity.multiplyScalar(particle.drag);
+
+        if(particle.data[particle.index-1] !== undefined || particle.time === 0) {
+            let delta = 1-(particle.data[particle.index]!.timeIndex-particle.time) /
+                particle.data[particle.index]!.time;
+            if(isNaN(delta)) delta = 1;
+
+            particle.sprite.material.opacity = lerp(
+                particle.data[particle.index]!.opacity,
+                particle.data[particle.index-1]?.opacity ?? 0,
+                delta);
+            const scale = lerp(
+                particle.data[particle.index]!.size,
+                particle.data[particle.index-1]?.size ?? 0,
+                delta);
+            particle.sprite.scale.set(scale,scale,1);
+        }
+
+        particle.time+=deltaTime;
+        while(particle.data[particle.index] !== undefined &&
+                particle.time>particle.data[particle.index]!.timeIndex) {
+            particle.index++;
+            if(particle.index>=particle.data.length){
+                particle.dead=true;
+                particle.sprite.removeFromParent();
+            }
+        }
+    }
+    for(let i=0;i<particles.length;i++){
+        if(particles[i]!.dead){
+            particles.splice(i,1);
+            i--;
+        }
+    }
+
     renderer.render(scene, camera);
     stats.end();
+    lastTime=time;
 });
 
 frontendInit();

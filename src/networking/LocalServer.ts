@@ -33,7 +33,7 @@ import {
     VPickCardsState,
     VTurnState
 } from "../client/VisualGameStates.js";
-import {registerDrawCallback, tempHowToUse} from "../client/ui.js";
+import {particleStreak, registerDrawCallback, tempHowToUse} from "../client/ui.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
@@ -256,7 +256,14 @@ async function receiveFromServer(packed:{
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
-            if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+            if (scared !== undefined) {
+                particleStreak(
+                    sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
+                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
+                ).then(()=>{
+                    sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                });
+            }
         }
         const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsB, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
         if(maybeAttacked) maybeAttacked.hasAttacked=true;
