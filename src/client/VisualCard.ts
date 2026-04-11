@@ -19,7 +19,7 @@ import Card, {Stat} from "../Card.js";
 import VisualGame from "./VisualGame.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import type {CardHoldable} from "./CardHoldable.js";
-import {sideTernary} from "../consts.js";
+import {sideTernary, statTernary} from "../consts.js";
 import {CardTriggerType} from "../CardData.js";
 
 const cardModel = (() => {
@@ -238,14 +238,10 @@ export default class VisualCard extends PositionedVisualGameElement{
      */
     getStatModel(stat:Stat){
         if(this.loadingModel) return;
-        switch(stat){
-            case Stat.RED:
-                return this.model.userData.redStat as Mesh;
-            case Stat.BLUE:
-                return this.model.userData.blueStat as Mesh;
-            case Stat.YELLOW:
-                return this.model.userData.yellowStat as Mesh;
-        }
+        return statTernary(stat,
+            this.model.userData.redStat,
+            this.model.userData.blueStat,
+            this.model.userData.yellowStat) as Mesh;
     }
 
     tick() {
@@ -343,6 +339,33 @@ export default class VisualCard extends PositionedVisualGameElement{
     }
     private updateHighlights(){
         this.highlightObj.visible=this.highlightLocks.size>0;
+    }
+
+    private highlightStatLocks: {
+        [Stat.RED]:Set<number>,
+        [Stat.BLUE]:Set<number>,
+        [Stat.YELLOW]:Set<number>,
+    } = {
+        [Stat.RED]:new Set(),
+        [Stat.BLUE]:new Set(),
+        [Stat.YELLOW]:new Set(),
+    };
+    highlightStat(stats:{
+        [Stat.RED]?:boolean,
+        [Stat.BLUE]?:boolean,
+        [Stat.YELLOW]?:boolean,
+    }, lock:number){
+        for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW])
+            if(stats[stat] !== undefined) {
+                if (stats[stat]) this.highlightStatLocks[stat].add(lock);
+                else this.highlightStatLocks[stat].delete(lock);
+            }
+        this.updateStatHighlights();
+    }
+    private updateStatHighlights(){
+        (this.material!.uniforms.highlight!.value as Vector3).x=this.highlightStatLocks[Stat.RED].size>0?1:0;
+        (this.material!.uniforms.highlight!.value as Vector3).y=this.highlightStatLocks[Stat.BLUE].size>0?1:0;
+        (this.material!.uniforms.highlight!.value as Vector3).z=this.highlightStatLocks[Stat.YELLOW].size>0?1:0;
     }
 
     static getExactVisualCard(obj:any){

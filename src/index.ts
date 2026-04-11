@@ -72,7 +72,27 @@ export const game = new VisualGame(scene);
 game.changeView(ViewType.WHOLE_BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
-        const toReturn = ["og-029"];
+        const toReturn = [
+            "og-001",
+            "og-003",
+            "og-015",
+            "og-031",
+            "og-027",
+            "og-030",
+            "og-034",
+            "og-039",
+            "og-036",
+            "og-023",
+            "og-026",
+            "og-040",
+            "og-035",
+            "og-017",
+            "og-019",
+            "og-022",
+            "og-018",
+            "og-006",
+            "og-007",
+            "og-008"];
         const alreadyAdded:{[k:string]:true} = Object.fromEntries(toReturn.map(v=>[v,true]));
         const cardsValues = Object.values(cards);
         let oneFlag = false;
@@ -113,6 +133,10 @@ renderer.setAnimationLoop((time) => {
                 particle.data[particle.index]!.opacity,
                 particle.data[particle.index-1]?.opacity ?? 0,
                 delta);
+            particle.sprite.material.color =
+                particle.data[particle.index]!.color.lerp(
+                    particle.data[particle.index-1]?.color ?? particle.data[particle.index]!.color,
+                    delta);
             const scale = lerp(
                 particle.data[particle.index]!.size,
                 particle.data[particle.index-1]?.size ?? 0,

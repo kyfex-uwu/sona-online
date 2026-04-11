@@ -182,9 +182,12 @@ export function parseEvent(event:Event<any>):processedEvent{
     }
 
     if(event instanceof FindGameEvent){
-        if(!event.data.deck.some(card => cards[card]?.level === 1)) {
+        if(!event.data.deck.some(card => cards[card]?.level === 1))
             return rejectEvent(event, "no level one card in deck");
-        }
+
+        if(event.data.deck.some(card => cards[card] === undefined))
+            return rejectEvent(event, "invalid card found");
+
         const cardDuplChecker:{[key:string]:true} = {};
         for(const card of event.data.deck) {
             if (cardDuplChecker[card] !== undefined) return rejectEvent(event, "duplicate card found");
@@ -202,17 +205,17 @@ export function parseEvent(event:Event<any>):processedEvent{
                 let id=0;
 
                 //debug code
-                const firstCard = event.data.deck[0];
-                const firstCardB = other.data.deck[0];
+                // const firstCard = event.data.deck[0];
+                // const firstCardB = other.data.deck[0];
 
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
 
                 //debug code
-                if(firstCard !== undefined)
-                    deckA.push(deckA.splice(deckA.findIndex(card => card.type === firstCard), 1)[0]!);
-                if(firstCardB !== undefined)
-                    deckB.push(deckB.splice(deckB.findIndex(card => card.type === firstCardB), 1)[0]!);
+                // if(firstCard !== undefined)
+                //     deckA.push(deckA.splice(deckA.findIndex(card => card.type === firstCard), 1)[0]!);
+                // if(firstCardB !== undefined)
+                //     deckB.push(deckB.splice(deckB.findIndex(card => card.type === firstCardB), 1)[0]!);
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;
@@ -329,16 +332,17 @@ export function parseEvent(event:Event<any>):processedEvent{
 
         if(!event.isForced()) {
             //validate
-            if (!((event.game.state instanceof BeforeGameState &&
+            if (!((event.game.state instanceof BeforeGameState &&//BEFORE GAME
                     event.game.player(card.side) === event.sender &&//card is the player's
                     card.cardData.level === 1 && //card is level 1
                     (event.game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
-                (event.game.state instanceof TurnState &&
+                (event.game.state instanceof TurnState &&//TURN
                     event.sender === event.game.player(event.game.state.turn) &&//it is the sender's turn
                     event.game.player(card.side) === event.sender &&//card is the player's
                     sideTernary(card.side, event.game.fieldsA, event.game.fieldsB)
                         .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1) &&//placed card's level is at most 1 above all other cards
                     event.game.state.drawnToStart &&//player has already started turn
+                    event.game.state.actionsLeft>0 &&// player has actions left
                     !event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED)))) { //player has not last actioned
                 if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
                     self: card,
@@ -412,7 +416,8 @@ export function parseEvent(event:Event<any>):processedEvent{
         if(side === undefined) return rejectEvent(event, "couldnt determine client side");
         if(!(event.game.state instanceof TurnState &&
             event.game.state.turn === side &&//it is the player's turn
-            sideTernary(side, event.game.handA, event.game.handB).length<5))//their hand is less than 5
+            sideTernary(side, event.game.handA, event.game.handB).length<5 &&//their hand is less than 5
+            event.game.state.actionsLeft>0))//they have actions left
             return rejectEvent(event, "failed draw check");
 
         const canPredraw = event.game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
@@ -461,6 +466,7 @@ export function parseEvent(event:Event<any>):processedEvent{
             if (!(event.game.state instanceof TurnState &&
                 event.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
                 event.sender === event.game.player(event.game.state.turn) &&//if its the player's turn
+                event.game.state.actionsLeft>0 && //player has actions left
                 scarer !== undefined && scared !== undefined &&//the cards exist
                 !scarer.hasAttacked &&//if the card hasnt scared yet
                 event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
@@ -528,8 +534,12 @@ export function parseEvent(event:Event<any>):processedEvent{
     }else if(event instanceof CardAction){
         if(event.game === undefined) return rejectEvent(event, "no game found (CardAction)");
         if(!event.isForced()) {
-            if (event.game.state instanceof TurnState && !event.game.state.drawnToStart)
-                return rejectEvent(event, "not draw to start yet c");
+            if (event.game.state instanceof TurnState) {
+                if(!event.game.state.drawnToStart)
+                    return rejectEvent(event, "not draw to start yet c");
+                if(!(event.game.state.actionsLeft>0))
+                    return rejectEvent(event, "no more actions c");
+            }
         }
         return processCardAction(event);
     }else if(event instanceof DiscardEvent){

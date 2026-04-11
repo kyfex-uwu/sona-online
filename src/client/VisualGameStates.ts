@@ -165,7 +165,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
     }
 
     visualTick(): void {
-        if(this.game.getMySide() === this.currTurn && this.getActionsLeft()>0){
+        if(this.game.getMySide() === this.currTurn){
             const handSize=sideTernary(this.game.getMySide(), this.game.getGame().handA, this.game.getGame().handB).length + (this.game.selectedCard !== undefined ? 1 : 0 );
             if(handSize > 5){
                 this.features.clear();
@@ -180,7 +180,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                     for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
                         card.highlight(false, canSelectCardHighlight);
                     }
-                }else {
+                }else if(this.getActionsLeft()>0){
                     this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
                         StateFeatures.FIELDS_PLACEABLE);
                     let maxLevel = fieldCards.map(field => field.getCard())
@@ -190,6 +190,13 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                         if(card.logicalCard.cardData.level <= maxLevel || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
                             {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
                             card.highlight(true, canSelectCardHighlight);
+                        }
+                    }
+                }else{
+                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                        if(!card.logicalCard.cardData.isFree() && !card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                            {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
+                            card.highlight(false, canSelectCardHighlight);
                         }
                     }
                 }
@@ -441,7 +448,7 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
     private readonly cardsListeners:number[] = [];
     private readonly cards:VisualCard[]=[];
-    addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCard)=>void){
+    addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCardClone)=>void){
         const newModels:VisualCardClone[] = [];
         this.cardsListeners.push(clickListener(() => {
             const intersects = this.game.raycaster.intersectObjects(newModels

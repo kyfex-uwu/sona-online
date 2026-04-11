@@ -1,6 +1,6 @@
 import p5 from "p5";
 import {clickListener, textureLoader} from "./clientConsts.js";
-import {Sprite, SpriteMaterial, Vector3} from "three";
+import {Color, Sprite, SpriteMaterial, Vector3} from "three";
 import {game} from "../index.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
@@ -210,6 +210,7 @@ export const particles:{
         timeIndex:number,
         size:number,
         opacity:number,
+        color:Color
     }[]
 }[] = [];
 const spriteMaterial = new SpriteMaterial({
@@ -221,6 +222,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
     time:number,
     size:number,
     opacity:number,
+    color:Color
 }[]){
     const sprite = new Sprite(spriteMaterial.clone());
     sprite.position.copy(pos);
@@ -238,7 +240,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
         dead:false,
     });
 }
-export function particleStreak(startPos:Vector3, endPos:Vector3){
+export function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
     let pos = startPos.clone();
     const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
     let timeout=0;
@@ -252,11 +254,13 @@ export function particleStreak(startPos:Vector3, endPos:Vector3){
                     time:0,
                     size:5+Math.random()*10,
                     opacity:1,
+                    color:startColor ?? whiteColor,
                 },
                 {
                     time:500,
                     size:0,
                     opacity:0.5,
+                    color:endColor ?? whiteColor,
                 },
             ]);
         },timeout*10);
@@ -267,4 +271,14 @@ export function particleStreak(startPos:Vector3, endPos:Vector3){
     return new Promise(r=>{
         setTimeout(r, timeout*10);
     });
+}
+
+export const whiteColor = new Color(255,255,255);
+export const redStatColor = new Color(237,33,36);
+export const blueStatColor = new Color(3,163,221);
+export const yellowStatColor = new Color(220,216,33);
+
+let animChain = new Promise<void>(r=>r());
+export function animation(callback:()=>Promise<any>){
+    animChain=animChain.then(async ()=>await callback());
 }

@@ -3,7 +3,7 @@ import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
 import {EndType, VAttackingState, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {sideTernary} from "../consts.js";
+import {sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import Card, {CardMiscDataStrings, Stat} from "../Card.js";
@@ -12,34 +12,26 @@ import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {waitForClarify} from "../networking/LocalServer.js";
-import {buttonId, registerDrawCallback, tempHowToUse} from "./ui.js";
+import {
+    animation, blueStatColor,
+    buttonId,
+    particleStreak,
+    redStatColor,
+    registerDrawCallback,
+    tempHowToUse,
+    whiteColor, yellowStatColor
+} from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 
 export function loadFrontendWrappers(){}
 
 export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<boolean>} = {};
 
-function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
-    return (card:VisualCard)=> {
-        if (visualGame.state instanceof VAttackingState) {
-            return callback(card);
-        }
-        return new Promise<boolean>(r=>r(false));
-    }
-}
-
-const og001Stats = {
-    [Stat.RED]:buttonId(),
-    [Stat.BLUE]:buttonId(),
-    [Stat.YELLOW]:buttonId(),
-}
 const og001Highlight = newHighlightLock();
-visualCardClientActions["og-001"] = lastAction((card)=>{
+visualCardClientActions["og-001"] = (card)=>{
     let endSignal: (value: boolean | PromiseLike<boolean>) => void;
     const toReturn = new Promise<boolean>(r=>endSignal=r);
     const oldStates:[VisualGameState<any>, GameState] = [visualGame.state, visualGame.getGame().state];
-    tempHowToUse("K9 Agent Alpha", "Select all the canines you want to use, then press Finish. " +
-        "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.");
 
     const toRemove: (() => void)[] = [];
     const attackWith:Set<VisualCard> = new Set([card]);
@@ -100,7 +92,17 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
                             attackWith:attackStat
                         }
                     })).onReply(successOrFail(()=>{
-
+                        animation(async ()=>{
+                            let particles = [];
+                            for(const field of sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB)
+                                .filter(field => attackWith.has(field.getCard()!))){
+                                particles.push(particleStreak(
+                                    field.position, card.getStatModel(attackStat!)!.getWorldPosition(new Vector3()),
+                                    whiteColor, statTernary(attackStat!, redStatColor, blueStatColor, yellowStatColor)
+                                    ))
+                            }
+                            await Promise.all(particles);
+                        })
                     },()=>{},()=>{
                         end();
                         endSignal(true);
@@ -113,7 +115,7 @@ visualCardClientActions["og-001"] = lastAction((card)=>{
     }), oldStates[1]);
 
     return toReturn;
-});
+};
 visualCardClientActions["og-018"] = async (card) =>{
     if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
@@ -146,7 +148,7 @@ visualCardClientActions["og-018"] = async (card) =>{
     });
     return toReturn;
 };
-visualCardClientActions["og-028"] = lastAction((card)=>{
+visualCardClientActions["og-028"] = (card)=>{
     if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
 
     tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
@@ -199,8 +201,8 @@ visualCardClientActions["og-028"] = lastAction((card)=>{
     visualGame.setState(state, visualGame.getGame().state);
 
     return toReturn;
-})
-visualCardClientActions["og-038"] = lastAction((card)=>{
+};
+visualCardClientActions["og-038"] = (card)=>{
     tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
 
     const cards = sideTernary(card.getSide(), visualGame.runawayA, visualGame.runawayB).getCards()
@@ -230,7 +232,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
             }, EndType.BOTH),
         visualGame.getGame().state);
     return toReturn;
-});
+};
 visualCardClientActions["og-041"] = (card)=>{
     if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 

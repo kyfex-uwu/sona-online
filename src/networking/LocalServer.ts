@@ -23,7 +23,7 @@ import cards from "../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
-import {sideTernary, wait} from "../consts.js";
+import {sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
     EndType,
@@ -33,7 +33,15 @@ import {
     VPickCardsState,
     VTurnState
 } from "../client/VisualGameStates.js";
-import {particleStreak, registerDrawCallback, tempHowToUse} from "../client/ui.js";
+import {
+    animation,
+    blueStatColor,
+    particleStreak,
+    redStatColor,
+    registerDrawCallback,
+    tempHowToUse,
+    whiteColor, yellowStatColor
+} from "../client/ui.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
@@ -48,6 +56,7 @@ import {
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
+import type VisualCardClone from "../client/VisualCardClone.js";
 
 //@ts-ignore
 window.showNetworkLogs=false;
@@ -250,18 +259,22 @@ async function receiveFromServer(packed:{
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
-        if(game.state instanceof VTurnState){
-            game.state.decrementTurn(true);
-        }
+        animation(async ()=>{
+            if(game.state instanceof VTurnState){
+                game.state.decrementTurn(true);
+            }
+        });
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
             if (scared !== undefined) {
-                particleStreak(
-                    sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
-                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
-                ).then(()=>{
-                    sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                animation(async ()=>{
+                    await particleStreak(
+                        sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
+                        sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
+                    ).then(()=>{
+                        sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                    });
                 });
             }
         }
@@ -510,7 +523,7 @@ async function receiveFromServer(packed:{
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
                         self.blackBg(true);
 
-                        let selectedCard:VisualCard|undefined;
+                        let selectedCard:VisualCardClone|undefined;
                         self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
                             // .filter(card=>card !== undefined)
                             .map((card,i, arr)=>{
@@ -542,7 +555,18 @@ async function receiveFromServer(packed:{
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }
-                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                    })).onReply(successOrFail(()=>{
+                                        const pos = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                                            .find(field=>field.getCard()?.logicalCard.cardData.name === "og-029");
+                                        if(pos){
+                                            animation(async ()=>{
+                                                await particleStreak(pos.position, selectedCard?.clonedFrom.getStatModel(selectedStat!)!
+                                                    .getWorldPosition(new Vector3())!,
+                                                    whiteColor, statTernary(selectedStat!,
+                                                        redStatColor, blueStatColor, yellowStatColor));
+                                            });
+                                        }
+                                    },()=>{},()=>{
                                         self.end();
                                     }));
                                 },

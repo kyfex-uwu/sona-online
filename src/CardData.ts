@@ -103,6 +103,9 @@ export default class CardData{
     setFree(){
         return this.with(CardTriggerType.IS_FREE, ()=>{});
     }
+    isFree(){
+        return !!this.getAction(CardTriggerType.IS_FREE);
+    }
     //{@link Card.getAction} should be preferred
     getAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];

@@ -2,7 +2,7 @@ import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
 import {other, Side} from "../../GameElement.js";
-import VisualCard from "../VisualCard.js";
+import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {
@@ -20,6 +20,7 @@ import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
 
+const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
     public readonly which:1|2|3;
@@ -102,16 +103,22 @@ export default class FieldMagnet extends CardMagnet{
                             ].filter(mesh => mesh !== undefined));
 
                             if (intersects[0] !== undefined) {
-                                if (this.card.logicalCard.stat(Stat.RED) !== undefined &&
-                                        intersects[0].object === this.card.getStatModel(Stat.RED)) {
-                                    state.attackData.type = Stat.RED;
-                                } else if (this.card.logicalCard.stat(Stat.BLUE) !== undefined &&
-                                        intersects[0].object === this.card.getStatModel(Stat.BLUE)) {
-                                    state.attackData.type = Stat.BLUE;
-                                } else if (this.card.logicalCard.stat(Stat.YELLOW) !== undefined &&
-                                        intersects[0].object === this.card.getStatModel(Stat.YELLOW)) {
-                                    state.attackData.type = Stat.YELLOW;
-                                } else if(intersects[0].object.parent?.parent?.parent === this.card.model){
+                                sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard()
+                                    ?.highlightStat({[Stat.RED]:false, [Stat.BLUE]:false, [Stat.YELLOW]:false}, attackLock);
+                                state.cardIndex=this.which;
+                                const cardClicked = sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard();
+
+                                let hitStat=false;
+                                for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW]){
+                                    if (this.card.logicalCard.stat(stat) !== undefined &&
+                                        intersects[0].object === this.card.getStatModel(stat)) {
+                                        state.attackData.type = stat;
+                                        cardClicked?.highlightStat({[stat]:true}, attackLock);
+                                        hitStat=true;
+                                        break;
+                                    }
+                                }
+                                if(!hitStat && intersects[0].object.parent?.parent?.parent === this.card.model){
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card).then((cancel)=>{
                                             if(cancel) state.end();
@@ -119,7 +126,6 @@ export default class FieldMagnet extends CardMagnet{
                                         return true;
                                     }
                                 }
-                                state.cardIndex=this.which;
                             }
                         }else{
                             if(state.attackData.type !== undefined) {
