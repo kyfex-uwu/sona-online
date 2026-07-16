@@ -1,7 +1,7 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
+import {EndType, StateFeatures, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
@@ -13,12 +13,14 @@ import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {waitForClarify} from "../networking/LocalServer.js";
 import {
-    animation, blueStatColor,
+    animation,
+    blueStatColor,
     particleStreak,
     redStatColor,
     registerDrawCallback,
     tempHowToUse,
-    whiteColor, yellowStatColor
+    whiteColor,
+    yellowStatColor
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 
@@ -40,7 +42,7 @@ visualCardClientActions["og-001"] = (card)=>{
     let drawCallback: () => void;
 
     const end = ()=>{
-        visualGame.changeView(sideTernary(card.getSide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        visualGame.changeView(sideTernary(card.getSide(), ViewType.BOARD_A, ViewType.BOARD_B));
         for(const remove of toRemove) remove();
         drawCallback();
 
@@ -168,56 +170,114 @@ visualCardClientActions["og-018"] = async (card) =>{
     });
     return toReturn;
 };
+const kibbyHighlightLock = newHighlightLock();
 visualCardClientActions["og-028"] = (card)=>{
     if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
 
     tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
         "to replace them with, and press Finish again.")
 
-    let resolve;
+    let resolve:(v:boolean)=>void;
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
-    const toScare = new Set<number>();
-    const fields = sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB);
+    const myFields = sideTernary(card.getSide(), visualGame.fieldsA, visualGame.fieldsB);
+    const myHand = sideTernary(visualGame.getMySide(), visualGame.handA, visualGame.handB);
     const oldStates:[VisualGameState<any>, GameState]=[visualGame.state, visualGame.getGame().state];
-    const state = new VPickCardsState(visualGame, oldStates,
-        fields.map(field=>field.getCard()).filter(card=>card!==undefined),
-        (picked)=>{
-            if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
-            else toScare.add(picked.logicalCard.id);
+    const replaceMap:[VisualCard|undefined,VisualCard|undefined,VisualCard|undefined] = [undefined,undefined,undefined];
 
-            state.endType = (toScare.size <= sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
-                .filter(card=>card.logicalCard.cardData.level === 3).length &&
-                toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
-        }, EndType.CANCEL, ()=>{
-            if(toScare.size===0) return resolve!(true);
+    let release:()=>void;
+    const state = new VGuiState(visualGame, oldStates, {
+        onEnd:(self, type)=>{
+            release();
+            for(const other of sideTernary(visualGame.getMySide(), visualGame.handA, visualGame.handB).cards)
+                other.highlight(false, kibbyHighlightLock);
+            for(const other of replaceMap)
+                other?.highlight(false, kibbyHighlightLock);
+            visualGame.selectedCard?.highlight(false, kibbyHighlightLock);
 
-            const toReplace:number[] = [];
-            const state2 = new VPickCardsState(visualGame, oldStates,
-                sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
-                    .filter(card=>card.logicalCard.cardData.level === 3),
-                (picked)=>{
-                    if(toReplace.indexOf(picked.logicalCard.id) !== -1)
-                        toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
-                    else toReplace.push(picked.logicalCard.id);
-
-                    state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
-                },EndType.CANCEL,()=>{
-                    let toSend:[number|false,number|false,number|false] = [false,false,false];
-                    for(let i=0;i<3;i++){
-                        if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
-                            toSend[i] = toReplace.pop()!;
+            if(type ==="finished"){
+                network.sendToServer(new CardAction({
+                    cardId:card.logicalCard.id,
+                    actionName:CardActionOptions.KIBBY_SCARE,
+                    cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? false) as [number|false,number|false,number|false]}
+                }));
+            }
+            resolve(true);
+        },
+        init:(self)=>{
+            visualGame.changeView(sideTernary(visualGame.getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
+            for(let i=0;i<myFields.length;i++)
+                myFields[i]!.addClickListener(()=>{
+                    if(visualGame.selectedCard === undefined){
+                        if(replaceMap[i] !== undefined)
+                            myHand.addCard(replaceMap[i]!);
+                        replaceMap[i] = undefined;
+                        return;
                     }
 
-                    network.sendToServer(new CardAction({
-                        cardId:card.logicalCard.id,
-                        actionName:CardActionOptions.KIBBY_SCARE,
-                        cardData:{cards:toSend}
-                    }));
-                    resolve!(true);
+                    const card = myFields[i]!.getCard();
+                    if(!card) return;
+
+                    if(replaceMap[i] !== undefined)
+                        myHand.addCard(replaceMap[i]!);
+
+                    replaceMap[i] = visualGame.selectedCard;
+                    visualGame.selectedCard = undefined;
+                    replaceMap[i]!.position = myFields[i]!.position.clone().add(new Vector3(0,20,0));
                 });
-            visualGame.setState(state2, visualGame.getGame().state);
-        });
+            self.addFeatures(StateFeatures.FIELDS_SELECTABLE)
+            for(const other of myHand.cards){
+                other.highlight(true, kibbyHighlightLock);
+            }
+
+            release = registerDrawCallback(0,(p5,scale)=>{
+                self.finishAndCancel(p5, scale, false, false);
+                self.infoText(p5, scale, "Scare your field cards by placing hand cards on top of them")
+            });
+        },
+        canSelectHandCard:(self, card)=>{
+            return card.logicalCard.cardData.level === 3;
+        }
+    });
+
+    // const state = new VPickCardsState(visualGame, oldStates,
+    //     fields.map(field=>field.getCard()).filter(card=>card!==undefined),
+    //     (picked)=>{
+    //         if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
+    //         else toScare.add(picked.logicalCard.id);
+    //
+    //         state.endType = (toScare.size <= sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+    //             .filter(card=>card.logicalCard.cardData.level === 3).length &&
+    //             toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
+    //     }, EndType.CANCEL, ()=>{
+    //         if(toScare.size===0) return resolve!(true);
+    //
+    //         const toReplace:number[] = [];
+    //         const state2 = new VPickCardsState(visualGame, oldStates,
+    //             sideTernary(card.getSide(), visualGame.handA, visualGame.handB).cards
+    //                 .filter(card=>card.logicalCard.cardData.level === 3),
+    //             (picked)=>{
+    //                 if(toReplace.indexOf(picked.logicalCard.id) !== -1)
+    //                     toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
+    //                 else toReplace.push(picked.logicalCard.id);
+    //
+    //                 state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
+    //             },EndType.CANCEL,()=>{
+    //                 let toSend:[number|false,number|false,number|false] = [false,false,false];
+    //                 for(let i=0;i<3;i++){
+    //                     if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
+    //                         toSend[i] = toReplace.pop()!;
+    //                 }
+    //
+    //                 network.sendToServer(new CardAction({
+    //                     cardId:card.logicalCard.id,
+    //                     actionName:CardActionOptions.KIBBY_SCARE,
+    //                     cardData:{cards:toSend}
+    //                 }));
+    //                 resolve!(true);
+    //             });
+    //         visualGame.setState(state2, visualGame.getGame().state);
+    //     });
     visualGame.setState(state, visualGame.getGame().state);
 
     return toReturn;

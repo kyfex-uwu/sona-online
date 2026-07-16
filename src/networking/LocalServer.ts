@@ -164,7 +164,7 @@ async function receiveFromServer(packed:{
 
     if(event instanceof GameStartEvent){
         game.getGame().setMySide(event.data.which);
-        game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
         if(game.getMySide() === Side.A){
             game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1);
             game.handB.position.add(new Vector3(0,100,60));
@@ -485,7 +485,7 @@ async function receiveFromServer(packed:{
                                                 selectedCard!.getSide()]
                                         }
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
-                                        self.end();
+                                        self.end("finished");
                                     }));
                                 },
                                 text:"Increase",
@@ -497,7 +497,7 @@ async function receiveFromServer(packed:{
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:false
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
-                                        self.end();
+                                        self.end("finished");
                                     }));
                                 },
                                 text:"Pass",
@@ -567,7 +567,7 @@ async function receiveFromServer(packed:{
                                             });
                                         }
                                     },()=>{},()=>{
-                                        self.end();
+                                        self.end("finished");
                                     }));
                                 },
                                 text:"Increase",
@@ -579,7 +579,7 @@ async function receiveFromServer(packed:{
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:false
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
-                                        self.end();
+                                        self.end("finished");
                                     }));
                                 },
                                 text:"Pass",

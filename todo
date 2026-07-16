@@ -49,3 +49,4 @@ scared still fires when cloud catted
 faceup (on placeaction) is evil and needs to be removed
 fix dcw (and foxy?) being silly. to do this you need to implement client side placed event for opponent
 add card texture atlas
+starting game with brownie is wrong

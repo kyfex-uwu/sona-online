@@ -69,30 +69,10 @@ window.addEventListener("resize", windowResize);
 //--
 
 export const game = new VisualGame(scene);
-game.changeView(ViewType.WHOLE_BOARD_A);
+game.changeView(ViewType.BOARD_A);
 game.sendEvent(new FindGameEvent({
     deck:(()=>{
-        const toReturn = [
-            "og-001",
-            "og-003",
-            "og-015",
-            "og-031",
-            "og-027",
-            "og-030",
-            "og-034",
-            "og-039",
-            "og-036",
-            "og-023",
-            "og-026",
-            "og-040",
-            "og-035",
-            "og-017",
-            "og-019",
-            "og-022",
-            "og-018",
-            "og-006",
-            "og-007",
-            "og-008"];
+        const toReturn = ["og-028"];
         const alreadyAdded:{[k:string]:true} = Object.fromEntries(toReturn.map(v=>[v,true]));
         const cardsValues = Object.values(cards);
         let oneFlag = false;

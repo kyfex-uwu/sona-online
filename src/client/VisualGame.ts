@@ -38,10 +38,12 @@ const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 
 //The camera view
 export enum ViewType{
-    WHOLE_BOARD_A,
-    WHOLE_BOARD_B,
+    BOARD_A,
+    BOARD_B,
     FIELDS_A,
     FIELDS_B,
+    CLOSE_BOARD_A,
+    CLOSE_BOARD_B,
 }
 
 const previewImages:{[k:string]:p5.Image|true} = {};
@@ -311,11 +313,11 @@ export default class VisualGame {
      */
     public changeView(type: ViewType) {
         switch (type) {
-            case ViewType.WHOLE_BOARD_A:
+            case ViewType.BOARD_A:
                 this.targetCameraPos = new Vector3(0,600,220);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
                 break;
-            case ViewType.WHOLE_BOARD_B:
+            case ViewType.BOARD_B:
                 this.targetCameraPos = new Vector3(0,600,-220);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
@@ -326,6 +328,14 @@ export default class VisualGame {
             case ViewType.FIELDS_B:
                 this.targetCameraPos = new Vector3(0,370, -40);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.5, 0, Math.PI));
+                break;
+            case ViewType.CLOSE_BOARD_A:
+                this.targetCameraPos = new Vector3(0,450,250);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
+                break;
+            case ViewType.CLOSE_BOARD_B:
+                this.targetCameraPos = new Vector3(0,450,-250);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
         }
     }

@@ -161,7 +161,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         if(!this.initedAlready && this.canInit) {
             this.initedAlready=true;
         }
-        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
     }
 
     visualTick(): void {
@@ -278,7 +278,7 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
 
     swapAway() {
         super.swapAway();
-        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
     }
 
     isCancellable(){ return true; }
@@ -321,7 +321,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
     init() {
         super.init();
 
-        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
 
         if(!this.initedAlready) {
             this.listener = clickListener(() => {
@@ -436,15 +436,18 @@ export class VGuiState extends VisualGameState<TurnState>{
     private parentState: [VisualGameState<any>, GameState];
     private endFunc: (self: VGuiState, state:"finished"|"canceled") => void;
     private initFunc: (self: VGuiState) => void;
+    private canSelectHandCardImpl: (self:VGuiState, card:VisualCard) => boolean;
     constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState],
             data:{
                 onEnd:(self:VGuiState, type:"finished"|"canceled")=>void,
-                init:(self:VGuiState)=>void
+                init:(self:VGuiState)=>void,
+                canSelectHandCard?:(self:VGuiState, card:VisualCard)=>boolean
             }) {
         super(game);
         this.parentState=parentState;
         this.endFunc=data.onEnd;
         this.initFunc = data.init;
+        this.canSelectHandCardImpl = data.canSelectHandCard ?? (()=>false);
     }
     private readonly cardsListeners:number[] = [];
     public readonly cards:VisualCard[]=[];
@@ -491,8 +494,8 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.game.setState(this.parentState[0], this.parentState[1]);
     }
 
-    canSelectHandCard(_card:VisualCard){
-        return false;
+    canSelectHandCard(card:VisualCard){
+        return this.canSelectHandCardImpl(this, card);
     }
 
     button(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean){
