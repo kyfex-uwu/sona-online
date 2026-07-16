@@ -434,11 +434,11 @@ const vGuiStates = {
 }
 export class VGuiState extends VisualGameState<TurnState>{
     private parentState: [VisualGameState<any>, GameState];
-    private endFunc: (self: VGuiState) => void;
+    private endFunc: (self: VGuiState, state:"finished"|"canceled") => void;
     private initFunc: (self: VGuiState) => void;
     constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState],
             data:{
-                onEnd:(self:VGuiState)=>void,
+                onEnd:(self:VGuiState, type:"finished"|"canceled")=>void,
                 init:(self:VGuiState)=>void
             }) {
         super(game);
@@ -447,7 +447,7 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.initFunc = data.init;
     }
     private readonly cardsListeners:number[] = [];
-    private readonly cards:VisualCard[]=[];
+    public readonly cards:VisualCard[]=[];
     addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCardClone)=>void){
         const newModels:VisualCardClone[] = [];
         this.cardsListeners.push(clickListener(() => {
@@ -486,8 +486,8 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.initFunc(this);
     }
 
-    end() {
-        this.endFunc(this);
+    end(type:"finished"|"canceled") {
+        this.endFunc(this, type);
         this.game.setState(this.parentState[0], this.parentState[1]);
     }
 
@@ -503,7 +503,10 @@ export class VGuiState extends VisualGameState<TurnState>{
             onClick, scale, vGuiButton1, disabled);
     }
     cancelButton(p5:any, scale:number, disabled:boolean){
-        this.button(p5, scale, ()=>this.end(), "Cancel", disabled);
+        this.button(p5, scale, ()=>this.end("canceled"), "Cancel", disabled);
+    }
+    finishButton(p5:any, scale:number, disabled:boolean){
+        this.button(p5, scale, ()=>this.end("finished"), "Finish", disabled);
     }
     twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled:boolean},
                button2:{onClick:()=>void, text:string, disabled:boolean}){
@@ -518,7 +521,16 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
     buttonAndCancel(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean){
         this.twoButtons(p5, scale, {onClick, text, disabled},
-            {onClick:()=>this.end(), text:"Cancel", disabled:cancelDisabled})
+            {onClick:()=>this.end("canceled"), text:"Cancel", disabled:cancelDisabled})
+    }
+    buttonAndFinish(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean){
+        this.twoButtons(p5, scale, {onClick, text, disabled},
+            {onClick:()=>this.end("finished"), text:"Finish", disabled:cancelDisabled})
+    }
+    finishAndCancel(p5:any, scale:number, finishDisabled:boolean, cancelDisabled:boolean){
+        this.twoButtons(p5, scale,
+            {onClick:()=>this.end("finished"), text:"Finish", disabled:finishDisabled},
+            {onClick:()=>this.end("canceled"), text:"Cancel", disabled:cancelDisabled})
     }
     statButtons(p5:any, scale:number, onClick:(stat:Stat)=>void, shouldHighlight:(stat:Stat)=>boolean, text:(stat:Stat)=>string){
         const height = scale*0.4;

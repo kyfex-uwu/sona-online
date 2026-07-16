@@ -1,20 +1,19 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {game as visualGame} from "../index.js";
-import {EndType, VAttackingState, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
+import {EndType, VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
-import Card, {CardMiscDataStrings, Stat} from "../Card.js";
+import {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
-import {Vector3} from "three";
+import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {waitForClarify} from "../networking/LocalServer.js";
 import {
     animation, blueStatColor,
-    buttonId,
     particleStreak,
     redStatColor,
     registerDrawCallback,
@@ -129,22 +128,43 @@ visualCardClientActions["og-018"] = async (card) =>{
         justification:ClarificationJustification.AMBER
     })).onReply(()=>{
         tempHowToUse("Amber", "Click the card you want to keep; don't click the card you want to discard");
-        if(toReorder.length === 1){
-            toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
-        }
-        visualGame.setState(new VPickCardsState(visualGame, [visualGame.state, visualGame.getGame().state],
-            toReorder, (c) => {
+        let release:()=>void;
+        let discardFirst=true;
+        visualGame.setState(new VGuiState(visualGame, [visualGame.state, visualGame.getGame().state], {
+            onEnd:(self)=>{
+                release();
+
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
                     cardData: {
-                        which: c.logicalCard === toReorder[0]?.logicalCard ? AmberData.KEEP_FIRST : AmberData.KEEP_SECOND
+                        which: discardFirst ? AmberData.KEEP_SECOND : AmberData.KEEP_FIRST
                     }
                 }));
                 resolve!(true);
-            }, EndType.NONE), visualGame.getGame().state);
+            },
+            init:(self)=>{
+                self.addCards(toReorder.map((card,i)=>{return{
+                    card, position:new Vector2(i*6-3, 0)
+                }}), (card)=>{
+                    for(const other of self.cards)
+                        other.position.multiply(new Vector3(-1,1,1));
+                    discardFirst=!discardFirst;
+                });
 
+                self.blackBg(true);
+
+                release = registerDrawCallback(0, (p5, scale)=>{
+                    p5.textSize(scale*50/128/2.5);
+                    p5.textAlign(p5.CENTER,p5.CENTER);
+                    p5.text("Keep",p5.width/2-scale/2,p5.height/2-scale/2);
+                    p5.text("Discard",p5.width/2+scale/2,p5.height/2-scale/2);
+
+                    self.finishButton(p5, scale, false);
+                });
+            }
+        }),visualGame.getGame().state);
     });
     return toReturn;
 };

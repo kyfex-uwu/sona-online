@@ -149,13 +149,7 @@ export default class VisualGame {
         this.passButtonId = buttonId();
         this.finishButtonId = buttonId();
 
-        // const spinner = this.addElement(new VisualCard(this,
-        //     new Card(cards["og-001"]!, Side.A, this.game, -1), new Vector3(0,200,0)))
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
-            // spinner.rotation.setFromEuler(new Euler(p5.frameCount*0.01, p5.frameCount*0.006,0))
-            // for(const card of this.elements.filter(e=>e instanceof VisualCard))
-            //     card.material!.uniforms.time!.value=p5.frameCount;
-
             if(this.previewCard !== undefined && this.drawPreviewCard) {
                 if (previewImages[this.previewCard.cardData.imagePath] !== undefined) {
                     if (previewImages[this.previewCard.cardData.imagePath] !== true) {
