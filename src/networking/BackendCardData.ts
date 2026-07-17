@@ -57,7 +57,7 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined ||
-        self.side !== scared.side)
+        self.side === scarer.side)
         return InterruptScareResult.PASSTHROUGH;
 
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);

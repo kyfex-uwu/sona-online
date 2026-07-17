@@ -54,7 +54,7 @@ export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
 export function rejectEvent(event:Event<any>, reason:string){
     network.replyToClient(event, new RejectEvent({}, undefined, undefined, event.id));
     console.log(`# rejected ${event.id}(${typeof event}): ${reason}`);
-    console.log(event.game);
+    //console.log(event.game);
     return processedEventMarker;
 }
 export function acceptEvent(event:Event<any>){

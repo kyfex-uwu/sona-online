@@ -241,6 +241,7 @@ async function receiveFromServer(packed:{
             }
         }
     }else if(event instanceof PlaceAction){
+        console.log(event)
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);

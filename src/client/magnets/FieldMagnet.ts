@@ -166,6 +166,7 @@ export default class FieldMagnet extends CardMagnet{
     }
 
     addCard(card:VisualCard){
+        console.trace(card.logicalCard.id, "add")
         if(this.card !== undefined) return false;
         this.card = card;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = card.logicalCard;
@@ -178,6 +179,7 @@ export default class FieldMagnet extends CardMagnet{
         return true;
     }
     removeCard(){
+        console.trace(this.card?.logicalCard.id, "remove")
         if(this.card === undefined) return false;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = undefined;
         this.card = undefined;

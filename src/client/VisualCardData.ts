@@ -184,6 +184,7 @@ visualCardClientActions["og-028"] = (card)=>{
     const myHand = sideTernary(visualGame.getMySide(), visualGame.handA, visualGame.handB);
     const oldStates:[VisualGameState<any>, GameState]=[visualGame.state, visualGame.getGame().state];
     const replaceMap:[VisualCard|undefined,VisualCard|undefined,VisualCard|undefined] = [undefined,undefined,undefined];
+    const listeners:(()=>void)[]=[];
 
     let release:()=>void;
     const state = new VGuiState(visualGame, oldStates, {
@@ -191,9 +192,13 @@ visualCardClientActions["og-028"] = (card)=>{
             release();
             for(const other of sideTernary(visualGame.getMySide(), visualGame.handA, visualGame.handB).cards)
                 other.highlight(false, kibbyHighlightLock);
-            for(const other of replaceMap)
+            for(const other of replaceMap) {
+                if(other) myHand.addCard(other);
                 other?.highlight(false, kibbyHighlightLock);
+            }
             visualGame.selectedCard?.highlight(false, kibbyHighlightLock);
+
+            for(const release of listeners) release();
 
             if(type ==="finished"){
                 network.sendToServer(new CardAction({
@@ -207,7 +212,7 @@ visualCardClientActions["og-028"] = (card)=>{
         init:(self)=>{
             visualGame.changeView(sideTernary(visualGame.getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
             for(let i=0;i<myFields.length;i++)
-                myFields[i]!.addClickListener(()=>{
+                listeners.push(myFields[i]!.addClickListener(()=>{
                     if(visualGame.selectedCard === undefined){
                         if(replaceMap[i] !== undefined)
                             myHand.addCard(replaceMap[i]!);
@@ -224,14 +229,15 @@ visualCardClientActions["og-028"] = (card)=>{
                     replaceMap[i] = visualGame.selectedCard;
                     visualGame.selectedCard = undefined;
                     replaceMap[i]!.position = myFields[i]!.position.clone().add(new Vector3(0,20,0));
-                });
+                }));
             self.addFeatures(StateFeatures.FIELDS_SELECTABLE)
             for(const other of myHand.cards){
-                other.highlight(true, kibbyHighlightLock);
+                if(self.canSelectHandCard(other))
+                    other.highlight(true, kibbyHighlightLock);
             }
 
             release = registerDrawCallback(0,(p5,scale)=>{
-                self.finishAndCancel(p5, scale, false, false);
+                self.finishAndCancel(p5, scale, !replaceMap.some(v=>v!==undefined), false);
                 self.infoText(p5, scale, "Scare your field cards by placing hand cards on top of them")
             });
         },

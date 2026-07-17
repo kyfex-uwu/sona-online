@@ -41,7 +41,9 @@ server.on('upgrade', (req, socket, head) => {
                 // console.trace(event.id)
                 ws.send(event.serialize());
             }};
-        ws.on("message", (message) => {
+        ws.on("message", async (message) => {
+            await new Promise(r=>setTimeout(r,50));
+
             try{
                 receiveFromClient(JSON.parse(message.toString()), sender);
             }catch(e){
