@@ -31,7 +31,7 @@ export abstract class Event<T extends SerializableEventData>{
      * @param sender Which client sent this event (shouldn't need to be filled on client)
      * @param id The event id (optional, only if you need a reply to this event)
      */
-    constructor(data:T, game?:Game, sender?:Client, id?:string) {
+    constructor(data:T, sender?:Client, id?:string) {
         this.data=data;
         this.game=game||network.clientGame;
         this.sender=sender;

@@ -1,5 +1,5 @@
 import {camera, renderer, scene} from "./client/clientConsts.js";
-import {frontendInit} from "./networking/LocalServer.js";
+import {frontendInit} from "./networking/LocalGameServer.js";
 import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
 import {lerp, particles} from "./client/ui.js";

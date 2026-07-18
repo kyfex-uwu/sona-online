@@ -2,7 +2,7 @@ import {Scene} from "./Scene.js";
 import VisualGame, {ViewType} from "../VisualGame.js";
 import {FindGameEvent, RequestServerDumpEvent} from "../../networking/Events.js";
 import {scene} from "../clientConsts.js";
-import {frontendInit} from "../../networking/LocalServer.js";
+import {frontendInit} from "../../networking/LocalGameServer.js";
 import {network} from "../../networking/Server.js";
 import {tempHowToUse} from "../ui.js";
 import {getDeck} from "./DeckBuildScene.js";

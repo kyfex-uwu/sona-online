@@ -10,7 +10,7 @@ import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
-import {waitForClarify} from "../networking/LocalServer.js";
+import {waitForClarify} from "../networking/LocalGameServer.js";
 import {gameScene} from "./scenes/GameScene.js";
 import {
     animation,
@@ -24,8 +24,6 @@ import {
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 import {EndType, StateFeatures} from "./VisualGameStateTools.js";
-
-export function loadFrontendWrappers(){}
 
 export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<boolean>} = {};
 

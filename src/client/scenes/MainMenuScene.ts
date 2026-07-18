@@ -5,6 +5,7 @@ import {button, buttonId, registerDrawCallback} from "../ui.js";
 import {setScene} from "../../index.js";
 import {GameScene} from "./GameScene.js";
 import {DeckBuildScene} from "./DeckBuildScene.js";
+import {FindGameScene} from "./FindGameScene.js";
 
 export class MainMenuScene extends Scene{
     private readonly buttonIds = {
@@ -18,8 +19,8 @@ export class MainMenuScene extends Scene{
         this.releaseDrawCallback=registerDrawCallback(0, (p5, scale)=>{
             button(p5,
                 p5.width/2-scale/2, p5.height/2-scale*0.15, scale, scale*0.3,
-                "Start", ()=>{
-                    setScene(()=>new GameScene());
+                "Find Game", ()=>{
+                    setScene(()=>new FindGameScene());
                 }, scale*0.8, this.buttonIds.start);
             button(p5,
                 p5.width/2-scale/2, p5.height/2+scale*0.2, scale, scale*0.3,

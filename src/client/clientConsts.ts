@@ -1,5 +1,6 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {AmbientLight, Color, CubeTextureLoader, PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
+import {PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
+import {network, Replyable} from "../networking/Server.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -61,3 +62,28 @@ export function removeClickListener(index:number){
 }
 
 export const updateOrder: {[k:string]:number}={};
+export const websocket = new WebSocket("ws://" + window.location.host);
+export const websocketReady = new Promise(r => websocket.addEventListener("open", r));
+websocketReady.then(() => {
+    websocket.onmessage = (message:MessageEvent<any>) => {
+        const parsed = JSON.parse(message.data.toString());
+        if(parsed.error !== undefined) log("Server error: "+parsed.error)
+        else receiveFromServer(parsed);
+    }
+});
+network.sendToServer = (event) => {
+    websocketReady.then(()=>{
+        websocket.send(event.serialize());
+        if(true) log("sent "+event.serialize())
+    });
+    return new Replyable(event);
+}
+
+//@ts-ignore
+window.showNetworkLogs=false;
+export function log(...data: any){
+    //@ts-ignore
+    if(window.showNetworkLogs)
+        if(typeof data === "string") console.log(data);
+        else console.log(...data);
+}
