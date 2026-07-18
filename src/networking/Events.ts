@@ -2,7 +2,6 @@ import IngameCard, {Stat} from "../Card.js";
 import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
-import {network} from "./Server.js";
 import {type CardActionOption} from "./CardActionOption.js";
 import type CardData from "../CardData.js";
 
@@ -20,7 +19,6 @@ export type SerializableEventData = {[k:string]:SerializableType};
 // An event that can be sent to or from the server
 export abstract class Event<T extends SerializableEventData>{
     public readonly data:T;
-    public readonly game:Game|undefined;
     public readonly sender:Client|undefined;
     public readonly id;
 
@@ -33,7 +31,6 @@ export abstract class Event<T extends SerializableEventData>{
      */
     constructor(data:T, sender?:Client, id?:string) {
         this.data=data;
-        this.game=game||network.clientGame;
         this.sender=sender;
         this.id=id||eventIdGenerator();
         this.init();
@@ -53,7 +50,10 @@ export abstract class Event<T extends SerializableEventData>{
 export class InvalidEvent extends Event<{}>{}
 addToSerializableClasses(InvalidEvent);
 
+export abstract class GameEvent<T extends SerializableEventData> extends Event<T>{}
+
 //--
+
 export enum ClarificationJustification{
     BROWNIE,
     AMBER,
@@ -64,14 +64,14 @@ export enum ClarificationJustification{
     FOXY_MAGICIAN
 }
 //Tells a card's data and if its faceup
-export class ClarifyCardEvent extends Event<{
+export class ClarifyCardEvent extends GameEvent<{
     id: number,
     cardDataName?: string,
     faceUp?: boolean,
     justification?: ClarificationJustification
 }>{}
 addToSerializableClasses(ClarifyCardEvent);
-export class MultiClarifyCardEvent extends Event<{
+export class MultiClarifyCardEvent extends GameEvent<{
     [id: number]: {cardDataName?:string, faceUp?:boolean},
     justification?: ClarificationJustification
 }>{}
@@ -101,9 +101,20 @@ export class FindGameEvent extends Event<{
     deck:Array<string>,
 }>{}
 addToSerializableClasses(FindGameEvent);
+export class InternalStartGameEvent extends Event<{}>{
+    public readonly game:Game;
+    public readonly p1:Client;
+    public readonly p2:Client;
+    constructor(game:Game, p1:Client, p2:Client) {
+        super({});
+        this.game=game;
+        this.p1=p1;
+        this.p2=p2;
+    }
+}
 
 //(S2C) Tells the client about the game they've just started
-export class GameStartEvent extends Event<{
+export class GameStartEvent extends GameEvent<{
     deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
@@ -111,7 +122,7 @@ export class GameStartEvent extends Event<{
 addToSerializableClasses(GameStartEvent);
 
 //(S2C) Tells a watcher about the game they are watching
-export class GameStartEventWatcher extends Event<{
+export class GameStartEventWatcher extends GameEvent<{
     deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
@@ -119,20 +130,20 @@ export class GameStartEventWatcher extends Event<{
 addToSerializableClasses(GameStartEventWatcher);
 
 //(C2S) Tells the server if they want to start first or second
-export class StartRequestEvent extends Event<{
+export class StartRequestEvent extends GameEvent<{
     which:"first"|"second"|"nopref",
 }>{}
 addToSerializableClasses(StartRequestEvent);
 
 //(S2C) Tells the client which side is starting
-export class DetermineStarterEvent extends Event<{
+export class DetermineStarterEvent extends GameEvent<{
     starter:Side,
     flippedCoin:boolean
 }>{}
 addToSerializableClasses(DetermineStarterEvent);
 
 //An event that constitutes an action
-export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends Event<T>{
+export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends GameEvent<T>{
     private forceMarker?:{};
     private freeMarker?:{};
     //Forces the scare through
@@ -189,7 +200,7 @@ export class CardAction<T extends SerializableType> extends ActionEvent<{
 addToSerializableClasses(CardAction);
 
 //Discards a card
-export class DiscardEvent extends Event<{which:number}>{}
+export class DiscardEvent extends GameEvent<{which:number}>{}
 addToSerializableClasses(DiscardEvent);
 
 //Passes without doing anything

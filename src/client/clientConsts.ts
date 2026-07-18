@@ -1,6 +1,7 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
 import {network, Replyable} from "../networking/Server.js";
+import isDev from "../dev.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -64,13 +65,7 @@ export function removeClickListener(index:number){
 export const updateOrder: {[k:string]:number}={};
 export const websocket = new WebSocket("ws://" + window.location.host);
 export const websocketReady = new Promise(r => websocket.addEventListener("open", r));
-websocketReady.then(() => {
-    websocket.onmessage = (message:MessageEvent<any>) => {
-        const parsed = JSON.parse(message.data.toString());
-        if(parsed.error !== undefined) log("Server error: "+parsed.error)
-        else receiveFromServer(parsed);
-    }
-});
+
 network.sendToServer = (event) => {
     websocketReady.then(()=>{
         websocket.send(event.serialize());
@@ -80,7 +75,7 @@ network.sendToServer = (event) => {
 }
 
 //@ts-ignore
-window.showNetworkLogs=false;
+window.showNetworkLogs=isDev;
 export function log(...data: any){
     //@ts-ignore
     if(window.showNetworkLogs)

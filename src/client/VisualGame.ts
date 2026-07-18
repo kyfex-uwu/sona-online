@@ -13,12 +13,7 @@ import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import Card from "../Card.js";
 import p5 from "p5";
-import {
-    VBeforeGameState,
-    type VisualGameState,
-    VPickCardsState,
-    VTurnState
-} from "./VisualGameStates.js";
+import {VBeforeGameState, type VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";

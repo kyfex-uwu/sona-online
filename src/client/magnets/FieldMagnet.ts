@@ -5,10 +5,7 @@ import {other, Side} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
-import {
-    VAttackingState,
-    VTurnState
-} from "../VisualGameStates.js";
+import {VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";

@@ -1,34 +1,17 @@
 import {Scene} from "./Scene.js";
-import VisualGame, {ViewType} from "../VisualGame.js";
-import {FindGameEvent, RequestServerDumpEvent} from "../../networking/Events.js";
-import {scene} from "../clientConsts.js";
-import {frontendInit} from "../../networking/LocalGameServer.js";
+import {RequestServerDumpEvent} from "../../networking/Events.js";
+import {getLocalGame} from "../../networking/LocalGameServer.js";
 import {network} from "../../networking/Server.js";
 import {tempHowToUse} from "../ui.js";
-import {getDeck} from "./DeckBuildScene.js";
 
-let currGame:VisualGame;
-export const gameScene = {get game(){ return currGame; }}
 
 export class GameScene extends Scene{
-    public readonly game;
     constructor() {
         super();
 
-        this.game = new VisualGame(scene);
-        currGame = this.game;
-        network.clientGame = this.game.getGame();
-
-        this.game.changeView(ViewType.BOARD_A);
-        this.game.sendEvent(new FindGameEvent({
-            deck:getDeck(),
-        }, undefined));
-
-        frontendInit();
-
 // @ts-ignore
         window.logGame =
-            ()=> console.log(this.game);
+            ()=> console.log(getLocalGame());
 // @ts-ignore
         window.serverDump =
             ()=>network.sendToServer(new RequestServerDumpEvent({}));
@@ -44,12 +27,12 @@ export class GameScene extends Scene{
 
     }
     exit(): void {
-        this.game.release();
+        getLocalGame().release();
     }
 
     tick(): void {
-        this.game.tick();
-        this.game.visualTick();
+        getLocalGame().tick();
+        getLocalGame().visualTick();
     }
 
 }

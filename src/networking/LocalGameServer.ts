@@ -1,26 +1,23 @@
-import {eventReplyIds, network, Replyable, successOrFail} from "./Server.js";
+import {eventReplyIds, network, successOrFail} from "./Server.js";
 import {
     CardAction,
     ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
     DrawAction,
-    Event,
+    GameEvent,
     GameStartEvent,
-    InvalidEvent,
     MultiClarifyCardEvent,
     PassAction,
     PlaceAction,
     ScareAction,
-    SerializableClasses,
-    type SerializableType,
     ServerDumpEvent,
 } from "./Events.js";
 import Card, {Stat} from "../Card.js";
 import VisualCard, {newHighlightLock} from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
-import {ViewType} from "../client/VisualGame.js";
+import VisualGame, {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
 import {sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
@@ -54,47 +51,29 @@ import {
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
-import {gameScene} from "../client/scenes/GameScene.js";
 import type VisualCardClone from "../client/VisualCardClone.js";
 import {EndType} from "../client/VisualGameStateTools.js";
-import {log} from "../client/clientConsts.js";
-
-export function frontendInit(){
-    log("network initialized :D")
-}
+import {log, scene} from "../client/clientConsts.js";
+import {waitFor} from "./LocalServer.js";
+import {setScene} from "../index.js";
+import {GameScene} from "../client/scenes/GameScene.js";
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
-    const visualCard = gameScene.game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
+    const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
     if(visualCard === undefined || visualCard.logicalCard.id<0) return;
     if(cardDataName !== undefined)
         visualCard.logicalCard.setCardData(cards[cardDataName]!);
 
     if(cardDataName !== undefined){
-        gameScene.game.getGame().cards.delete(visualCard.logicalCard);
+        game.getGame().cards.delete(visualCard.logicalCard);
         visualCard.repopulate(visualCard.logicalCard);
     }
 
     if(faceUp !== undefined && faceUp !== visualCard.logicalCard.getFaceUp())
         visualCard[faceUp ? "flipFaceup" : "flipFacedown"]();
 
-    gameScene.game.getGame().cards.add(visualCard.logicalCard);
+    game.getGame().cards.add(visualCard.logicalCard);
 }
-
-const logColors:{[key:string]:string}={
-    DrawAction:"#88f",
-    PlaceAction:"#8f8",
-    ScareAction:"#f88",
-    CardAction:"#ff8",
-    PassAction:"#a8f",
-
-    AcceptEvent:"#0f0",
-    RejectEvent:"#f00",
-
-    GameStartEvent:"#8ff",
-    DetermineStarterEvent:"#fb8",
-    ClarifyCardEvent:"#8fc"
-}
-
 const waitingForClarify:{[k:number]:((event:ClarifyCardEvent|MultiClarifyCardEvent)=>void)[]} = {};
 export function waitForClarify(justification:ClarificationJustification,
                                callback:(event:ClarifyCardEvent|MultiClarifyCardEvent)=>void){
@@ -102,45 +81,37 @@ export function waitForClarify(justification:ClarificationJustification,
         waitingForClarify[justification] = [];
     waitingForClarify[justification].push(callback);
 }
-const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
-export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
-    waitingFor.push({filter,callback});
+
+const logColors:{[key:string]:string}= {
+    DrawAction: "#88f",
+    PlaceAction: "#8f8",
+    ScareAction: "#f88",
+    CardAction: "#ff8",
+    PassAction: "#a8f",
+
+    AcceptEvent: "#0f0",
+    RejectEvent: "#f00",
+
+    GameStartEvent: "#8ff",
+    DetermineStarterEvent: "#fb8",
+    ClarifyCardEvent: "#8fc"
 }
 
-async function receiveFromServer(packed:{
-    type:string,
-    data:SerializableType,
-    id:string,
-}) {
-    let game = gameScene.game;
+let game:VisualGame;
+export function getLocalGame(){ return game; }
+export async function gameReceiveFromServer(event:GameEvent<any>) {
+    log("%c -> "+event.constructor.name+"\n"+event.serialize(),
+        `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
 
-    //todo: this smells like vulnerability (but less!)
-    const event = new (SerializableClasses[packed.type] || InvalidEvent)(
-        //@ts-ignore
-        packed.data,
-        game?.getGame(), null, packed.id) as Event<any>;
-    log("%c -> "+packed.type+"\n"+event.serialize(),
-        `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
-    if(game === undefined && !(event instanceof GameStartEvent)) {
-        console.log("roaches in the cereal???");
+    if(eventReplyIds[event.id] !== undefined){
+        (eventReplyIds[event.id]?._callback||(()=>{}))(event);
         return;
-    }
-
-    if((eventReplyIds[game?.getGame().gameID]||{})[event.id] !== undefined){
-        ((eventReplyIds[game?.getGame().gameID]||{})[event.id]?._callback||(()=>{}))(event);
-        return;
-    }
-
-    for(let i=0;i<waitingFor.length;i++){
-        if(waitingFor[i]!.filter(event)){
-            let processNormally = waitingFor[i]!.callback(event);
-            waitingFor.splice(i,1);
-            if(!processNormally) return;
-            else break;
-        }
     }
 
     if(event instanceof GameStartEvent){
+        game = new VisualGame(scene);
+        network.clientGame = game.getGame();
+
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
         if(game.getMySide() === Side.A){
@@ -165,6 +136,8 @@ async function receiveFromServer(packed:{
             theirDeck.addCard(visualCard);
         }
 
+        setScene(()=>new GameScene());
+
         await wait(500);
     }else if (event instanceof ClarifyCardEvent) {
         clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
@@ -188,6 +161,7 @@ async function receiveFromServer(packed:{
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
+                game.frozen=false;
                 game.setState(new VTurnState(event.data.starter, game, false),
                     new TurnState(game.getGame(), event.data.starter));
                 (game.state as VTurnState).canInit=true;//top 10 worst things

@@ -51,3 +51,4 @@ fix dcw (and foxy?) being silly. to do this you need to implement client side pl
 shuffle everywhere!
 add card texture atlas
 starting game with brownie is wrong
+verify and fix any cards that need a scare instead of a scare attempt

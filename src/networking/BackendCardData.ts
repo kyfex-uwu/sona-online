@@ -2,7 +2,7 @@ import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
-import {draw, sendToClients} from "./BackendServer.js";
+import {draw, sendToGame} from "./BackendGameServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {other, Side} from "../GameElement.js";
@@ -90,11 +90,11 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     const card = sideTernary(self.side, game.deckA, game.deckB).shift();
     if(card !== undefined){
         sideTernary(self.side, game.handA, game.handB).push(card);
-        sendToClients(new CardAction({
+        sendToGame(new CardAction({
             cardId: -1,
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},
-        }, game));
+        }), game);
         game.player(self.side)?.send(new ClarifyCardEvent({
             id:card.id,
             cardDataName:card.cardData.name

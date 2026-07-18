@@ -3,7 +3,6 @@ import {camera} from "../clientConsts.js";
 import {Euler, Vector3} from "three";
 import {button, buttonId, registerDrawCallback} from "../ui.js";
 import {setScene} from "../../index.js";
-import {GameScene} from "./GameScene.js";
 import {DeckBuildScene} from "./DeckBuildScene.js";
 import {FindGameScene} from "./FindGameScene.js";
 

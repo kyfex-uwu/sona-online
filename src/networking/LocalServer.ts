@@ -1,9 +1,21 @@
-import {Event, GameStartEvent, InvalidEvent, SerializableClasses, type SerializableType} from "./Events.js";
-import {gameScene} from "../client/scenes/GameScene.js";
-import {log} from "../client/clientConsts.js";
-import {eventReplyIds} from "./Server.js";
+import {Event, GameEvent, InvalidEvent, SerializableClasses, type SerializableType} from "./Events.js";
+import {gameReceiveFromServer} from "./LocalGameServer.js";
+import {log, websocket, websocketReady} from "../client/clientConsts.js";
 
-async function receiveFromServer(packed:{
+const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
+export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
+    waitingFor.push({filter,callback});
+}
+
+websocketReady.then(() => {
+    websocket.onmessage = (message:MessageEvent<any>) => {
+        const parsed = JSON.parse(message.data.toString());
+        if(parsed.error !== undefined) log("Server error: "+parsed.error)
+        else receiveFromServer(parsed);
+    }
+});
+
+export async function receiveFromServer(packed:{
     type:string,
     data:SerializableType,
     id:string,
@@ -12,17 +24,8 @@ async function receiveFromServer(packed:{
     const event = new (SerializableClasses[packed.type] || InvalidEvent)(
         //@ts-ignore
         packed.data, null, null, packed.id) as Event<any>;
-    log("%c -> "+packed.type+"\n"+event.serialize(),
-        `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
-    if(game === undefined && !(event instanceof GameStartEvent)) {
-        console.log("roaches in the cereal???");
-        return;
-    }
-
-    if((eventReplyIds[game?.getGame().gameID]||{})[event.id] !== undefined){
-        ((eventReplyIds[game?.getGame().gameID]||{})[event.id]?._callback||(()=>{}))(event);
-        return;
-    }
+    // log("%c -> "+packed.type+"\n"+event.serialize(),
+    //     `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
 
     for(let i=0;i<waitingFor.length;i++){
         if(waitingFor[i]!.filter(event)){
@@ -32,4 +35,5 @@ async function receiveFromServer(packed:{
             else break;
         }
     }
+    if(event instanceof GameEvent) gameReceiveFromServer(event);
 }
