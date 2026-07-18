@@ -1,4 +1,4 @@
-import { reactive, html } from '@arrow-js/core';
+import {html, reactive} from '@arrow-js/core';
 
 const descriptions:{[k:string]:string} = {
     CHILI_MAMA_ALL_CANINES:"When Chili Mama is on field, her effect applies to all canines"

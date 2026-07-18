@@ -1,6 +1,6 @@
 import {type GameElement, Side} from "./GameElement.js";
 import CardData, {CardTriggerType} from "./CardData.js";
-import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
+import {sideTernary, statTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {addTempStats} from "./Cards.js";
 import type {ScareAction} from "./networking/Events.js";
@@ -12,18 +12,10 @@ export enum Stat{
     YELLOW=2
 }
 export function getVictim(stat:Stat){
-    switch(stat){
-        case Stat.RED: return Stat.YELLOW;
-        case Stat.BLUE: return Stat.RED;
-        case Stat.YELLOW: return Stat.BLUE;
-    }
+    return statTernary(stat, Stat.YELLOW, Stat.RED, Stat.BLUE);
 }
 export function getAttacker(stat:Stat){
-    switch(stat){
-        case Stat.RED: return Stat.BLUE;
-        case Stat.BLUE: return Stat.YELLOW;
-        case Stat.YELLOW: return Stat.RED;
-    }
+    return statTernary(stat, Stat.BLUE, Stat.YELLOW, Stat.RED);
 }
 
 export type CardMiscDataString<T> = {};
@@ -38,7 +30,7 @@ export const CardMiscDataStrings = {
     NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<ScareAction>,
 
     PAUSED_SCARE:"pausedScare" as CardMiscDataString<() => void>,
-    ALREADY_ATTACKED:"alreadyAttacked" as CardMiscDataString<boolean>,
+    ALREADY_ACTIONED:"alreadyAttacked" as CardMiscDataString<boolean>,
     TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };
 verifyNoDuplicateStrVals(CardMiscDataStrings, "MiscDataStrings has a duplicate");

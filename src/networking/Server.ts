@@ -1,10 +1,4 @@
-import {
-    AcceptEvent,
-    Event,
-    PerchanceEvent,
-    RejectEvent,
-    type SerializableEventData,
-} from "./Events.js";
+import {AcceptEvent, Event, PerchanceEvent, RejectEvent, type SerializableEventData,} from "./Events.js";
 import type Game from "../Game.js";
 
 class FlagData{

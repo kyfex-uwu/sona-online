@@ -19,7 +19,7 @@ export class GameScene extends Scene{
         currGame = this.game;
         network.clientGame = this.game.getGame();
 
-        this.game.changeView(ViewType.WHOLE_BOARD_A);
+        this.game.changeView(ViewType.BOARD_A);
         this.game.sendEvent(new FindGameEvent({
             deck:getDeck(),
         }, undefined));

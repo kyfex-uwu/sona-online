@@ -1,6 +1,6 @@
 import {Scene, startTime} from "./Scene.js";
 import {camera} from "../clientConsts.js";
-import {Vector3} from "three";
+import {Euler, Vector3} from "three";
 import {button, buttonId, registerDrawCallback} from "../ui.js";
 import {setScene} from "../../index.js";
 import {GameScene} from "./GameScene.js";
@@ -26,7 +26,9 @@ export class MainMenuScene extends Scene{
                 "Build Deck", ()=>{
                     setScene(()=>new DeckBuildScene());
                 }, scale*0.8, this.buttonIds.buildDeck);
-        })
+        });
+        camera.position.set(0,600,220);
+        camera.quaternion.setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
     }
     exit(): void {
         this.releaseDrawCallback();

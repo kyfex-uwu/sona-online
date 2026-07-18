@@ -44,7 +44,8 @@ export default class HandFan extends VisualCardFan{
     removeCard(card: VisualCard) {
         super.removeCard(card);
         const hand = sideTernary(this.getSide(), this.game!.getGame().handA, this.game!.getGame().handB);
-        hand.splice(hand.indexOf(card.logicalCard),1);
+        if(hand.includes(card.logicalCard))
+            hand.splice(hand.indexOf(card.logicalCard),1);
     }
 
     tick() {

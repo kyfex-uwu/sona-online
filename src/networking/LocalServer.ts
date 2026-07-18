@@ -1,4 +1,4 @@
-import {eventReplyIds, network, Replyable} from "./Server.js";
+import {eventReplyIds, network, Replyable, successOrFail} from "./Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -13,24 +13,34 @@ import {
     PlaceAction,
     ScareAction,
     SerializableClasses,
-    type SerializableType, ServerDumpEvent,
+    type SerializableType,
+    ServerDumpEvent,
 } from "./Events.js";
 import Card, {Stat} from "../Card.js";
-import VisualCard from "../client/VisualCard.js";
+import VisualCard, {newHighlightLock} from "../client/VisualCard.js";
 import cards from "../Cards.js";
-import {Euler, Quaternion, Vector3} from "three";
+import {Euler, Quaternion, Vector2, Vector3} from "three";
 import {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
-import {sideTernary, wait} from "../consts.js";
+import {sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
-    EndType,
     VChoosingStartState,
+    VGuiState,
     VisualGameState,
     VPickCardsState,
     VTurnState
 } from "../client/VisualGameStates.js";
-import {registerDrawCallback, tempHowToUse} from "../client/ui.js";
+import {
+    animation,
+    blueStatColor,
+    particleStreak,
+    redStatColor,
+    registerDrawCallback,
+    tempHowToUse,
+    whiteColor,
+    yellowStatColor
+} from "../client/ui.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {loadFrontendWrappers} from "../client/VisualCardData.js";
 import {
@@ -40,15 +50,17 @@ import {
     type BROWNIE_DRAW,
     CardActionOptions,
     type CLOUD_CAT_PICK,
-    type FURMAKER_PICK, type SONIC_STALLION_SAVE,
+    type FURMAKER_PICK,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {gameScene} from "../client/scenes/GameScene.js";
+import type VisualCardClone from "../client/VisualCardClone.js";
+import {EndType} from "../client/VisualGameStateTools.js";
 
 //@ts-ignore
-window.showNetworkLogs=false;
+window.showNetworkLogs=false;//DEV
 const log = (...data: any) => {
     //@ts-ignore
     if(window.showNetworkLogs)
@@ -57,6 +69,8 @@ const log = (...data: any) => {
 }
 
 export function frontendInit(){
+    //kyfexmerge
+    // network.clientGame=gameScene.game.getGame();
     loadFrontendWrappers();
     log("network initialized :D")
 }
@@ -158,7 +172,7 @@ async function receiveFromServer(packed:{
 
     if(event instanceof GameStartEvent){
         game.getGame().setMySide(event.data.which);
-        game.changeView(sideTernary(event.data.which, ViewType.WHOLE_BOARD_A, ViewType.WHOLE_BOARD_B));
+        game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
         if(game.getMySide() === Side.A){
             game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1);
             game.handB.position.add(new Vector3(0,100,60));
@@ -205,7 +219,7 @@ async function receiveFromServer(packed:{
             const finish = ()=>{
                 game.cursorActive=true;
                 game.setState(new VTurnState(event.data.starter, game, false),
-                    new TurnState(game.getGame(), event.data.starter, false));
+                    new TurnState(game.getGame(), event.data.starter));
                 (game.state as VTurnState).canInit=true;//top 10 worst things
 
                 for(const field of game.fieldsA) {
@@ -235,6 +249,7 @@ async function receiveFromServer(packed:{
             }
         }
     }else if(event instanceof PlaceAction){
+        console.log(event)
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);
@@ -253,14 +268,27 @@ async function receiveFromServer(packed:{
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
-        if(game.state instanceof VTurnState){
-            game.state.decrementTurn();
-        }
+        animation(async ()=>{
+            if(game.state instanceof VTurnState){
+                game.state.decrementTurn(true);
+            }
+        });
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
             const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
-            if (scared !== undefined) sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+            if (scared !== undefined) {
+                animation(async ()=>{
+                    await particleStreak(
+                        sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
+                        sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
+                    ).then(()=>{
+                        sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                    });
+                });
+            }
         }
+        const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsB, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
+        if(maybeAttacked) maybeAttacked.hasAttacked=true;
         game.frozen=false;//todo: this is not how it should be solved
         if(game.state instanceof VTurnState && !event.data.free){
             game.state.decrementTurn();
@@ -344,7 +372,7 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.DCW_GUESS,
                             cardData:picked.logicalCard.cardData.level
                         }));
-                        state.cancel();
+                        state.end();
 
                         waitForClarify(ClarificationJustification.DCW, (event)=>{
                             if(event instanceof ClarifyCardEvent && event.data.cardDataName === ""){
@@ -369,7 +397,7 @@ async function receiveFromServer(packed:{
                                             cardData:picked2.logicalCard.cardData.level
                                         }));
                                         game.getGame().unfreeze();
-                                        state.cancel();
+                                        state.end();
                                     },EndType.NONE);
                                 game.setState(state2, oldStates[1]);
                             }else if(event instanceof ClarifyCardEvent){
@@ -401,7 +429,7 @@ async function receiveFromServer(packed:{
                                         .find(card=>card.logicalCard.id === event.data.id)!);
                             }
                         });
-                        state.cancel();
+                        state.end();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
@@ -416,124 +444,162 @@ async function receiveFromServer(packed:{
                             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                             cardData:picked.logicalCard.cardData.name === "temp_keep"
                         }));
-                        state.cancel();
+                        state.end();
                     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
-                tempHowToUse("Cowgirl Coyote", "Select the card who's stat you want to increase. Then, select the stat you " +
-                    "want to increase by 2.")
-
                 const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-                const state = new VPickCardsState(game, oldStates,
-                    [game.fieldsA, game.fieldsB].map(fields =>
-                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
-                        .flat(),
-                    (picked)=>{
-                        const state2 = new VPickCardsState(game, oldStates,
-                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
-                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                            (picked2)=>{
-                                network.sendToServer(new CardAction({
-                                    cardId:-1,
-                                    actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                                    cardData:{
-                                        stat:({
-                                            temp_red:Stat.RED,
-                                            temp_yellow:Stat.YELLOW,
-                                            temp_blue:Stat.BLUE
-                                        })[picked2.logicalCard.cardData.name]!,
-                                        pos:[
-                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
-                                                .map(field=>field.getCard())
-                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
-                                            picked.logicalCard.side]
-                                    }
-                                }));
-                                state2.cancel();
-                            },EndType.NONE);
-                        game.setState(state2,oldStates[1]);
-                    },EndType.FINISH, ()=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                            cardData:false
-                        }));
-                        state.cancel();
-                    });
-                game.setState(state, oldStates[1]);
-            }break;
-            case CardActionOptions.BROY_WEASLA_INCREASE:{
-                tempHowToUse("Broy Weasla", "Select the card who's stat you want to increase. Then, select the stat you " +
-                    "want to increase by 2.")
 
-                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-                const state = new VPickCardsState(game, oldStates,
-                    [game.fieldsA, game.fieldsB].map(fields =>
-                        fields.map(field=>field.getCard()).filter(card=>card !== undefined))
-                        .flat(),
-                    (picked)=>{
-                        const state2 = new VPickCardsState(game, oldStates,
-                            ["temp_red", "temp_yellow", "temp_blue"].map(name => new VisualCard(game,
-                                new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                            (picked2)=>{
-                                network.sendToServer(new CardAction({
-                                    cardId:-1,
-                                    actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                                    cardData:{//todo
-                                        stat:({
-                                            temp_red:Stat.RED,
-                                            temp_yellow:Stat.YELLOW,
-                                            temp_blue:Stat.BLUE
-                                        })[picked2.logicalCard.cardData.name]!,
-                                        pos:[
-                                            (sideTernary(picked.logicalCard.side, game.fieldsA, game.fieldsB)
+                let drawCallback;
+                const state = new VGuiState(game, oldStates, {
+                    onEnd:(self)=>{
+                        drawCallback!();
+                        self.blackBg(false);
+                    },
+                    init: (self: VGuiState) => {
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        self.blackBg(true);
+
+                        let selectedCard:VisualCard|undefined;
+                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
+                            // .filter(card=>card !== undefined)
+                            .map((card,i, arr)=>{
+                                return card === undefined ? undefined : {
+                                    card,
+                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
+                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
+                                }}).filter(data=>data!==undefined), (card)=>{
+                            selectedCard?.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard?.highlight(true, og029Highlight);
+                        });
+
+                        let selectedStat:Stat|undefined=undefined;
+                        drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                            self.statButtons(p5, scale,
+                                (stat)=>selectedStat=stat,
+                                (stat)=>selectedStat === stat,
+                                (stat)=>"+2");
+                            self.twoButtons(p5, scale, {
+                                onClick:()=>{
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                                        cardData:{
+                                            stat:selectedStat!,
+                                            pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
                                                 .map(field=>field.getCard())
-                                                .findIndex(card=>card?.logicalCard.id === picked.logicalCard.id) +1) as 1|2|3,
-                                            picked.logicalCard.side]
-                                    }
-                                }));
-                                state2.cancel();
-                            },EndType.NONE);
-                        game.setState(state2,oldStates[1]);
-                    },EndType.FINISH, ()=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                            cardData:false
-                        }));
-                        state.cancel();
+                                                .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
+                                                selectedCard!.getSide()]
+                                        }
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end("finished");
+                                    }));
+                                },
+                                text:"Increase",
+                                disabled:selectedStat===undefined||selectedCard===undefined
+                            }, {
+                                onClick:()=> {
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                                        cardData:false
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end("finished");
+                                    }));
+                                },
+                                text:"Pass",
+                                disabled:false
+                            });
+                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                                "want to increase by 2");
+                        });
+                    },
                 });
                 game.setState(state, oldStates[1]);
             }break;
-            case CardActionOptions.SONIC_STALLION_SAVE:{
-                if((event as CardAction<SONIC_STALLION_SAVE>).data.cardData === false) {
-                    const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                        [1, 2, 3].map(level => new VisualCard(game,
-                            new Card(cards["temp_lv" + level]!, Side.A, game.getGame(), -1), new Vector3())),
-                        (picked) => {
-                            network.sendToServer(new CardAction({
-                                cardId: -1,
-                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
-                                cardData: picked.logicalCard.cardData.level
-                            }));
-                            state.cancel();
-                        }, EndType.FINISH, () => {
-                            network.sendToServer(new CardAction({
-                                cardId: -1,
-                                actionName: CardActionOptions.SONIC_STALLION_SAVE,
-                                cardData: false
-                            }));
-                            state.cancel();
+            case CardActionOptions.BROY_WEASLA_INCREASE:{
+                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
+
+                let drawCallback;
+                const state = new VGuiState(game, oldStates, {
+                    onEnd:(self)=>{
+                        drawCallback!();
+                        self.blackBg(false);
+                    },
+                    init: (self: VGuiState) => {
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        self.blackBg(true);
+
+                        let selectedCard:VisualCardClone|undefined;
+                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
+                            // .filter(card=>card !== undefined)
+                            .map((card,i, arr)=>{
+                                return card === undefined ? undefined : {
+                                    card,
+                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
+                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
+                            }}).filter(data=>data!==undefined), (card)=>{
+                            selectedCard?.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard?.highlight(true, og029Highlight);
                         });
-                    game.setState(state, game.getGame().state);
-                }else{
-                    if(game.state instanceof VTurnState && game.state.getNonVisState().crisis){
-                        game.setState(new VTurnState(game.state.currTurn, game),
-                            new TurnState(game.getGame(), game.state.currTurn, false));
-                        game.getGame().setCrisis(game.state.currTurn, game.getGame().getCrisis(game.state.currTurn)-1);
-                    }
-                }
+
+                        let selectedStat:Stat|undefined=undefined;
+                        drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                            self.statButtons(p5, scale,
+                                (stat)=>selectedStat=stat,
+                                (stat)=>selectedStat === stat,
+                                (stat)=>"+2");
+                            self.twoButtons(p5, scale, {
+                                onClick:()=>{
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                                        cardData:{
+                                            stat:selectedStat!,
+                                            pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
+                                                .map(field=>field.getCard())
+                                                .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
+                                                selectedCard!.getSide()]
+                                        }
+                                    })).onReply(successOrFail(()=>{
+                                        const pos = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                                            .find(field=>field.getCard()?.logicalCard.cardData.name === "og-029");
+                                        if(pos){
+                                            animation(async ()=>{
+                                                await particleStreak(pos.position, selectedCard?.clonedFrom.getStatModel(selectedStat!)!
+                                                    .getWorldPosition(new Vector3())!,
+                                                    whiteColor, statTernary(selectedStat!,
+                                                        redStatColor, blueStatColor, yellowStatColor));
+                                            });
+                                        }
+                                    },()=>{},()=>{
+                                        self.end("finished");
+                                    }));
+                                },
+                                text:"Increase",
+                                disabled:selectedStat===undefined||selectedCard===undefined
+                            }, {
+                                onClick:()=> {
+                                    network.sendToServer(new CardAction({
+                                        cardId:-1,
+                                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                                        cardData:false
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                        self.end("finished");
+                                    }));
+                                },
+                                text:"Pass",
+                                disabled:false
+                            });
+                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                                    "want to increase by 2");
+                        });
+                    },
+                });
+                game.setState(state, oldStates[1]);
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
                 tempHowToUse("Noble Rat", "Select Noble Rat if you want to retarget the opponent's attack to Noble Rat, " +
@@ -546,14 +612,14 @@ async function receiveFromServer(packed:{
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: true
                         }));
-                        state.cancel();
+                        state.end();
                     }, EndType.FINISH, () => {
                         network.sendToServer(new CardAction({
                             cardId: -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: false
                         }));
-                        state.cancel();
+                        state.end();
                     });
                 game.setState(state, game.getGame().state);
             }break;
@@ -567,3 +633,5 @@ async function receiveFromServer(packed:{
 
 //@ts-ignore
 window.requestSync = ()=> game.sendEvent(new RequestSyncEvent({}));
+
+const og029Highlight = newHighlightLock();

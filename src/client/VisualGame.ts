@@ -11,13 +11,9 @@ import {Side} from "../GameElement.js";
 import {camera, updateOrder} from "./clientConsts.js";
 import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
-import type Card from "../Card.js";
+import Card from "../Card.js";
 import p5 from "p5";
 import {
-    type Cancellable,
-    EndType,
-    isCancellable,
-    VAttackingState,
     VBeforeGameState,
     type VisualGameState,
     VPickCardsState,
@@ -28,6 +24,7 @@ import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
+import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
 
 const pointer = new Vector2();
 
@@ -39,10 +36,12 @@ const geo = new Mesh(new PlaneGeometry(999999,999999).rotateX(-Math.PI/2));
 
 //The camera view
 export enum ViewType{
-    WHOLE_BOARD_A,
-    WHOLE_BOARD_B,
+    BOARD_A,
+    BOARD_B,
     FIELDS_A,
     FIELDS_B,
+    CLOSE_BOARD_A,
+    CLOSE_BOARD_B,
 }
 
 const previewImages:{[k:string]:p5.Image|true} = {};
@@ -141,6 +140,7 @@ export default class VisualGame {
         this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
             if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide()){
                 this.sendEvent(new DrawAction({}));
+                this.state.getNonVisState().setDrawnToStart();
             }
         })
 
@@ -148,12 +148,13 @@ export default class VisualGame {
 
         this.passButtonId = buttonId();
         this.finishButtonId = buttonId();
+
         this.releaseDrawCallback = registerDrawCallback(0, (p5, scale)=>{
             if(this.previewCard !== undefined && this.drawPreviewCard) {
                 if (previewImages[this.previewCard.cardData.imagePath] !== undefined) {
                     if (previewImages[this.previewCard.cardData.imagePath] !== true) {
                         p5.image(previewImages[this.previewCard.cardData.imagePath],
-                            p5.width - 50 * scale / 45, (p5.height - 70 * scale / 45) / 2, 50 * scale / 45, 70 * scale / 45);
+                            p5.mouseX<p5.width/2 ? p5.width - 50 * scale / 45 : 0, (p5.height - 70 * scale / 45) / 2, 50 * scale / 45, 70 * scale / 45);
                     }
                 } else {
                     previewImages[this.previewCard.cardData.imagePath] = true;
@@ -167,14 +168,16 @@ export default class VisualGame {
             if(this.state instanceof VTurnState && this.state.getNonVisState().turn === this.getMySide()){
                 let width=scale*1.3;
                 let height=scale*0.4;
-                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height, "Pass", ()=>{
+                button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
+                        this.state.getActionsLeft() === 0 ? "End Turn" : "Pass", ()=>{
                     this.frozen=true;
                     this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
-                        (this.state as VTurnState).decrementTurn();
-                    },undefined,()=>{
+                        (this.state as VTurnState).decrementTurn(true);
+                    },()=>{},()=>{
                         this.frozen=false;
                     }));
-                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 && !this.frozen);
+                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 ||
+                    this.frozen || !this.state.getNonVisState().drawnToStart);
             }
 
             const width = scale * 1.3;
@@ -194,7 +197,7 @@ export default class VisualGame {
                     }, scale, this.finishButtonId, this.frozen);
                 }
                 button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Cancel", () => {
-                    (this.state as unknown as Cancellable).cancel();//trust
+                    (this.state as unknown as Cancellable).end();//trust
                 }, scale, this.passButtonId, this.frozen);
             }
             if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
@@ -205,24 +208,24 @@ export default class VisualGame {
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{
-            p5.push();
-            p5.fill(255,0,0);
-            p5.textSize(scale*0.1);
-            p5.textAlign(p5.RIGHT,p5.TOP);
-            if(this.state instanceof VTurnState){
-                p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
-current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
-actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
-            }
-            if(this.state instanceof VAttackingState){
-                p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
-                    .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
-            }
-
-            p5.textAlign(p5.LEFT,p5.BOTTOM);
-            p5.text(this.debugLast, 0,p5.height);
-
-            p5.pop();
+//             p5.push();
+//             p5.fill(255,0,0);
+//             p5.textSize(scale*0.1);
+//             p5.textAlign(p5.RIGHT,p5.TOP);
+//             if(this.state instanceof VTurnState){
+//                 p5.text(`side: ${Side[this.getMySide()]} ${this.getMySide()}
+// current turn: ${(this.state.getNonVisState().turn === Side.A)?"A":"B"}
+// actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
+//             }
+//             if(this.state instanceof VAttackingState){
+//                 p5.text(`${this.state.attackData.type}\n${sideTernary(this.getMySide(), this.fieldsA, this.fieldsB)[this.state.cardIndex-1]!
+//                     .getCard()?.logicalCard.cardData.stats.toString()}`, 0,0);
+//             }
+//
+//             p5.textAlign(p5.LEFT,p5.BOTTOM);
+//             p5.text(this.debugLast, 0,p5.height);
+//
+//             p5.pop();
         });
     }
     private readonly releaseDrawCallback;
@@ -259,9 +262,9 @@ actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
 
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
-            ...this.elements.filter(element => VisualCard.getExactVisualCard(element)
-                && !specialCards.has((element as VisualCard).logicalCard.cardData.name)
-                && (element as VisualCard).logicalCard.getFaceUp()
+            ...this.elements.filter(element => //VisualCard.getExactVisualCard(element) &&
+                !specialCards.has((element as VisualCard).logicalCard?.cardData.name ?? "")
+                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true)
             )
                 .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
@@ -308,11 +311,11 @@ actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
      */
     public changeView(type: ViewType) {
         switch (type) {
-            case ViewType.WHOLE_BOARD_A:
+            case ViewType.BOARD_A:
                 this.targetCameraPos = new Vector3(0,600,220);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
                 break;
-            case ViewType.WHOLE_BOARD_B:
+            case ViewType.BOARD_B:
                 this.targetCameraPos = new Vector3(0,600,-220);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
@@ -323,6 +326,14 @@ actions left: ${this.state.getActionsLeft()}`, p5.width-20,0);
             case ViewType.FIELDS_B:
                 this.targetCameraPos = new Vector3(0,370, -40);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.5, 0, Math.PI));
+                break;
+            case ViewType.CLOSE_BOARD_A:
+                this.targetCameraPos = new Vector3(0,450,250);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
+                break;
+            case ViewType.CLOSE_BOARD_B:
+                this.targetCameraPos = new Vector3(0,450,-250);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
         }
     }

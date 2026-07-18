@@ -2,12 +2,12 @@ import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
-import type VisualCard from "../VisualCard.js";
+import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {StateFeatures} from "../VisualGameStates.js";
 import {sideTernary} from "../../consts.js";
 import {DiscardEvent} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
+import {StateFeatures} from "../VisualGameStateTools.js";
 
 export type CardWithRot = {card:VisualCard,rot:number}
 export default class RunawayMagnet extends CardMagnet{
@@ -71,7 +71,7 @@ export default class RunawayMagnet extends CardMagnet{
         const takeFrom = sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB);
         const index = card === undefined ?
             takeFrom.length-1 : takeFrom.findIndex(c=>c.id === card.logicalCard.id);
-
+        if(index !== -1) return false;
         takeFrom.splice(index,1);
         this.cards.splice(index,1);
         this.position.sub(CardMagnet.offs);
@@ -93,11 +93,13 @@ export default class RunawayMagnet extends CardMagnet{
             data.card.rotation.y+=data.rot;
         }
         this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
-        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide());
+        this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide(),
+            highlightLock);
     }
 
     getCards(){
         return this.cards.map(data => data.card);
     }
 }
+const highlightLock = newHighlightLock();
 updateOrder[RunawayMagnet.name] = CardMagnet.updateOrder;

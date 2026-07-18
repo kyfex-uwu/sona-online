@@ -1,13 +1,6 @@
 import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
-import {
-    CardAction,
-    ClarificationJustification,
-    ClarifyCardEvent,
-    multiClarifyFactory,
-    PlaceAction,
-    ScareAction
-} from "./Events.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToClients} from "./BackendServer.js";
 import {sideTernary} from "../consts.js";
@@ -37,29 +30,6 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
-wrap(cards["og-014"]!, CardTriggerType.AFTER_ACTION, (orig, {self, game})=>{
-    if(orig) orig({self, game});
-
-    if(sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card!==undefined) ||
-        !(game.state instanceof TurnState) ||
-        game.state.actionsLeft !== 1 ||
-        game.state.turn === self.side)
-        return InterruptScareResult.PASSTHROUGH;
-
-    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.SONIC_STALLION_SAVE);
-    game.freeze(event=>
-        (event instanceof CardAction &&
-        event.sender === game.player(self.side) &&
-        event.data.actionName === CardActionOptions.SONIC_STALLION_SAVE) ||
-        (event instanceof PlaceAction && event.isForced()));
-    game.player(self.side)?.send(new CardAction({
-        cardId:-1,
-        actionName:CardActionOptions.SONIC_STALLION_SAVE,
-        cardData:false
-    }));
-
-    return InterruptScareResult.PREVENT_SCARE;
-})
 wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
@@ -87,7 +57,7 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined ||
-        self.side !== scared.side)
+        self.side === scarer.side)
         return InterruptScareResult.PASSTHROUGH;
 
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
@@ -161,7 +131,11 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-        cardData:false
+        cardData:{
+            stat,
+            pos:origEvent.data.scarerPos,
+            otherPos:origEvent.data.scaredPos,
+        }
     }));
 
     return InterruptScareResult.PREVENT_SCARE;
@@ -236,7 +210,7 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 
     if(!(game.state instanceof TurnState && //is a turn
         game.state.turn !== self.side && // is opponents turn
-        self.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) !== true &&//havent done this already
+        self.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) !== true &&//havent done this already
         stat !== "card"//we can actually defend against this
     ))
         return InterruptScareResult.PASSTHROUGH;
@@ -252,7 +226,11 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-        cardData:false
+        cardData:{
+            stat,
+            pos:origEvent.data.scaredPos,
+            otherPos:origEvent.data.scarerPos,
+        }
     }));
 
     return InterruptScareResult.PREVENT_SCARE;
@@ -267,5 +245,5 @@ wrap(cards["og-035"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scare
 });
 wrap(cards["og-035"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });

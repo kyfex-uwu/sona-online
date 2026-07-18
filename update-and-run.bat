@@ -1,4 +1,4 @@
 git pull
-node i
+npm i
 npx tsc
 node ./main.js dev

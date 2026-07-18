@@ -1,85 +1,125 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
-import {EndType, VAttackingState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
-import VisualCard from "./VisualCard.js";
-import {sideTernary} from "../consts.js";
+import {VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
+import VisualCard, {newHighlightLock} from "./VisualCard.js";
+import {sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
-import Card, {CardMiscDataStrings, Stat} from "../Card.js";
+import {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
-import {Vector3} from "three";
+import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
-import {Side} from "../GameElement.js";
 import {waitForClarify} from "../networking/LocalServer.js";
-import {tempHowToUse} from "./ui.js";
 import {gameScene} from "./scenes/GameScene.js";
+import {
+    animation,
+    blueStatColor,
+    particleStreak,
+    redStatColor,
+    registerDrawCallback,
+    tempHowToUse,
+    whiteColor,
+    yellowStatColor
+} from "./ui.js";
+import {ViewType} from "./VisualGame.js";
+import {EndType, StateFeatures} from "./VisualGameStateTools.js";
 
 export function loadFrontendWrappers(){}
 
 export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<boolean>} = {};
 
-function lastAction(callback:(card:VisualCard)=>Promise<boolean>){
-    return (card:VisualCard)=> {
-        if (gameScene.game.state instanceof VAttackingState && gameScene.game.state.parentState.getActionsLeft() === 1) {
-            return callback(card);
-        }
-        return new Promise<boolean>(r=>r(false));
-    }
-}
-
-visualCardClientActions["og-001"] = lastAction((card)=>{
+const og001Highlight = newHighlightLock();
+visualCardClientActions["og-001"] = (card)=>{
+    let endSignal: (value: boolean | PromiseLike<boolean>) => void;
+    const toReturn = new Promise<boolean>(r=>endSignal=r);
     const oldStates:[VisualGameState<any>, GameState] = [gameScene.game.state, gameScene.game.getGame().state];
-    let picked = new Set<Card>();
-    let resolve:(val:boolean)=>void;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
-    tempHowToUse("K9 Agent Alpha", "Select all the canines you want to use, then press Finish. " +
-        "Then, select the card you want to scare. Then, select the color of the stat you want to attack with.")
-    gameScene.game.setState(new VPickCardsState(gameScene.game, oldStates,
-            sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB).map(field => field.getCard())
-                .filter(card => card !== undefined)
-                .filter(card => card?.logicalCard.cardData.species === Species.CANINE)
-                .filter(card => !card?.logicalCard.hasAttacked), (toAttackWith)=>{
-                if(picked.has(toAttackWith.logicalCard)) picked.delete(toAttackWith.logicalCard);
-                else picked.add(toAttackWith.logicalCard);
-            }, EndType.BOTH, ()=>{
-                gameScene.game.setState(new VPickCardsState(gameScene.game, oldStates,
-                    sideTernary(card.getSide(), gameScene.game.fieldsB, gameScene.game.fieldsA).map(field => field.getCard())
-                        .filter(card => card !== undefined),
-                    (toAttack)=>{
-                        let thirdState:VPickCardsState;
-                        const statCards = [
-                            new VisualCard(gameScene.game, new Card(cards["temp_red"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(gameScene.game, new Card(cards["temp_blue"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                            new VisualCard(gameScene.game, new Card(cards["temp_yellow"]!, Side.A, card.game.getGame(), -1), new Vector3()),
-                        ];
-                        gameScene.game.setState(thirdState=new VPickCardsState(gameScene.game, oldStates, statCards,
-                            (attackStat)=>{
-                                thirdState.cancel();
-                                network.sendToServer(new CardAction({
-                                    cardId:card.logicalCard.id,
-                                    actionName:CardActionOptions.K9_ALPHA,
-                                    cardData:{
-                                        canineFields:sideTernary(card.getSide(), gameScene.game.getGame().fieldsA, gameScene.game.getGame().fieldsB)
-                                            .map(card => card !== undefined && picked.has(card)),
-                                        attack:sideTernary(card.getSide(), gameScene.game.getGame().fieldsB, gameScene.game.getGame().fieldsA).indexOf(toAttack.logicalCard)+1 as 1|2|3,
-                                        attackWith:{
-                                            "temp_red":Stat.RED,
-                                            "temp_blue":Stat.BLUE,
-                                            "temp_yellow":Stat.YELLOW,
-                                        }[attackStat.logicalCard.cardData.name]!
-                                    }
-                                }));
-                                resolve(true);
-                                //why arent cards removing
-                            }, EndType.NONE), oldStates[1]);
-                    },EndType.CANCEL), oldStates[1]);
-            }),
-        oldStates[1]);
+
+    const toRemove: (() => void)[] = [];
+    const attackWith:Set<VisualCard> = new Set([card]);
+    card.highlight(true, og001Highlight);
+    let attacking:VisualCard|undefined=undefined;
+    let attackStat:Stat|undefined=undefined;
+    let drawCallback: () => void;
+
+    const end = ()=>{
+        gameScene.game.changeView(sideTernary(card.getSide(), ViewType.BOARD_A, ViewType.BOARD_B));
+        for(const remove of toRemove) remove();
+        drawCallback();
+
+        for(const field of [...gameScene.game.fieldsA, ...gameScene.game.fieldsB])
+            field.getCard()?.highlight(false, og001Highlight);
+        attacking?.highlight(false, og001Highlight);
+    }
+    gameScene.game.setState(new VGuiState(gameScene.game, oldStates, {
+        onEnd: (self: VGuiState) => {},
+        init: (self: VGuiState) => {
+            gameScene.game.changeView(sideTernary(card.getSide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+
+            for(const field of sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB)){
+                toRemove.push(field.addClickListener(()=>{
+                    const card = field.getCard();
+                    if(card !== undefined && card.logicalCard.cardData.species === Species.CANINE && !attackWith.delete(card)) {
+                        attackWith.add(card);
+                        card.highlight(true, og001Highlight);
+                    }else if(card !== undefined){
+                        card.highlight(false, og001Highlight);
+                    }
+                }));
+            }
+            for(const field of sideTernary(card.getSide(), gameScene.game.fieldsB, gameScene.game.fieldsA)){
+                toRemove.push(field.addClickListener(()=>{
+                    if(attacking) attacking.highlight(false, og001Highlight);
+                    attacking = field.getCard();
+                    if(attacking) attacking.highlight(true, og001Highlight);
+                }));
+            }
+
+            drawCallback = registerDrawCallback(0, (p5, scale)=>{
+                self.statButtons(p5, scale,
+                    (stat)=>attackStat=stat,
+                    (stat)=>attackStat === stat,
+                    (stat)=>[...attackWith.values()].map(card=>card.logicalCard
+                        .stat(stat) ?? 0).reduce((a,c)=>a+c,0).toString());
+
+                self.buttonAndCancel(p5, scale, ()=>{
+                    network.sendToServer(new CardAction({
+                        cardId:card.logicalCard.id,
+                        actionName:CardActionOptions.K9_ALPHA,
+                        cardData:{
+                            canineFields:sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB)
+                                .map(field => attackWith.has(field.getCard()!)),
+                            attack:sideTernary(card.getSide(), gameScene.game.getGame().fieldsB, gameScene.game.getGame().fieldsA)
+                                .indexOf(attacking!.logicalCard)+1 as 1|2|3,
+                            attackWith:attackStat
+                        }
+                    })).onReply(successOrFail(()=>{
+                        animation(async ()=>{
+                            let particles = [];
+                            for(const field of sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB)
+                                .filter(field => attackWith.has(field.getCard()!))){
+                                particles.push(particleStreak(
+                                    field.position, card.getStatModel(attackStat!)!.getWorldPosition(new Vector3()),
+                                    whiteColor, statTernary(attackStat!, redStatColor, blueStatColor, yellowStatColor)
+                                    ))
+                            }
+                            await Promise.all(particles);
+                        })
+                    },()=>{},()=>{
+                        end();
+                        endSignal(true);
+                    }));
+                }, "Attack", attacking===undefined || attackStat === undefined, false);
+                self.infoText(p5, scale, "Select any number of your Canine cards to attack with, select a stat to attack with," +
+                    "and select which of the opponent's cards to attack. ");
+            })
+        },
+    }), oldStates[1]);
+
     return toReturn;
-});
+};
 visualCardClientActions["og-018"] = async (card) =>{
-    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
     const toReorder = sideTernary(card.getSide(), gameScene.game.deckA, gameScene.game.deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
@@ -91,80 +131,165 @@ visualCardClientActions["og-018"] = async (card) =>{
         justification:ClarificationJustification.AMBER
     })).onReply(()=>{
         tempHowToUse("Amber", "Click the card you want to keep; don't click the card you want to discard");
-        if(toReorder.length === 1){
-            toReorder.push(new VisualCard(card.game, new Card(cards["unknown"]!, card.getSide(), card.game.getGame(), -1), new Vector3()));
-        }
-        gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
-            toReorder, (c) => {
-                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
+        let release:()=>void;
+        let discardFirst=true;
+        gameScene.game.setState(new VGuiState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state], {
+            onEnd:(self)=>{
+                release();
+
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
                     cardData: {
-                        which: c.logicalCard === toReorder[0]?.logicalCard ? AmberData.KEEP_FIRST : AmberData.KEEP_SECOND
+                        which: discardFirst ? AmberData.KEEP_SECOND : AmberData.KEEP_FIRST
                     }
                 }));
                 resolve!(true);
-            }, EndType.NONE), gameScene.game.getGame().state);
+            },
+            init:(self)=>{
+                self.addCards(toReorder.map((card,i)=>{return{
+                    card, position:new Vector2(i*6-3, 0)
+                }}), (card)=>{
+                    for(const other of self.cards)
+                        other.position.multiply(new Vector3(-1,1,1));
+                    discardFirst=!discardFirst;
+                });
 
+                self.blackBg(true);
+
+                release = registerDrawCallback(0, (p5, scale)=>{
+                    p5.textSize(scale*50/128/2.5);
+                    p5.textAlign(p5.CENTER,p5.CENTER);
+                    p5.text("Keep",p5.width/2-scale/2,p5.height/2-scale/2);
+                    p5.text("Discard",p5.width/2+scale/2,p5.height/2-scale/2);
+
+                    self.finishButton(p5, scale, false);
+                });
+            }
+        }),gameScene.game.getGame().state);
     });
     return toReturn;
 };
-visualCardClientActions["og-028"] = lastAction((card)=>{
+const kibbyHighlightLock = newHighlightLock();
+visualCardClientActions["og-028"] = (card)=>{
     if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
 
     tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
         "to replace them with, and press Finish again.")
 
-    let resolve;
+    let resolve:(v:boolean)=>void;
     const toReturn = new Promise<boolean>(r=>resolve=r);
 
-    const toScare = new Set<number>();
-    const fields = sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB);
+    const myFields = sideTernary(card.getSide(), gameScene.game.fieldsA, gameScene.game.fieldsB);
+    const myHand = sideTernary(gameScene.game.getMySide(), gameScene.game.handA, gameScene.game.handB);
     const oldStates:[VisualGameState<any>, GameState]=[gameScene.game.state, gameScene.game.getGame().state];
-    const state = new VPickCardsState(gameScene.game, oldStates,
-        fields.map(field=>field.getCard()).filter(card=>card!==undefined),
-        (picked)=>{
-            if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
-            else toScare.add(picked.logicalCard.id);
+    const replaceMap:[VisualCard|undefined,VisualCard|undefined,VisualCard|undefined] = [undefined,undefined,undefined];
+    const listeners:(()=>void)[]=[];
 
-            state.endType = (toScare.size <= sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
-                .filter(card=>card.logicalCard.cardData.level === 3).length &&
-                toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
-        }, EndType.CANCEL, ()=>{
-            if(toScare.size===0) return resolve!(true);
+    let release:()=>void;
+    const state = new VGuiState(gameScene.game, oldStates, {
+        onEnd:(self, type)=>{
+            release();
+            for(const other of sideTernary(gameScene.game.getMySide(), gameScene.game.handA, gameScene.game.handB).cards)
+                other.highlight(false, kibbyHighlightLock);
+            for(const other of replaceMap) {
+                if(other) myHand.addCard(other);
+                other?.highlight(false, kibbyHighlightLock);
+            }
+            gameScene.game.selectedCard?.highlight(false, kibbyHighlightLock);
 
-            const toReplace:number[] = [];
-            const state2 = new VPickCardsState(gameScene.game, oldStates,
-                sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
-                    .filter(card=>card.logicalCard.cardData.level === 3),
-                (picked)=>{
-                    if(toReplace.indexOf(picked.logicalCard.id) !== -1)
-                        toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
-                    else toReplace.push(picked.logicalCard.id);
+            for(const release of listeners) release();
 
-                    state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
-                },EndType.CANCEL,()=>{
-                    let toSend:[number|false,number|false,number|false] = [false,false,false];
-                    for(let i=0;i<3;i++){
-                        if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
-                            toSend[i] = toReplace.pop()!;
+            if(type ==="finished"){
+                network.sendToServer(new CardAction({
+                    cardId:card.logicalCard.id,
+                    actionName:CardActionOptions.KIBBY_SCARE,
+                    cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? false) as [number|false,number|false,number|false]}
+                }));
+            }
+            resolve(true);
+        },
+        init:(self)=>{
+            gameScene.game.changeView(sideTernary(gameScene.game.getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
+            for(let i=0;i<myFields.length;i++)
+                listeners.push(myFields[i]!.addClickListener(()=>{
+                    if(gameScene.game.selectedCard === undefined){
+                        if(replaceMap[i] !== undefined)
+                            myHand.addCard(replaceMap[i]!);
+                        replaceMap[i] = undefined;
+                        return;
                     }
 
-                    network.sendToServer(new CardAction({
-                        cardId:card.logicalCard.id,
-                        actionName:CardActionOptions.KIBBY_SCARE,
-                        cardData:{cards:toSend}
-                    }));
-                    resolve!(true);
-                });
-            gameScene.game.setState(state2, gameScene.game.getGame().state);
-        });
+                    const card = myFields[i]!.getCard();
+                    if(!card) return;
+
+                    if(replaceMap[i] !== undefined)
+                        myHand.addCard(replaceMap[i]!);
+
+                    replaceMap[i] = gameScene.game.selectedCard;
+                    gameScene.game.selectedCard = undefined;
+                    replaceMap[i]!.position = myFields[i]!.position.clone().add(new Vector3(0,20,0));
+                }));
+            self.addFeatures(StateFeatures.FIELDS_SELECTABLE)
+            for(const other of myHand.cards){
+                if(self.canSelectHandCard(other))
+                    other.highlight(true, kibbyHighlightLock);
+            }
+
+            release = registerDrawCallback(0,(p5,scale)=>{
+                self.finishAndCancel(p5, scale, !replaceMap.some(v=>v!==undefined), false);
+                self.infoText(p5, scale, "Scare your field cards by placing hand cards on top of them")
+            });
+        },
+        canSelectHandCard:(self, card)=>{
+            return card.logicalCard.cardData.level === 3;
+        }
+    });
+
+    // const state = new VPickCardsState(gameScene.game, oldStates,
+    //     fields.map(field=>field.getCard()).filter(card=>card!==undefined),
+    //     (picked)=>{
+    //         if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
+    //         else toScare.add(picked.logicalCard.id);
+    //
+    //         state.endType = (toScare.size <= sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
+    //             .filter(card=>card.logicalCard.cardData.level === 3).length &&
+    //             toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
+    //     }, EndType.CANCEL, ()=>{
+    //         if(toScare.size===0) return resolve!(true);
+    //
+    //         const toReplace:number[] = [];
+    //         const state2 = new VPickCardsState(gameScene.game, oldStates,
+    //             sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).cards
+    //                 .filter(card=>card.logicalCard.cardData.level === 3),
+    //             (picked)=>{
+    //                 if(toReplace.indexOf(picked.logicalCard.id) !== -1)
+    //                     toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
+    //                 else toReplace.push(picked.logicalCard.id);
+    //
+    //                 state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
+    //             },EndType.CANCEL,()=>{
+    //                 let toSend:[number|false,number|false,number|false] = [false,false,false];
+    //                 for(let i=0;i<3;i++){
+    //                     if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
+    //                         toSend[i] = toReplace.pop()!;
+    //                 }
+    //
+    //                 network.sendToServer(new CardAction({
+    //                     cardId:card.logicalCard.id,
+    //                     actionName:CardActionOptions.KIBBY_SCARE,
+    //                     cardData:{cards:toSend}
+    //                 }));
+    //                 resolve!(true);
+    //             });
+    //         gameScene.game.setState(state2, gameScene.game.getGame().state);
+    //     });
     gameScene.game.setState(state, gameScene.game.getGame().state);
 
     return toReturn;
-})
-visualCardClientActions["og-038"] = lastAction((card)=>{
+};
+visualCardClientActions["og-038"] = (card)=>{
     tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
 
     const cards = sideTernary(card.getSide(), gameScene.game.runawayA, gameScene.game.runawayB).getCards()
@@ -186,7 +311,7 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
                         }
                     })).onReply(successOrFail(()=>{
                         sideTernary(card.getSide(), gameScene.game.handA, gameScene.game.handB).addCard(picked);
-                        (gameScene.game.state as VPickCardsState).cancel();
+                        (gameScene.game.state as VPickCardsState).end();
                     },()=>{},()=>{
                         gameScene.game.frozen=false;
                         resolve!(true);
@@ -194,9 +319,9 @@ visualCardClientActions["og-038"] = lastAction((card)=>{
             }, EndType.BOTH),
         gameScene.game.getGame().state);
     return toReturn;
-});
+};
 visualCardClientActions["og-041"] = (card)=>{
-    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ATTACKED) === true) return new Promise(r=>r(false));
+    if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
@@ -209,7 +334,7 @@ visualCardClientActions["og-041"] = (card)=>{
         gameScene.game.setState(new VPickCardsState(gameScene.game, [gameScene.game.state, gameScene.game.getGame().state],
             sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
                 gameScene.game.frozen=true;
-                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, true);
+                card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
@@ -280,7 +405,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                 }));
             }
 
-            state.cancel();
+            state.end();
         }, EndType.NONE), game.state);
     }));
 });
@@ -323,7 +448,7 @@ wrap(cards["og-011"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 wrap(cards["og-018"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
 wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -366,7 +491,7 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                 actionName:CardActionOptions.YASHI_REORDER,
                                 cardData:{cards:newOrder},
                             }));
-                            toCancel.cancel();
+                            toCancel.end();
                         }
                     },EndType.NONE);
                 gameScene.game.setState(toCancel, game.state);
@@ -389,7 +514,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                     actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
                     cardData:picked.logicalCard.id
                 }));
-                state.cancel();
+                state.end();
 
                 waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
                     if(event instanceof ClarifyCardEvent && event.data.id === picked.logicalCard.id) {
@@ -418,7 +543,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                         actionName:CardActionOptions.DCW_PICK,
                         cardData:picked.logicalCard.id
                     }));
-                    state.cancel();
+                    state.end();
 
                     waitForClarify(ClarificationJustification.DCW, (event)=>{
                         if(event instanceof ClarifyCardEvent && event.data.id === -1) {
@@ -440,7 +565,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                                     })).onReply(successOrFail(()=>{
                                         game.unfreeze();
                                     },()=>{},()=>{}));
-                                    state2.cancel();
+                                    state2.end();
                                 },EndType.NONE);
                             gameScene.game.setState(state2, oldStates[1]);
                         }
@@ -469,7 +594,7 @@ wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
 wrap(cards["og-041"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    self.setMiscData(CardMiscDataStrings.ALREADY_ATTACKED, false);
+    self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
 wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -501,7 +626,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
                     .map(magnet=>magnet.getCard())
                     .findIndex(mCard=>mCard?.logicalCard.id === card.logicalCard.id)+1
             }));
-            state.cancel();
+            state.end();
         }, EndType.NONE);
     gameScene.game.setState(state, game.state);
 });

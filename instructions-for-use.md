@@ -72,11 +72,19 @@ Currently, when someone wins the game, the game just locks up. There is no visua
 ## Last thoughts
 If there's anything unclear or strange, I welcome any dms :3
 
+### UI
+
 The UI is currently VERY unpolished; currently it's just enough to be workable. The next big project
 I want to work on is overhauling the UI and the visuals, and I want to go through that process with
 a lot more input from you two than I had during this stage. There is currently a bug I haven't addressed
 and I won't: sometimes when leaving a card selection screen, some cards get stuck in the middle of the
 board. I know exactly why this happens, and it won't happen once the UI overhaul is done.
+
+### Flags
+
+You can access and toggle any feature flags by appending `/flags` to the client link.
+
+### Next steps
 
 Additionally, I would love any and all pointers on visual directions you want to go in; I would much
 rather consider an outlandish request than not hear it. 

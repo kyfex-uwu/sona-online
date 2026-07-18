@@ -1,4 +1,5 @@
 import {Side} from "./GameElement.js";
+import {Stat} from "./Card.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{
@@ -19,6 +20,14 @@ export function shuffled<T>(array:Array<T>):Array<T>{
  */
 export function sideTernary<T>(side:Side, a:T, b:T){
     return side == Side.A ? a : b;
+}
+
+export function statTernary<T>(stat:Stat, red:T, blue: T, yellow:T){
+    switch(stat){
+        case Stat.RED: return red;
+        case Stat.BLUE: return blue;
+        default: return yellow;
+    }
 }
 
 //@param ms The amount of milliseconds to wait
