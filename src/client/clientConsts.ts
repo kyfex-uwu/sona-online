@@ -11,19 +11,6 @@ export const camera = new PerspectiveCamera(50, aspect, 1, 10000);
 
 export const scene = new Scene();
 
-const loader = new CubeTextureLoader();
-loader.setPath('/assets/skybox/cloudy/');
-scene.background = loader.load(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png']);
-
-scene.add(new AmbientLight(new Color(0xffffff), 3));
-scene.add(camera);
-
-modelLoader.load("/assets/board.glb", model => {
-    model.scene.scale.set(10,10,10);
-    model.scene.position.set(0,-10,0);
-    scene.add(model.scene);
-});
-
 // Init renderer
 export const renderer = new WebGLRenderer({
     powerPreference: "high-performance",

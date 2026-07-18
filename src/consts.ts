@@ -45,3 +45,13 @@ export function verifyNoDuplicateStrVals(miscDataStrings: { [k: string]: any }, 
         checker.add(miscDataStrings[key]!);
     }
 }
+
+export function externalPromise<T=void>(){
+    let resolve:(v:T)=>void=undefined!;
+    //@ts-expect-error
+    const toReturn:
+        Promise<T> & {resolve:(v:T)=>void} = new Promise<T>(r=>resolve=r);
+    toReturn.resolve=resolve;
+
+    return toReturn;
+}

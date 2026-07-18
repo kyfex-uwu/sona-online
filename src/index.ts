@@ -1,9 +1,9 @@
 import {camera, renderer, scene} from "./client/clientConsts.js";
 import {frontendInit} from "./networking/LocalServer.js";
 import type {Scene} from "./client/scenes/Scene.js";
-import {MainMenuScene} from "./client/scenes/MainMenuScene.js";
 import Stats from "stats.js";
 import {lerp, particles} from "./client/ui.js";
+import {LoadScene} from "./client/scenes/LoadScene.js";
 
 /////
 // version 0.1.0
@@ -13,7 +13,7 @@ const stats = new Stats();
 stats.showPanel(0);
 // document.getElementById("stats")!.appendChild(stats.dom);
 
-let currScene:Scene = new MainMenuScene();
+let currScene:Scene = new LoadScene();
 export function setScene(scene:()=>Scene){
     currScene.exit();
     currScene=scene();

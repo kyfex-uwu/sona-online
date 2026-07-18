@@ -35,7 +35,7 @@ export class MainMenuScene extends Scene{
     }
 
     tick(): void {
-        let angle = ((new Date().valueOf()-startTime)*0.0005)%(Math.PI*2);
+        let angle = ((new Date().valueOf()-startTime)*0.0001)%(Math.PI*2);
         const size = 400;
         camera.position.lerp(new Vector3(Math.sin(angle)*size, 400, Math.cos(angle)*size),0.1);
         const oldRot = camera.quaternion.clone();
