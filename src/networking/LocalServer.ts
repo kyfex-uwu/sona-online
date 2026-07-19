@@ -31,9 +31,10 @@ export async function receiveFromServer(packed:{
 }) {
     //todo: this smells like vulnerability (but less!)
     const event = new (SerializableClasses[packed.type] || InvalidEvent)(
-        //@ts-ignore
-        packed.data, null, null, packed.id) as Event<any>;
-    if(event instanceof AcceptEvent) log(`%c accepted event ${event}`, "color:green");
+        //@ts-expect-error
+        packed.data,
+        undefined, packed.id) as Event<any>;
+    if(event instanceof AcceptEvent) log(`%c accepted event ${event.id}`, "color:green");
     if(event instanceof RejectEvent) log(`%c rejected event ${event.id}`, "color:red");
     if(event instanceof PerchanceEvent) log(`%c perchanced event ${event.id}`, "color:yellow");
 
