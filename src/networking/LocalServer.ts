@@ -34,9 +34,9 @@ export async function receiveFromServer(packed:{
         //@ts-expect-error
         packed.data,
         undefined, packed.id) as Event<any>;
-    if(event instanceof AcceptEvent) log(`%c accepted event ${event.id}`, "color:green");
-    if(event instanceof RejectEvent) log(`%c rejected event ${event.id}`, "color:red");
-    if(event instanceof PerchanceEvent) log(`%c perchanced event ${event.id}`, "color:yellow");
+    if(event instanceof AcceptEvent) log(`%c accepted event ${event.id}`, "color:#0f0");
+    if(event instanceof RejectEvent) log(`%c rejected event ${event.id}`, "color:#f00");
+    if(event instanceof PerchanceEvent) log(`%c perchanced event ${event.id}`, "color:#ff0");
 
     if(eventReplyIds[event.id] !== undefined){
         (eventReplyIds[event.id]?._callback||(()=>{}))(event);

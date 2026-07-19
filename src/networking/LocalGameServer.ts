@@ -109,15 +109,13 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
 
         setScene(()=>new GameScene());
 
-        // await wait(0);//TODO BRO
-
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
         if(game.getMySide() === Side.A){
-            game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1);
+            game.handB.setRotation(game.handB.rotation.slerp(new Quaternion().setFromEuler(new Euler(-1.7,Math.PI,0)),1));
             game.handB.position.add(new Vector3(0,100,60));
         }else{
-            game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(1.7,0, 0)),1);
+            game.handA.setRotation(game.handA.rotation.slerp(new Quaternion().setFromEuler(new Euler(1.7,0, 0)),1));
             game.handA.position.add(new Vector3(0,100,-60));
         }
 

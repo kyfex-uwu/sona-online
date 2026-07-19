@@ -7,8 +7,8 @@ import {sideTernary} from "../../consts.js";
 import {getLocalGame} from "../../networking/LocalGameServer.js";
 
 export default class HandFan extends VisualCardFan{
-    private defaultRotation;
-    private rotatedRotation;
+    private defaultRotation:Quaternion=undefined!;
+    private rotatedRotation:Quaternion=undefined!;
     constructor(game:VisualGame, position:Vector3, side:Side, params:{
         rotation?:Quaternion
     }={}) {
@@ -17,8 +17,12 @@ export default class HandFan extends VisualCardFan{
             ...params
         });
 
-        this.defaultRotation = this.rotation.clone();
-        this.rotatedRotation = this.defaultRotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+        this.setRotation(this.rotation);
+    }
+
+    public setRotation(rotation:Quaternion){
+        this.defaultRotation = rotation.clone();
+        this.rotatedRotation = rotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
     }
 
     /**

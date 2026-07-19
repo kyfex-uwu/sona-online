@@ -53,12 +53,7 @@ export default class VisualGame {
     public cursorPos = new Vector3();
     public readonly raycaster = new Raycaster();
 
-    public _frozen=false;
-    public get frozen(){ return this._frozen; }
-    public set frozen(v:boolean){
-        console.trace(v,"freeze")
-        this._frozen=v;
-    }
+    public frozen=false;
 
     public readonly fieldsA: [FieldMagnet, FieldMagnet, FieldMagnet] =
         [{} as FieldMagnet, {} as FieldMagnet, {} as FieldMagnet];
