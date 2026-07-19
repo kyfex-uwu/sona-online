@@ -1,6 +1,7 @@
 import p5 from "p5";
 import {clickListener, scene, textureLoader} from "./clientConsts.js";
 import {Color, Sprite, SpriteMaterial, Vector3} from "three";
+import {wait} from "../consts.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
@@ -241,7 +242,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
         dead:false,
     });
 }
-export function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
+export async function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
     let pos = startPos.clone();
     const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
     let timeout=0;
@@ -249,29 +250,26 @@ export function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Col
         const lerpDelta= 1/(1+pos.distanceTo(endPos)*0.01/timeout);
         const target = aboveEnd.clone().sub(pos).lerp(endPos.clone().sub(pos),lerpDelta);
         const thisPos = pos.clone().add(new Vector3(Math.random()*20-10,Math.random()*20-10,Math.random()*20-10));
-        setTimeout(()=>{
-            particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
-                {
-                    time:0,
-                    size:5+Math.random()*10,
-                    opacity:1,
-                    color:startColor ?? whiteColor,
-                },
-                {
-                    time:500,
-                    size:0,
-                    opacity:0.5,
-                    color:endColor ?? whiteColor,
-                },
-            ]);
-        },timeout*10);
+
+        await wait(10);
+        particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
+            {
+                time:0,
+                size:5+Math.random()*10,
+                opacity:1,
+                color:startColor ?? whiteColor,
+            },
+            {
+                time:500,
+                size:0,
+                opacity:0.5,
+                color:endColor ?? whiteColor,
+            },
+        ]);
 
         pos.add(target.normalize().multiplyScalar(5+Math.random()*5));
         timeout++;
     }
-    return new Promise(r=>{
-        setTimeout(r, timeout*10);
-    });
 }
 
 export const whiteColor = new Color(255,255,255);

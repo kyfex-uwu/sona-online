@@ -14,7 +14,7 @@ import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
 import {canSelectCardHighlight, type Decrementable, isDecrementable, StateFeatures} from "../VisualGameStateTools.js";
 
-const attackLock = newHighlightLock();
+export const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
     public readonly which:1|2|3;
@@ -134,6 +134,9 @@ export default class FieldMagnet extends CardMagnet{
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
+                                        })).onReply(successOrFail(()=>{}, ()=>{}, ()=>{
+                                            sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard()
+                                                ?.highlightStat({[Stat.RED]:false, [Stat.BLUE]:false, [Stat.YELLOW]:false}, attackLock);
                                         }));
                                         this.game.frozen=true;
                                         state.end();
@@ -160,7 +163,6 @@ export default class FieldMagnet extends CardMagnet{
     }
 
     addCard(card:VisualCard){
-        console.trace(card.logicalCard.id, "add")
         if(this.card !== undefined) return false;
         this.card = card;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = card.logicalCard;

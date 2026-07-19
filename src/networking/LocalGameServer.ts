@@ -1,4 +1,4 @@
-import {eventReplyIds, network, successOrFail} from "./Server.js";
+import {network, successOrFail} from "./Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -103,14 +103,13 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     log("%c -> "+event.constructor.name+"\n"+event.serialize(),
         `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
 
-    if(eventReplyIds[event.id] !== undefined){
-        (eventReplyIds[event.id]?._callback||(()=>{}))(event);
-        return;
-    }
-
     if(event instanceof GameStartEvent){
         game = new VisualGame(scene);
         network.clientGame = game.getGame();
+
+        setScene(()=>new GameScene());
+
+        // await wait(0);//TODO BRO
 
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
@@ -136,8 +135,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             theirDeck.addCard(visualCard);
         }
 
-        setScene(()=>new GameScene());
-
         await wait(500);
     }else if (event instanceof ClarifyCardEvent) {
         clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
@@ -161,7 +158,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         if(game.state instanceof VChoosingStartState){
             const finish = ()=>{
                 game.cursorActive=true;
-                game.frozen=false;
                 game.setState(new VTurnState(event.data.starter, game, false),
                     new TurnState(game.getGame(), event.data.starter));
                 (game.state as VTurnState).canInit=true;//top 10 worst things
@@ -193,7 +189,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             }
         }
     }else if(event instanceof PlaceAction){
-        console.log(event)
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);

@@ -21,7 +21,7 @@ export function getAttacker(stat:Stat){
 export type CardMiscDataString<T> = {};
 export const CardMiscDataStrings = {
     TRASH_PANDA_IMMUNITY: "og-011_immunity" as CardMiscDataString<"wait"|"immune"|"not immune">,
-    LITTLEBOSS_IMMUNE: "og-015_immunity" as CardMiscDataString<boolean>,
+    LITTLEBOSS_IMMUNE: "og-015_immunity" as CardMiscDataString<boolean|undefined>,
     K9_TEMP_STAT_UPGRADE: "og-001_statupgrade" as CardMiscDataString<{ stat: Stat, newVal: number }>,
     CLOUD_CAT_ALREADY_PICKED: "og-043_alreadypicked" as CardMiscDataString<boolean>,
     COWGIRL_COYOTE_TARGET: "og-035_target" as CardMiscDataString<Card>,
@@ -29,7 +29,7 @@ export const CardMiscDataStrings = {
     FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as CardMiscDataString<Set<number>>,
     NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<ScareAction>,
 
-    PAUSED_SCARE:"pausedScare" as CardMiscDataString<() => void>,
+    PAUSED_SCARE:"pausedScare" as CardMiscDataString<(succeeded?:boolean) => void>,
     ALREADY_ACTIONED:"alreadyAttacked" as CardMiscDataString<boolean>,
     TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };

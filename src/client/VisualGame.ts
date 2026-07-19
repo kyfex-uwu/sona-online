@@ -20,6 +20,7 @@ import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
 import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
+import type VisualCardClone from "./VisualCardClone.js";
 
 const pointer = new Vector2();
 
@@ -52,7 +53,12 @@ export default class VisualGame {
     public cursorPos = new Vector3();
     public readonly raycaster = new Raycaster();
 
-    public frozen=false;
+    public _frozen=false;
+    public get frozen(){ return this._frozen; }
+    public set frozen(v:boolean){
+        console.trace(v,"freeze")
+        this._frozen=v;
+    }
 
     public readonly fieldsA: [FieldMagnet, FieldMagnet, FieldMagnet] =
         [{} as FieldMagnet, {} as FieldMagnet, {} as FieldMagnet];
@@ -258,10 +264,9 @@ export default class VisualGame {
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
             ...this.elements.filter(element => //VisualCard.getExactVisualCard(element) &&
-                !specialCards.has((element as VisualCard).logicalCard?.cardData.name ?? "")
-                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true)
-            )
-                .map(card => (card as VisualCard).model)
+                !specialCards.has((element as VisualCard | VisualCardClone).logicalCard?.cardData.name ?? "")
+                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true))
+            .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
         if(cardsIntersects[0] !== undefined){
             const visualCardMaybe = cardsIntersects[0].object.parent?.parent?.parent?.userData.card as VisualCard|undefined;

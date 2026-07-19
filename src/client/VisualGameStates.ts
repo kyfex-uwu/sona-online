@@ -3,7 +3,7 @@ import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox
 import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
-import VisualCard from "./VisualCard.js";
+import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
@@ -19,6 +19,7 @@ import {
     isDecrementable,
     StateFeatures
 } from "./VisualGameStateTools.js";
+import {attackLock} from "./magnets/FieldMagnet.js";
 
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
@@ -49,6 +50,7 @@ export abstract class VisualGameState<T extends GameState>{
     }
 }
 
+const beforeGameHighlight = newHighlightLock();
 //During this, the player chooses a lv1 card to place. After it's placed, change to {@link VChoosingStartState}
 export class VBeforeGameState extends VisualGameState<BeforeGameState>{
     private drawCallback: () => void = ()=>{};
@@ -63,6 +65,9 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
     }
 
     visualTick() {
+        for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards)
+            if(card.logicalCard.cardData.level === 1) card.highlight(true, beforeGameHighlight);
+
         if(sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(v=>v.getCard()!==undefined)){
             this.game.setState(new VChoosingStartState(this.game), this.game.getGame().state);
         }
@@ -71,6 +76,9 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
     swapAway() {
         super.swapAway();
         this.drawCallback();
+
+        for(const field of sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB))
+            field.getCard()?.highlight(false, beforeGameHighlight);
     }
 
     canSelectHandCard(card: VisualCard): boolean {
@@ -193,7 +201,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                     }
                 }
             }
-            if(handSize >= 5){
+            if(handSize >= 5 || this.getActionsLeft()===0){
                 this.features.delete(StateFeatures.DECK_DRAWABLE);
             }else{
                 this.features.add(StateFeatures.DECK_DRAWABLE);
@@ -264,6 +272,11 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
 
     swapAway() {
         super.swapAway();
+
+        for(const field of sideTernary(this.parentState.currTurn, this.game.fieldsA, this.game.fieldsB)){
+            field.getCard()?.highlightStat([false,false,false], attackLock);
+        }
+
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
     }
 
@@ -464,6 +477,59 @@ export class VGuiState extends VisualGameState<TurnState>{
 
         return this;
     }
+    private readonly fans: { cards:VisualCardClone[], pos:Vector2, width:number, inited:boolean }[]=[];
+    addCardsFan(cards:VisualCard[], position:Vector2, width:number, onPick:(card:VisualCardClone)=>void){
+        const newModels:VisualCardClone[] = [];
+        this.cardsListeners.push(clickListener(() => {
+            const intersects = this.game.raycaster.intersectObjects(newModels
+                .map(card=>card.model));
+            if (intersects[0] !== undefined) {
+                onPick(newModels.find(card=>card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
+                    .userData.card.logicalCard.id)!);
+                return true;
+            }
+
+            return false;
+        }));
+
+        for (let i = 0; i < cards.length; i++) {
+            console.trace("b",i,cards[i]!)
+            const newCard = new VisualCardClone(cards[i]!);
+            this.game.addElement(newCard);
+            newCard.populate(newCard.logicalCard);
+            newCard.createModel().then(()=>{
+                camera.add(newCard.model);
+            });
+
+            newCard.flipFaceup();
+
+            this.cards.push(newCard);
+            newModels.push(newCard);
+        }
+
+        this.fans.push({
+            cards:newModels,
+            pos:position,
+            width,
+            inited:false,
+        });
+
+        return this;
+    }
+    visualTick() {
+        super.visualTick();
+
+        for(const fan of this.fans){
+            const delta = fan.inited?0.01:1;
+
+            for(let i=0;i<fan.cards.length;i++){
+                fan.cards[i]!.scale.set(1,1,1).multiplyScalar(0.05);
+                fan.cards[i]!.position.lerp(new Vector3(0,0,-20), delta);
+                fan.cards[i]!.rotation.slerp(new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0)), delta);
+            }
+        }
+    }
+
     init() {
         super.init();
         this.initFunc(this);
@@ -492,23 +558,24 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.button(p5, scale, ()=>this.end("finished"), "Finish", disabled);
     }
     twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled:boolean},
-               button2:{onClick:()=>void, text:string, disabled:boolean}){
+               button2:{onClick:()=>void, text:string, disabled:boolean}, center?:boolean){
         const height = scale * 0.4;
         let splitMaybeWidth = scale * 0.8;
         let splitMaybeX = p5.width/2-scale*0.9;
 
-        button(p5, p5.width/2+scale*0.1, p5.height - height - scale * 0.1, splitMaybeWidth, height, button1.text,
+        const y = (center ?? false) ? p5.height/2 - height/2 : p5.height - height - scale * 0.1;
+        button(p5, p5.width/2+scale*0.1, y, splitMaybeWidth, height, button1.text,
             button1.onClick, scale, vGuiButton1, button1.disabled);
-        button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, button2.text,
+        button(p5, splitMaybeX, y, splitMaybeWidth, height, button2.text,
             button2.onClick, scale, vGuiButton2, button2.disabled);
     }
-    buttonAndCancel(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean){
+    buttonAndCancel(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean, center?:boolean){
         this.twoButtons(p5, scale, {onClick, text, disabled},
             {onClick:()=>this.end("canceled"), text:"Cancel", disabled:cancelDisabled})
     }
-    buttonAndFinish(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean){
+    buttonAndFinish(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean, center:boolean){
         this.twoButtons(p5, scale, {onClick, text, disabled},
-            {onClick:()=>this.end("finished"), text:"Finish", disabled:cancelDisabled})
+            {onClick:()=>this.end("finished"), text:"Finish", disabled:cancelDisabled}, center)
     }
     finishAndCancel(p5:any, scale:number, finishDisabled:boolean, cancelDisabled:boolean){
         this.twoButtons(p5, scale,

@@ -101,7 +101,8 @@ export class FindGameEvent extends Event<{
     deck:Array<string>,
 }>{}
 addToSerializableClasses(FindGameEvent);
-export class InternalStartGameEvent extends Event<{}>{
+//only for use internally
+export class InternalStartGameEvent extends GameEvent<{}>{
     public readonly game:Game;
     public readonly p1:Client;
     public readonly p2:Client;

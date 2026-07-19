@@ -1,6 +1,15 @@
-import {Event, GameEvent, InvalidEvent, SerializableClasses, type SerializableType} from "./Events.js";
+import {
+    AcceptEvent,
+    Event,
+    GameEvent,
+    InvalidEvent, PerchanceEvent,
+    RejectEvent,
+    SerializableClasses,
+    type SerializableType
+} from "./Events.js";
 import {gameReceiveFromServer} from "./LocalGameServer.js";
 import {log, websocket, websocketReady} from "../client/clientConsts.js";
+import {eventReplyIds} from "./Server.js";
 
 const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
 export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
@@ -24,8 +33,14 @@ export async function receiveFromServer(packed:{
     const event = new (SerializableClasses[packed.type] || InvalidEvent)(
         //@ts-ignore
         packed.data, null, null, packed.id) as Event<any>;
-    // log("%c -> "+packed.type+"\n"+event.serialize(),
-    //     `background:${(logColors[packed.type]||"#000")+"2"}; color:${logColors[packed.type]||"#fff"}`);
+    if(event instanceof AcceptEvent) log(`%c accepted event ${event}`, "color:green");
+    if(event instanceof RejectEvent) log(`%c rejected event ${event.id}`, "color:red");
+    if(event instanceof PerchanceEvent) log(`%c perchanced event ${event.id}`, "color:yellow");
+
+    if(eventReplyIds[event.id] !== undefined){
+        (eventReplyIds[event.id]?._callback||(()=>{}))(event);
+        return;
+    }
 
     for(let i=0;i<waitingFor.length;i++){
         if(waitingFor[i]!.filter(event)){
