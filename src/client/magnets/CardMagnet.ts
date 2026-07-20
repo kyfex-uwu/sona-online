@@ -1,7 +1,7 @@
 import {Side} from "../../GameElement.js";
 import {clickListener, removeClickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, Vector3} from "three";
-import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
+import {PositionedVisualGameElement, SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualGame from "../VisualGame.js";
 import VisualCard from "../VisualCard.js";
 import type {CardHoldable} from "../CardHoldable.js";
@@ -9,7 +9,7 @@ import Card from "../../Card.js";
 import cards from "../../Cards.js";
 
 //A game element that holds and attracts cards
-export default abstract class CardMagnet extends PositionedVisualGameElement implements CardHoldable{
+export default abstract class CardMagnet extends SidedPositionedVisualGameElement implements CardHoldable{
     private readonly radius:number;
     private readonly hardRadius:number;
     private readonly onClick:()=>boolean;
@@ -38,9 +38,9 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
         rotation?: Quaternion,
     }={}) {
         props = Object.assign({
-            radius:70,
-            hardRadius:40,
-            onClick:()=>false,
+            radius: 70,
+            hardRadius: 40,
+            onClick: () => false,
             rotation: new Quaternion(),
         }, props);
         super(game, side, position, props.rotation!);
@@ -48,18 +48,18 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
         this.hardRadius = props.hardRadius!;
         this.onClick = props.onClick!;
 
-        this.listener = clickListener(()=> {
-            if(this.game.frozen) return false;
+        this.listener = clickListener(() => {
+            if (game.frozen) return false;
 
-            const dist = this.game.cursorPos.distanceTo(this.position);
+            const dist = game.cursorPos.distanceTo(this.position);
             if (dist <= this.radius) {
-                for(const listener of this.listeners) listener();
+                for (const listener of this.listeners) listener();
                 return this.onClick();
             }
             return false;
         });
 
-        this.utilityCard = game.addElement(new VisualCard(game,new Card(cards["utility"]!,Side.A, game.getGame(), -1),this.position, this.rotation));
+        this.utilityCard = game.addElement(new VisualCard(game, new Card(cards["utility"]!, Side.A, game.getGame(), -1), this.position, this.rotation));
     }
 
     //If this magnet should visually snap cards towards it. Should be false if you cant place cards there
@@ -85,8 +85,8 @@ export default abstract class CardMagnet extends PositionedVisualGameElement imp
     }
     abstract removeCard(card:VisualCard):boolean;
     private listener:number=-1;
-    removeFromGame() {
-        super.removeFromGame();
+    removeFromScene() {
+        super.removeFromScene();
         removeClickListener(this.listener);
     }
 

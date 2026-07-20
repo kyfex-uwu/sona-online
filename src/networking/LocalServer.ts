@@ -11,6 +11,10 @@ import {gameReceiveFromServer} from "./LocalGameServer.js";
 import {log, websocket, websocketReady} from "../client/clientConsts.js";
 import {eventReplyIds} from "./Server.js";
 
+export function loadLocalNetwork(){
+    //this is here to load the file
+}
+
 const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
 export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
     waitingFor.push({filter,callback});

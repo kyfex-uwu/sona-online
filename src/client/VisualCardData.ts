@@ -381,7 +381,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
             VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
 
             const state = getLocalGame().state as VPickCardsState;
-            state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromGame();
+            state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromScene();
 
             const deck = sideTernary(card.getSide(), getLocalGame().deckA, getLocalGame().deckB);
             const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);

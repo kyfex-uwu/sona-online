@@ -403,7 +403,7 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
         }
         wait(1000).then(()=>{
             for(const card of this.cards){
-                card.removeFromGame();
+                card.removeFromScene();
             }
         });
     }
@@ -619,7 +619,7 @@ export class VGuiState extends VisualGameState<TurnState>{
 
     swapAway() {
         super.swapAway();
-        for(const card of this.cards) card.removeFromGame();
+        for(const card of this.cards) card.removeFromScene();
         bgPlane.removeFromParent();
     }
 }

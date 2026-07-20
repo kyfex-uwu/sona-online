@@ -3,6 +3,7 @@ import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
 import {lerp, particles} from "./client/ui.js";
 import {LoadScene} from "./client/scenes/LoadScene.js";
+import {loadLocalNetwork} from "./networking/LocalServer.js";
 
 /////
 // version 0.1.0
@@ -71,3 +72,5 @@ renderer.setAnimationLoop((time) => {
     stats.end();
     lastTime=time;
 });
+
+loadLocalNetwork();

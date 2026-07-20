@@ -1,11 +1,12 @@
-import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
+import {SidedPositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import type VisualGame from "./VisualGame.js";
 import type {Side} from "../GameElement.js";
 import {Euler, Quaternion, Vector3} from "three";
 import CardMagnet from "./magnets/CardMagnet.js";
-import {SuperficialVisualCard} from "./SuperficialVisualCard.js";
+import SuperficialVisualCard from "./SuperficialVisualCard.js";
+import type {SmartGameElement} from "./VisualGameElement.js";
 
-export class CrisisCounter extends PositionedVisualGameElement{
+export class CrisisCounter extends SidedPositionedVisualGameElement implements SmartGameElement{
     private readonly counterCard;
     private readonly coverCard;
     private lastCrisisCount=-1;
@@ -16,7 +17,11 @@ export class CrisisCounter extends PositionedVisualGameElement{
         game.addElement(this.coverCard=new SuperficialVisualCard(game, "card_shape.png", this.position.clone(),
             this.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,-Math.PI/2,0)))));
         this.coverCard.flipFacedown();
+
+        this.game=game;
     }
+    public readonly game:VisualGame;
+
     tick(){
         const crisisCount = this.game.getGame().getCrisis(this.getSide());
         if(this.lastCrisisCount === crisisCount) return;

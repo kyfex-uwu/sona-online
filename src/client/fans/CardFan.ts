@@ -1,14 +1,12 @@
 import {Side} from "../../GameElement.js";
 import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector3} from "three";
-import {PositionedVisualGameElement} from "../PositionedVisualGameElement.js";
+import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {clickListener, removeClickListener} from "../clientConsts.js";
 import type {CardHoldable} from "../CardHoldable.js";
-import type {SidedVisualGameElement} from "../VisualGameElement.js";
 
-export default class CardFan extends PositionedVisualGameElement implements CardHoldable, SidedVisualGameElement{
-
+export default class CardFan extends SidedPositionedVisualGameElement implements CardHoldable{
     public readonly cards: Array<VisualCard> = [];
 
     protected readonly group: Group = new Group();
@@ -28,25 +26,25 @@ export default class CardFan extends PositionedVisualGameElement implements Card
         rotation?: Quaternion
     }) {
         props = Object.assign({
-            rotation:new Quaternion(),
-            onSelect:()=>{},
-        },props);
+            rotation: new Quaternion(),
+            onSelect: () => {},
+        }, props);
         super(game, side, position, props.rotation!);
 
-        this.onSelect=props.onSelect!;
+        this.onSelect = props.onSelect!;
 
         this.fakeCard = new Group();
-        const mesh = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({visible:false}));
-        mesh.rotateX(-Math.PI/2);
+        const mesh = new Mesh(new PlaneGeometry(100, 100), new MeshBasicMaterial({visible: false}));
+        mesh.rotateX(-Math.PI / 2);
         this.fakeCard.add(mesh);
         this.group.add(this.fakeCard);
 
-        this.game.scene.add(this.group);
+        this.elScene.scene.add(this.group);
 
-        this.listener=clickListener(()=>{
-            const intersects = this.game.raycaster.intersectObjects(this.cards
+        this.listener = clickListener(() => {
+            const intersects = this.elScene.raycaster.intersectObjects(this.cards
                 .map(card => card.model).filter(model => model !== undefined)
-                .concat(...(this.cards.length !== 0 ? []:[this.fakeCard as Group])));
+                .concat(...(this.cards.length !== 0 ? [] : [this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
                 this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), this.game);
             }
@@ -55,8 +53,8 @@ export default class CardFan extends PositionedVisualGameElement implements Card
     }
 
     private listener:number=-1;
-    removeFromGame() {
-        super.removeFromGame();
+    removeFromScene() {
+        super.removeFromScene();
         removeClickListener(this.listener);
         this.group.removeFromParent();
     }

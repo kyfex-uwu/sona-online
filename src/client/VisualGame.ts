@@ -21,6 +21,7 @@ import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
 import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
 import type VisualCardClone from "./VisualCardClone.js";
+import ElementScene from "./ElementScene.js";
 
 const pointer = new Vector2();
 
@@ -43,15 +44,11 @@ export enum ViewType{
 const previewImages:{[k:string]:p5.Image|true} = {};
 
 //A *visual* game. This should manage everything that's part of the player's game experience. This wraps a logical {@link Game}
-export default class VisualGame {
+export default class VisualGame extends ElementScene{
     private game: Game;
     //Returns the logical game
     public getGame():Game{ return this.game; }
     public selectedCard: VisualCard | undefined;
-    public readonly elements: VisualGameElement[] = [];
-    public readonly scene: Scene;
-    public cursorPos = new Vector3();
-    public readonly raycaster = new Raycaster();
 
     public frozen=false;
 
@@ -66,14 +63,8 @@ export default class VisualGame {
     public readonly deckB: DeckMagnet;
     public readonly handB: VisualHandFan;
 
-    private previewCard:Card|undefined;
-    private drawPreviewCard=false;
-
     private readonly passButtonId;
     private readonly finishButtonId;
-
-    private targetCameraPos = new Vector3();
-    private targetCameraRot = new Quaternion();
 
     private _state:VisualGameState<GameState> = new VBeforeGameState(this);
     public get state(){ return this._state; }
@@ -97,7 +88,8 @@ export default class VisualGame {
      * @param scene The ThreeJS scene for this game
      */
     public constructor(scene: Scene) {
-        this.scene = scene;
+        super(scene);
+
         this.game = new Game([],[],Game.localID+Math.random());
 
         this.fieldsA[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, 70), Side.A, 1));

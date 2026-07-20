@@ -1,10 +1,11 @@
 import type VisualGame from "./VisualGame.js";
 import type {Side} from "../GameElement.js";
+import type ElementScene from "./ElementScene.js";
 
 //A game element that has a model and should update
 export abstract class VisualGameElement{
-    constructor(game:VisualGame) {
-        this.game=game;
+    constructor(scene:ElementScene) {
+        this.elScene=scene;
     }
     //the "physics" of a game element. i think this should be deprecated i think
     abstract tick():void;
@@ -14,13 +15,17 @@ export abstract class VisualGameElement{
      */
     abstract visualTick():void;
     //Removes this game element from the game
-    removeFromGame(){}
+    removeFromScene(){}
 
-    public readonly game:VisualGame;
+    public readonly elScene:ElementScene;
 }
 
 //A game element that belongs to a specific side
-export interface SidedVisualGameElement{
+export interface SidedVisualGameElement extends SmartGameElement{
     //Returns the side this element belongs to
     getSide():Side;
+}
+
+export interface SmartGameElement{
+    get game():VisualGame;
 }
