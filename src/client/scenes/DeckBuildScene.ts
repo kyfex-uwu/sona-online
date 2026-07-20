@@ -34,6 +34,31 @@ const deck:string[] = [
     "og-026",
     "og-012",
 ];
+const disabledCards = [
+    "og-001",
+    "og-003",
+    "og-005",
+    "og-009",
+    "og-011",
+    "og-014",
+    "og-015",
+    "og-018",
+    "og-020",
+    "og-022",
+    "og-024",
+    "og-025",
+    "og-027",
+    "og-028",
+    "og-029",
+    "og-030",
+    "og-031",
+    "og-032",
+    "og-035",
+    "og-038",
+    "og-041",
+    "og-042",
+    "og-043",
+];
 export const getDeck = ()=>deck;
 const backButtonId = buttonId();
 export class DeckBuildScene extends Scene{
@@ -63,11 +88,15 @@ export class DeckBuildScene extends Scene{
                     (Math.floor(i / 4) + 0.1) * scale * 0.8 + offset,
                     scale * 0.5, scale * 0.7,
                 ()=>{
+                    if(disabledCards.includes(card[0].name)) return;
+
                     if(deck.includes(card[0].name))
                         deck.splice(deck.indexOf(card[0].name),1);
                     else
                         deck.push(card[0].name);
                 },card[1],(isIn)=>{
+                    if(disabledCards.includes(card[0].name)) isIn=false;
+
                     if(images[card[0].name] === undefined){
                         images[card[0].name]=true;
                         p5.loadImage(`/assets/card-images/${card[0].imagePath}`, (image:p5.Image) => {
