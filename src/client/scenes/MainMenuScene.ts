@@ -27,9 +27,11 @@ export class MainMenuScene extends Scene{
                     setScene(()=>new DeckBuildScene());
                 }, scale*0.8, this.buttonIds.buildDeck);
 
-            if(assets['title'])
-                p5.image(assets["title"],p5.width/4,p5.height/2-p5.width/2*assets["title"].height/assets["title"].width-scale*0.5,
-                    p5.width/2, p5.width/2*assets["title"].height/assets["title"].width);
+            if(assets['title']) {
+                const titleHeight = scale*2*assets["title"].height/assets["title"].width;
+                p5.image(assets["title"], p5.width / 2-scale, p5.height / 2 - titleHeight - scale * 0.5,
+                    scale*2, titleHeight);
+            }
         });
         camera.position.set(0,600,220);
         camera.quaternion.setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
