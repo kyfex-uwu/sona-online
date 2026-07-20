@@ -42,6 +42,7 @@ const cardMat = new ShaderMaterial( {
     uniforms: {
         highlight: { value: new Vector3(0,0,0) },
         time:{value:0},
+        disabled:{value:0},
         cardTexture: { value: textureLoader.load("/assets/card-images/card_shape.png") },
         alphaTexture: { value: textureLoader.load("/assets/card-images/card_shape.png") },
         highlightT1: { value:textureLoader.load(`/assets/card-images/highlight1.png`) },
@@ -76,6 +77,7 @@ const cardMat = new ShaderMaterial( {
         uniform sampler2D highlightTex;
         uniform vec3 highlight;
         uniform float visible;
+        uniform float disabled;
         uniform float time;
         
         void main() { 
@@ -90,6 +92,8 @@ const cardMat = new ShaderMaterial( {
             color = color + shineColor1 * shineColor1.a * highlight.x;
             color = color + shineColor2 * shineColor2.a * highlight.y;
             color = color + shineColor3 * shineColor3.a * highlight.z;
+            
+            color = vec4(1,1,1,1) * disabled * 0.3 + color * (1. - disabled * 0.7);
             
             gl_FragColor = vec4(color.r+time, color.g, color.b, texture(alphaTexture, vUv.xy).r * visible);
         }`,
@@ -260,6 +264,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         targetPos.sub(this.realPosition);
         targetPos = this.realPosition.clone().add(targetPos);
         super.visualTick(targetPos, targetRot);
+        console.log(1)
 
         this.model.position.copy(this.realPosition);
         this.model.quaternion.copy(this.realRotation);
@@ -327,6 +332,13 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         (this.material!.uniforms.highlight!.value as Vector3).x=this.highlightStatLocks[Stat.RED].size>0?1:0;
         (this.material!.uniforms.highlight!.value as Vector3).y=this.highlightStatLocks[Stat.BLUE].size>0?1:0;
         (this.material!.uniforms.highlight!.value as Vector3).z=this.highlightStatLocks[Stat.YELLOW].size>0?1:0;
+    }
+
+    private _disabled=false;
+    public get disabled(){ return this._disabled; }
+    public set disabled(v:boolean){
+        this._disabled=v;
+        this.material!.uniforms.disabled!.value = v ? 1 : 0;
     }
 }
 updateOrder[SuperficialVisualCard.name] = 0;

@@ -219,20 +219,6 @@ export default class VisualGame extends ElementScene{
     private readonly releaseDrawCallback;
     private readonly releaseDebugDraw;
 
-    /**
-     * Adds the element to this game
-     * @param element The element to add
-     */
-    public addElement<T extends VisualGameElement>(element: T): T {
-        this.elements.push(element);
-
-        this.elements.sort((e1, e2) => {
-            return (updateOrder[e2.constructor.name] || 999999) - (updateOrder[e1.constructor.name] || 999999);
-        });
-
-        return element;
-    }
-
     public cursorActive = true;
 
     //Handles the 3d cursor and ticks all game elements
@@ -283,13 +269,16 @@ export default class VisualGame extends ElementScene{
         for (const element of this.elements) element.tick();
     }
 
+    private targetCameraPos = new Vector3();
+    private targetCameraRot = new Quaternion();
+
     //Visually ticks all the game elements and the camera
     public visualTick() {
-        for (const element of this.elements) element.visualTick();
-        this.state.visualTick();
+        super.visualTick();
 
         camera.position.lerp(this.targetCameraPos, 0.1);
         camera.quaternion.slerp(this.targetCameraRot, 0.1);
+        this.state.visualTick();
     }
 
     /**

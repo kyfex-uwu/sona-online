@@ -64,6 +64,8 @@ new p5(p => {
         p.loadImage(`/assets/stat_yellow_s.png`, (image:p5.Image) => assets.statYellowS = image);
 
         p.loadImage(`/assets/info.png`, (image:p5.Image) => assets.info = image);
+
+        p.loadImage(`/assets/title.png`, (image:p5.Image) => assets["title"] = image);
     };
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
@@ -75,7 +77,7 @@ new p5(p => {
         mouseData.down=p.mouseIsPressed;
 
         buttons.length=0;
-        const scale = Math.min(p.windowWidth/4,p.windowHeight/3);
+        const scale = uiScale();
         for(const callbackList of Object.entries(drawCallbacks)
             .toSorted((e1, e2)=>parseFloat(e1[0])-parseFloat(e2[0]))){
             for(const callback of callbackList[1]) callback(p, scale);
@@ -83,6 +85,9 @@ new p5(p => {
     };
     p5Inst=p;
 }, document.getElementById("uiLayer")!);
+export function uiScale(){
+    return Math.min(window.innerWidth/4,window.innerHeight/3);
+}
 clickListener(()=>{
     for(const b of buttons){
         if(buttonData[b.id] && p5Inst!.mouseX>=b.x&&p5Inst!.mouseX<=b.x+b.w&&p5Inst!.mouseY>=b.y&&p5Inst!.mouseY<=b.y+b.h){

@@ -44,6 +44,8 @@ export class LoadScene extends Scene{
             boardPromise.resolve();
         });
 
+
+
         Promise.all([backgroundPromise,boardPromise]).then(()=>{
             setScene(()=>new MainMenuScene());
         });
