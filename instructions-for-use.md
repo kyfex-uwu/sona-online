@@ -13,15 +13,8 @@ to the SONA client. If you port forward port 4000 (there's a bunch of tutorials 
 then anyone with the IP link (the one that's just numbers) can connect to the SONA client.
 
 ## Before you play
-Currently, I highly recommend playing the game with the web console open. To open the console, press 
-Ctrl+Shift+I. After you open the console, reload the page. This window will show any relevant 
-instructions on how to use some cards. 
-
-There also isn't a way to choose what deck you want; I'm going to throw together a quick and dirty
-solution to fix that (if i havent already)
-
-There are also a couple things you can type for some additional output. Each of these need to be typed
-or copied in, then you need to press Enter.
+There are a couple things you can type for some additional output. Each of these need to be typed
+or copied in to the web console (press F12 to open it), then you need to press Enter.
 - `logGame()` - outputs the game as the CLIENT sees it. This can be very confusing; chances are you
 won't need to use this often (unless i ask you to show me something in this command)
 - `serverDump()` - outputs the game as the SERVER sees it. This will be a little more useful: under
@@ -69,17 +62,6 @@ of your hand, and below your crisis marker) and click the runaway pile.
 ### Winning the game
 Currently, when someone wins the game, the game just locks up. There is no visual indicator :c
 
-## Last thoughts
-If there's anything unclear or strange, I welcome any dms :3
-
-### UI
-
-The UI is currently VERY unpolished; currently it's just enough to be workable. The next big project
-I want to work on is overhauling the UI and the visuals, and I want to go through that process with
-a lot more input from you two than I had during this stage. There is currently a bug I haven't addressed
-and I won't: sometimes when leaving a card selection screen, some cards get stuck in the middle of the
-board. I know exactly why this happens, and it won't happen once the UI overhaul is done.
-
 ### Flags
 
 You can access and toggle any feature flags by appending `/flags` to the client link.
@@ -89,5 +71,4 @@ You can access and toggle any feature flags by appending `/flags` to the client 
 Additionally, I would love any and all pointers on visual directions you want to go in; I would much
 rather consider an outlandish request than not hear it. 
 
-I would also love any ideas on features that aren't the game, namely: what deckbuilding should look
-like, what matchmaking should look like, any other features like that
+I would also love any ideas on features that aren't the game, namely: what matchmaking should look like, any other features 

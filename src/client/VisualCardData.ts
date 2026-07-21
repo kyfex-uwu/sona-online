@@ -107,7 +107,7 @@ visualCardClientActions["og-001"] = (card)=>{
                         endSignal(true);
                     }));
                 }, "Attack", attacking===undefined || attackStat === undefined, false);
-                self.infoText(p5, scale, "Select any number of your Canine cards to attack with, select a stat to attack with," +
+                self.infoText(p5, scale, "Select any number of your Canine cards to attack with, select a stat to attack with, " +
                     "and select which of the opponent's cards to attack. ");
             })
         },

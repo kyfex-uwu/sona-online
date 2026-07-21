@@ -427,6 +427,8 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                     sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
                 sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
+                scared.callAction(CardTriggerType.AFTER_SCARED,
+                    {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
                 for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
                     if (card === undefined) continue;
 

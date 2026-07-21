@@ -44,9 +44,10 @@ export function parseEvent(event:Event<any>):processedEvent{
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1))
             return rejectEvent(event, "no level one card in deck");
-
         if(event.data.deck.some(card => cards[card] === undefined))
             return rejectEvent(event, "invalid card found");
+        if(event.data.deck.length!==20)
+            return rejectEvent(event, "deck must be 20 cards");
 
         const cardDuplChecker:{[key:string]:true} = {};
         for(const card of event.data.deck) {
@@ -64,8 +65,12 @@ export function parseEvent(event:Event<any>):processedEvent{
             waiter.then((other) => {
                 let id=0;
 
+                // let firstA = event.data.deck[0];
+                // let firstB = other.data.deck[0];
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
+                // deckA.push(...deckA.splice(deckA.findIndex(v=>v.type === firstA),1));
+                // deckB.push(...deckB.splice(deckB.findIndex(v=>v.type === firstB),1));
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;

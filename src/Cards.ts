@@ -90,13 +90,7 @@ setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA)//todo
         return InterruptScareResult.PASSTHROUGH;
     }));
 setCard(new CardData("og-021", [2,1,8], 1, Species.FELINE));
-setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN)//DONE
-    .with(CardTriggerType.AFTER_SCARED, ({self, scarer, scared, stat, game})=>{
-        if(scared !== self) return;
-
-        const toAdd = sideTernary(self.side, game.deckA, game.deckB).pop();
-        if(toAdd !== undefined) sideTernary(self.side, game.handA, game.handB).push(toAdd);
-    }));
+setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN));//DONE
 setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID));
 setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE));//DONE
 setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE));//DONE

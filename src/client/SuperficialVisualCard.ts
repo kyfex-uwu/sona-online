@@ -150,7 +150,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
     constructor(game:ElementScene, card: Card|string, position: Vector3, rotation: Quaternion = new Quaternion()) {
         super(game, position, rotation);
 
-        if(!(card instanceof Card)){
+        if(typeof card === "string"){
             card=new Card(new CardData("",[0,0,0],1,Species.UNKNOWN,card),Side.A, null!, -1);
         }
 
@@ -255,7 +255,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
 
     protected ifSelected(targetPos:Vector3){}
     visualTick() {
-        if(this._logicalCard && this._logicalCard.getGame())//todo: remove
+        if(this._logicalCard && this._logicalCard.getGame && this._logicalCard.getGame())//todo: remove like asap
             this._logicalCard.callAction(CardTriggerType.VISUAL_TICK, {self:this._logicalCard});
 
         let targetPos = this.position.clone();
@@ -264,7 +264,6 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         targetPos.sub(this.realPosition);
         targetPos = this.realPosition.clone().add(targetPos);
         super.visualTick(targetPos, targetRot);
-        console.log(1)
 
         this.model.position.copy(this.realPosition);
         this.model.quaternion.copy(this.realRotation);

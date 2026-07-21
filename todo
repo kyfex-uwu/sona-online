@@ -1,14 +1,27 @@
-x
 
-x
-
-x
 
 
 
 x
 
+
+
 x
+
+
+
+
+
+x
+
+
+
+
+x
+
+
+
+
 
 
 x
@@ -16,20 +29,10 @@ x
 
 
 x
-
 x
 
-x
 
-x
-x
 
-x
-x
-x
-x
-x
-x
 
 
 x
@@ -37,9 +40,6 @@ x
 
 x
 
-
-x
-x
 x
 
 ---
@@ -52,3 +52,4 @@ shuffle everywhere!
 add card texture atlas
 starting game with brownie is wrong
 verify and fix any cards that need a scare instead of a scare attempt
+improve 029, 035 gui, start with relevant stat selected
