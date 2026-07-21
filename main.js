@@ -8,7 +8,7 @@ import {backendInit, receiveFromClient} from "./dist/networking/BackendServer.js
 const __dirname=fileURLToPath(import.meta.url).slice(0,"/main.js".length*-1);
 
 if(process.argv[2] === "dev") {
-    (await import("./dev.js")).init();
+    (await import("./dev.js")).init(website);
 }
 const server = website.listen(4000);
 

@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@arrow-js/core": "^1.0.0-alpha.10",
+    "dpdm": "^4.2.0",
     "qrcode": "^1.5.4",
     "ts-patch": "^3.3.0"
   }

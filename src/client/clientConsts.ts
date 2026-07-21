@@ -1,5 +1,7 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {PerspectiveCamera, TextureLoader} from "three";
+import {PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
+import {network, Replyable} from "../networking/Server.js";
+import isDev from "../dev.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -9,10 +11,61 @@ export const textureLoader = new TextureLoader();
 let aspect = window.innerWidth / window.innerHeight;
 export const camera = new PerspectiveCamera(50, aspect, 1, 10000);
 
-let clickedListeners:Array<()=>boolean>=[];
-window.addEventListener("mouseup", ()=>{
-    for(const listener of clickedListeners) if(listener()) break;
+export const scene = new Scene();
+
+// Init renderer
+export const renderer = new WebGLRenderer({
+    powerPreference: "high-performance",
+    antialias: true,
+    premultipliedAlpha: false,
+    alpha: true,
 });
+//Resizes the canvas to the window bounds
+function windowResize(){
+    camera.aspect = window.innerWidth / window.innerHeight;
+
+    //taken from https://discourse.threejs.org/t/keeping-an-object-scaled-based-on-the-bounds-of-the-canvas-really-battling-to-explain-this-one/17574/10
+    //i was ripping my HAIR out
+    const fov = 50;
+    const planeAspectRatio = 4/3;
+    if (camera.aspect > planeAspectRatio) {
+        camera.fov = fov;
+    } else {
+        const cameraHeight = Math.tan((fov / 2)/360*2*Math.PI);
+        const ratio = camera.aspect / planeAspectRatio;
+        const newCameraHeight = cameraHeight / ratio;
+        camera.fov = (Math.atan(newCameraHeight))/2/Math.PI*360  * 2;
+    }
+
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+renderer.setPixelRatio(window.devicePixelRatio);
+windowResize();
+document.body.appendChild(renderer.domElement);
+window.addEventListener("resize", windowResize);
+
+//--
+
+let clickedListeners:Array<()=>boolean>=[];
+let dragListeners:((v:{type:"start"|"move"|"end",x:number,y:number})=>void)[]=[];
+let wheelListeners:((dy:number,dx:number)=>void)[]=[];
+let dragging=false;
+window.addEventListener("mousedown", (e:MouseEvent)=>{
+    for(const listener of dragListeners) listener({type:"start",x:e.x,y:e.y});
+    dragging=true;
+});
+window.addEventListener("mouseup", (e:MouseEvent)=>{
+    for(const listener of clickedListeners) if(listener()) break;
+    for(const listener of dragListeners) listener({type:"end",x:e.x,y:e.y});
+    dragging=false;
+});
+window.addEventListener("mousemove", (e:MouseEvent)=>{
+    if(dragging) for(const listener of dragListeners) listener({type:"move",x:e.x,y:e.y});
+});
+window.addEventListener("wheel", (e:WheelEvent)=>{
+    for(const listener of wheelListeners) listener(e.deltaY,e.deltaX);
+})
 
 //@param listener The function that will run every time the mouse is clicked
 //@return The id of this listener
@@ -24,4 +77,37 @@ export function removeClickListener(index:number){
     clickedListeners.splice(index,1);
 }
 
+export function dragListener(listener:(v:{type:"start"|"move"|"end",x:number,y:number})=>void){
+    return dragListeners.push(listener)-1;
+}
+export function removeDragListener(index:number){
+    dragListeners.splice(index,1);
+}
+
+export function wheelListener(listener:(dy:number,dx:number)=>boolean){
+    return wheelListeners.push(listener)-1;
+}
+export function removeWheelListener(index:number){
+    wheelListeners.splice(index,1);
+}
+
 export const updateOrder: {[k:string]:number}={};
+export const websocket = new WebSocket("ws://" + window.location.host);
+export const websocketReady = new Promise(r => websocket.addEventListener("open", r));
+
+network.sendToServer = (event) => {
+    websocketReady.then(()=>{
+        websocket.send(event.serialize());
+        if(true) log("sent "+event.serialize())
+    });
+    return new Replyable(event);
+}
+
+//@ts-ignore
+window.showNetworkLogs=isDev;
+export function log(...data: any){
+    //@ts-ignore
+    if(window.showNetworkLogs)
+        if(typeof data === "string") console.log(data);
+        else console.log(...data);
+}

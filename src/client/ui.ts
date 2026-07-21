@@ -1,12 +1,14 @@
 import p5 from "p5";
-import {clickListener, textureLoader} from "./clientConsts.js";
+import {clickListener, scene, textureLoader} from "./clientConsts.js";
 import {Color, Sprite, SpriteMaterial, Vector3} from "three";
-import {game} from "../index.js";
+import {wait} from "../consts.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
 /**
  * Registers a drawing callback to be called at the specified z index
+ *
+ * scale = min(width/4, height/3);
  * @param layer The specific z index to call this callback at. Lower layers get draws under (called before) higher layers
  * @param callback The function to call
  */
@@ -62,6 +64,8 @@ new p5(p => {
         p.loadImage(`/assets/stat_yellow_s.png`, (image:p5.Image) => assets.statYellowS = image);
 
         p.loadImage(`/assets/info.png`, (image:p5.Image) => assets.info = image);
+
+        p.loadImage(`/assets/title.png`, (image:p5.Image) => assets["title"] = image);
     };
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
@@ -73,7 +77,7 @@ new p5(p => {
         mouseData.down=p.mouseIsPressed;
 
         buttons.length=0;
-        const scale = Math.min(p.windowWidth/4,p.windowHeight/3);
+        const scale = uiScale();
         for(const callbackList of Object.entries(drawCallbacks)
             .toSorted((e1, e2)=>parseFloat(e1[0])-parseFloat(e2[0]))){
             for(const callback of callbackList[1]) callback(p, scale);
@@ -81,6 +85,9 @@ new p5(p => {
     };
     p5Inst=p;
 }, document.getElementById("uiLayer")!);
+export function uiScale(){
+    return Math.min(window.innerWidth/4,window.innerHeight/3);
+}
 clickListener(()=>{
     for(const b of buttons){
         if(buttonData[b.id] && p5Inst!.mouseX>=b.x&&p5Inst!.mouseX<=b.x+b.w&&p5Inst!.mouseY>=b.y&&p5Inst!.mouseY<=b.y+b.h){
@@ -226,7 +233,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
 }[]){
     const sprite = new Sprite(spriteMaterial.clone());
     sprite.position.copy(pos);
-    game.scene.add(sprite);
+    scene.add(sprite);
     particles.push({
         sprite,
         data:data.map((state,i)=>{return{
@@ -240,7 +247,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
         dead:false,
     });
 }
-export function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
+export async function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
     let pos = startPos.clone();
     const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
     let timeout=0;
@@ -248,29 +255,26 @@ export function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Col
         const lerpDelta= 1/(1+pos.distanceTo(endPos)*0.01/timeout);
         const target = aboveEnd.clone().sub(pos).lerp(endPos.clone().sub(pos),lerpDelta);
         const thisPos = pos.clone().add(new Vector3(Math.random()*20-10,Math.random()*20-10,Math.random()*20-10));
-        setTimeout(()=>{
-            particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
-                {
-                    time:0,
-                    size:5+Math.random()*10,
-                    opacity:1,
-                    color:startColor ?? whiteColor,
-                },
-                {
-                    time:500,
-                    size:0,
-                    opacity:0.5,
-                    color:endColor ?? whiteColor,
-                },
-            ]);
-        },timeout*10);
+
+        await wait(10);
+        particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
+            {
+                time:0,
+                size:5+Math.random()*10,
+                opacity:1,
+                color:startColor ?? whiteColor,
+            },
+            {
+                time:500,
+                size:0,
+                opacity:0.5,
+                color:endColor ?? whiteColor,
+            },
+        ]);
 
         pos.add(target.normalize().multiplyScalar(5+Math.random()*5));
         timeout++;
     }
-    return new Promise(r=>{
-        setTimeout(r, timeout*10);
-    });
 }
 
 export const whiteColor = new Color(255,255,255);

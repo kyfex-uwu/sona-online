@@ -1,0 +1,52 @@
+import {Scene, startTime} from "./Scene.js";
+import {camera} from "../clientConsts.js";
+import {Euler, Vector3} from "three";
+import {assets, button, buttonId, registerDrawCallback} from "../ui.js";
+import {setScene} from "../../index.js";
+import {DeckBuildScene} from "./DeckBuildScene.js";
+import {FindGameScene} from "./FindGameScene.js";
+
+export class MainMenuScene extends Scene{
+    private readonly buttonIds = {
+        start:buttonId(),
+        buildDeck:buttonId()
+    }
+    private readonly releaseDrawCallback;
+    constructor() {
+        super();
+
+        this.releaseDrawCallback=registerDrawCallback(0, (p5, scale)=>{
+            button(p5,
+                p5.width/2-scale/2, p5.height/2-scale*0.15, scale, scale*0.3,
+                "Find Game", ()=>{
+                    setScene(()=>new FindGameScene());
+                }, scale*0.8, this.buttonIds.start);
+            button(p5,
+                p5.width/2-scale/2, p5.height/2+scale*0.2, scale, scale*0.3,
+                "Build Deck", ()=>{
+                    setScene(()=>new DeckBuildScene());
+                }, scale*0.8, this.buttonIds.buildDeck);
+
+            if(assets['title']) {
+                const titleHeight = scale*2*assets["title"].height/assets["title"].width;
+                p5.image(assets["title"], p5.width / 2-scale, p5.height / 2 - titleHeight - scale * 0.5,
+                    scale*2, titleHeight);
+            }
+        });
+        camera.position.set(0,600,220);
+        camera.quaternion.setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
+    }
+    exit(): void {
+        this.releaseDrawCallback();
+    }
+
+    tick(): void {
+        let angle = ((new Date().valueOf()-startTime)*0.0001)%(Math.PI*2);
+        const size = 400;
+        camera.position.lerp(new Vector3(Math.sin(angle)*size, 400, Math.cos(angle)*size),0.1);
+        const oldRot = camera.quaternion.clone();
+        camera.lookAt(new Vector3(0,100,0));
+        camera.quaternion.slerp(oldRot, 0.9);
+    }
+
+}

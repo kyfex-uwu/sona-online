@@ -5,10 +5,11 @@ import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
-import {StateFeatures, VTurnState} from "../VisualGameStates.js";
+import {VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
 import type {CardWithRot} from "./RunawayMagnet.js";
+import {StateFeatures} from "../VisualGameStateTools.js";
 
 export default class DeckMagnet extends CardMagnet{
     private cards:Array<CardWithRot> = [];

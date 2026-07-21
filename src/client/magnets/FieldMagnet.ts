@@ -5,22 +5,16 @@ import {other, Side} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
-import {
-    canSelectCardHighlight,
-    type Decrementable,
-    isDecrementable,
-    StateFeatures,
-    VAttackingState,
-    VTurnState
-} from "../VisualGameStates.js";
+import {VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim, Stat} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
 import {sideTernary} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
+import {canSelectCardHighlight, type Decrementable, isDecrementable, StateFeatures} from "../VisualGameStateTools.js";
 
-const attackLock = newHighlightLock();
+export const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
     private card:VisualCard|undefined;
     public readonly which:1|2|3;
@@ -140,6 +134,9 @@ export default class FieldMagnet extends CardMagnet{
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
+                                        })).onReply(successOrFail(()=>{}, ()=>{}, ()=>{
+                                            sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard()
+                                                ?.highlightStat({[Stat.RED]:false, [Stat.BLUE]:false, [Stat.YELLOW]:false}, attackLock);
                                         }));
                                         this.game.frozen=true;
                                         state.end();
@@ -166,7 +163,6 @@ export default class FieldMagnet extends CardMagnet{
     }
 
     addCard(card:VisualCard){
-        console.trace(card.logicalCard.id, "add")
         if(this.card !== undefined) return false;
         this.card = card;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = card.logicalCard;
@@ -179,7 +175,6 @@ export default class FieldMagnet extends CardMagnet{
         return true;
     }
     removeCard(){
-        console.trace(this.card?.logicalCard.id, "remove")
         if(this.card === undefined) return false;
         sideTernary(this.getSide(), this.game.getGame().fieldsA, this.game.getGame().fieldsB)[this.which-1] = undefined;
         this.card = undefined;

@@ -4,10 +4,10 @@ import {updateOrder} from "../clientConsts.js";
 import type {Side} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {StateFeatures} from "../VisualGameStates.js";
 import {sideTernary} from "../../consts.js";
 import {DiscardEvent} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
+import {StateFeatures} from "../VisualGameStateTools.js";
 
 export type CardWithRot = {card:VisualCard,rot:number}
 export default class RunawayMagnet extends CardMagnet{

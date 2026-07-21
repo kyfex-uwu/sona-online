@@ -13,20 +13,15 @@ import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import Card from "../Card.js";
 import p5 from "p5";
-import {
-    type Cancellable,
-    EndType,
-    isCancellable,
-    VBeforeGameState,
-    type VisualGameState,
-    VPickCardsState,
-    VTurnState
-} from "./VisualGameStates.js";
+import {VBeforeGameState, type VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
+import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
+import type VisualCardClone from "./VisualCardClone.js";
+import ElementScene from "./ElementScene.js";
 
 const pointer = new Vector2();
 
@@ -49,15 +44,11 @@ export enum ViewType{
 const previewImages:{[k:string]:p5.Image|true} = {};
 
 //A *visual* game. This should manage everything that's part of the player's game experience. This wraps a logical {@link Game}
-export default class VisualGame {
+export default class VisualGame extends ElementScene{
     private game: Game;
     //Returns the logical game
     public getGame():Game{ return this.game; }
     public selectedCard: VisualCard | undefined;
-    public readonly elements: VisualGameElement[] = [];
-    public readonly scene: Scene;
-    public cursorPos = new Vector3();
-    public readonly raycaster = new Raycaster();
 
     public frozen=false;
 
@@ -72,14 +63,8 @@ export default class VisualGame {
     public readonly deckB: DeckMagnet;
     public readonly handB: VisualHandFan;
 
-    private previewCard:Card|undefined;
-    private drawPreviewCard=false;
-
     private readonly passButtonId;
     private readonly finishButtonId;
-
-    private targetCameraPos = new Vector3();
-    private targetCameraRot = new Quaternion();
 
     private _state:VisualGameState<GameState> = new VBeforeGameState(this);
     public get state(){ return this._state; }
@@ -103,7 +88,8 @@ export default class VisualGame {
      * @param scene The ThreeJS scene for this game
      */
     public constructor(scene: Scene) {
-        this.scene = scene;
+        super(scene);
+
         this.game = new Game([],[],Game.localID+Math.random());
 
         this.fieldsA[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, 70), Side.A, 1));
@@ -233,20 +219,6 @@ export default class VisualGame {
     private readonly releaseDrawCallback;
     private readonly releaseDebugDraw;
 
-    /**
-     * Adds the element to this game
-     * @param element The element to add
-     */
-    public addElement<T extends VisualGameElement>(element: T): T {
-        this.elements.push(element);
-
-        this.elements.sort((e1, e2) => {
-            return (updateOrder[e2.constructor.name] || 999999) - (updateOrder[e1.constructor.name] || 999999);
-        });
-
-        return element;
-    }
-
     public cursorActive = true;
 
     //Handles the 3d cursor and ticks all game elements
@@ -265,10 +237,9 @@ export default class VisualGame {
         let shouldRemovePreview=true;
         const cardsIntersects = this.raycaster.intersectObjects([
             ...this.elements.filter(element => //VisualCard.getExactVisualCard(element) &&
-                !specialCards.has((element as VisualCard).logicalCard?.cardData.name ?? "")
-                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true)
-            )
-                .map(card => (card as VisualCard).model)
+                !specialCards.has((element as VisualCard | VisualCardClone).logicalCard?.cardData.name ?? "")
+                && ((element as VisualCard).logicalCard?.getFaceUp() ?? true))
+            .map(card => (card as VisualCard).model)
         ].filter(v=>v!==undefined));
         if(cardsIntersects[0] !== undefined){
             const visualCardMaybe = cardsIntersects[0].object.parent?.parent?.parent?.userData.card as VisualCard|undefined;
@@ -298,13 +269,16 @@ export default class VisualGame {
         for (const element of this.elements) element.tick();
     }
 
+    private targetCameraPos = new Vector3();
+    private targetCameraRot = new Quaternion();
+
     //Visually ticks all the game elements and the camera
     public visualTick() {
-        for (const element of this.elements) element.visualTick();
-        this.state.visualTick();
+        super.visualTick();
 
         camera.position.lerp(this.targetCameraPos, 0.1);
         camera.quaternion.slerp(this.targetCameraRot, 0.1);
+        this.state.visualTick();
     }
 
     /**

@@ -2,7 +2,7 @@ import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import cards from "../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
-import {draw, sendToClients} from "./BackendServer.js";
+import {draw, sendToGame} from "./BackendGameServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {other, Side} from "../GameElement.js";
@@ -36,9 +36,12 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 
     if(self!==scared) return InterruptScareResult.PASSTHROUGH;
 
-    if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) !== true) {
+    if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === undefined) {
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.LITTLEBOSS_IMMUNITY);
-        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, (succeeded?:boolean)=>{
+            console.log(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE), succeeded)
+            next(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === true ? true : succeeded);
+        });
 
         game.player(self.side)?.send(new CardAction({
             cardId:-1,
@@ -52,6 +55,9 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         return InterruptScareResult.PREVENT_SCARE;
     }else return InterruptScareResult.PASSTHROUGH;
 });
+wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARED, (orig, {self})=>{
+    self.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, undefined)
+})
 wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
@@ -90,11 +96,11 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     const card = sideTernary(self.side, game.deckA, game.deckB).shift();
     if(card !== undefined){
         sideTernary(self.side, game.handA, game.handB).push(card);
-        sendToClients(new CardAction({
+        sendToGame(new CardAction({
             cardId: -1,
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},
-        }, game));
+        }), game);
         game.player(self.side)?.send(new ClarifyCardEvent({
             id:card.id,
             cardDataName:card.cardData.name

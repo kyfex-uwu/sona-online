@@ -22,7 +22,7 @@ export function getFlag<T>(name:flagName<T>){
     return flags[name as string]!.val as T;
 }
 
-export const eventReplyIds:{[k:string]:{[k:string]:Replyable<any>}} = {}
+export const eventReplyIds:{[k:string]:Replyable<any>} = {}
 export class Replyable<T extends SerializableEventData>{
     public _callback?: (event: Event<any>) => void;
     private readonly source:Event<T>;
@@ -30,18 +30,12 @@ export class Replyable<T extends SerializableEventData>{
         this.source=source;
     }
     onReply(callback:(event:Event<any>)=>void){
-        if(this.source.game === undefined){
-            console.trace("tried to add a reply callback to a message not in a game");
-            return;
-        }
         if(this._callback !== undefined){
             console.trace("tried to 2 event reply callbacks");
             return;
         }
 
-        if(eventReplyIds[this.source.game.gameID] === undefined)
-            eventReplyIds[this.source.game.gameID] = {};
-        eventReplyIds[this.source.game.gameID]![this.source.id] = this;
+        eventReplyIds![this.source.id] = this;
         this._callback=callback;
         return this.source;
     }
