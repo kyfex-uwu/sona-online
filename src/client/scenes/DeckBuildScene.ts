@@ -13,13 +13,13 @@ import {setScene} from "../../index.js";
 import {MainMenuScene} from "./MainMenuScene.js";
 
 const deck:string[] = [
+    "og-035",
     "og-021",
     "og-024",
     "og-023",
     "og-022",
     "og-039",
     "og-006",
-    "og-035",
     "og-011",
     "og-010",
     "og-003",

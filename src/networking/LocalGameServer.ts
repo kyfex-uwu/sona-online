@@ -13,7 +13,7 @@ import {
     ScareAction,
     ServerDumpEvent,
 } from "./Events.js";
-import Card, {Stat} from "../Card.js";
+import Card, {getVictim} from "../Card.js";
 import VisualCard, {newHighlightLock} from "../client/VisualCard.js";
 import cards from "../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
@@ -44,15 +44,14 @@ import {
     type AMBER_PICK,
     AmberData,
     type BOTTOM_DRAW,
-    type BROWNIE_DRAW,
+    type BROWNIE_DRAW, type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
-    type CLOUD_CAT_PICK,
+    type CLOUD_CAT_PICK, type COWGIRL_COYOTE_INCREASE_DATA,
     type FURMAKER_PICK,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
-import type VisualCardClone from "../client/VisualCardClone.js";
 import {EndType} from "../client/VisualGameStateTools.js";
 import {log, scene} from "../client/clientConsts.js";
 import {waitFor} from "./LocalServer.js";
@@ -399,7 +398,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
                         self.blackBg(true);
 
-                        let selectedCard:VisualCard|undefined;
                         self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
                             // .filter(card=>card !== undefined)
                             .map((card,i, arr)=>{
@@ -412,8 +410,12 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                             selectedCard=card;
                             selectedCard?.highlight(true, og029Highlight);
                         });
+                        let selectedCard = self.cards.find(card=>
+                            card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
+                            (event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id);
+                        selectedCard?.highlight(true, og029Highlight);
 
-                        let selectedStat:Stat|undefined=undefined;
+                        let selectedStat=getVictim((event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).stat);
                         drawCallback = registerDrawCallback(0, (p5, scale)=>{
                             self.statButtons(p5, scale,
                                 (stat)=>selectedStat=stat,
@@ -470,7 +472,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
                         self.blackBg(true);
 
-                        let selectedCard:VisualCardClone|undefined;
                         self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
                             // .filter(card=>card !== undefined)
                             .map((card,i, arr)=>{
@@ -484,7 +485,11 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                             selectedCard?.highlight(true, og029Highlight);
                         });
 
-                        let selectedStat:Stat|undefined=undefined;
+                        let selectedCard = self.cards.find(card=>
+                            card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
+                            (event.data.cardData as BROY_WEASLA_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id);
+
+                        let selectedStat=(event.data.cardData as BROY_WEASLA_INCREASE_DATA).stat;
                         drawCallback = registerDrawCallback(0, (p5, scale)=>{
                             self.statButtons(p5, scale,
                                 (stat)=>selectedStat=stat,
