@@ -71,22 +71,31 @@ export class TurnState extends GameState{
      */
     decrementAction(suppressChanges=false, toNextTurn=false){
         this.actionsLeft--;
-        if(this.actionsLeft<0||toNextTurn){
+        if(toNextTurn) this.actionsLeft=-1;
+        if(this.actionsLeft<0){
             this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
             this.game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, false);
             if(!suppressChanges) {
                 this.game.state = new TurnState(this.game, other(this.turn));
 
-                if(this.crisis && !sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
-                    this.game.state = new EndGameState(this.game, other(this.turn));
-                }else if(this.game.getCrisis(other(this.turn))>=3){
-                    this.game.state = new EndGameState(this.game, this.turn);
-                }
+                const endState = this.shouldEndGame();
+                if(endState!==undefined) this.game.state = new EndGameState(this.game, endState);
             }
             return true;
         }
 
         return false;
+    }
+
+    shouldEndGame(){
+        if(this.actionsLeft<0){
+            if(this.crisis && !sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
+                return other(this.turn);
+            }else if(this.game.getCrisis(other(this.turn))>=3){
+                return this.turn;
+            }
+        }
+        return undefined;
     }
 }
 

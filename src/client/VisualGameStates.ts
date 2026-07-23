@@ -2,7 +2,7 @@ import VisualGame, {ViewType} from "./VisualGame.js";
 import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox} from "./ui.js";
 import {StartRequestEvent} from "../networking/Events.js";
 import {other, type Side} from "../GameElement.js";
-import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
@@ -230,7 +230,12 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
             if(state instanceof TurnState) {
                 this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
                 if(state.decrementAction(true, toNextTurn)){
-                    this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+                    const shouldEnd = state.shouldEndGame();
+                    console.log(shouldEnd,"shouldEnd", state)
+                    if(shouldEnd === undefined)
+                        this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+                    else
+                        this.game.setState(new VEndState(this.game, shouldEnd), new EndGameState(this.game.getGame(), shouldEnd));
                 }
             }
         });
@@ -443,7 +448,7 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.canSelectHandCardImpl = data.canSelectHandCard ?? (()=>false);
     }
     private readonly cardsListeners:number[] = [];
-    public readonly cards:VisualCard[]=[];
+    public readonly cards:VisualCardClone[]=[];
     addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCardClone)=>void){
         const newModels:VisualCardClone[] = [];
         this.cardsListeners.push(clickListener(() => {
@@ -631,3 +636,25 @@ registerDrawCallback(0, (p5, scale) => {
     }
     currentInfoText="";
 })
+
+export class VEndState extends VisualGameState<EndGameState>{
+    public readonly sideWon: Side;
+    private release: (() => void)|undefined;
+    constructor(game:VisualGame, sideWon:Side) {
+        super(game);
+        this.sideWon=sideWon;
+    }
+    init() {
+        super.init();
+        this.release=registerDrawCallback(0, (p5, scale)=>{
+            p5.background(this.game.getMySide() === this.sideWon ? 255 : 0, 100);
+
+            p5.push();
+            p5.textAlign(p5.CENTER,p5.CENTER);
+            p5.fill(255);
+            p5.textSize(scale*0.3);
+            p5.text(this.game.getMySide() === this.sideWon ? "You Win" : "You Lose",p5.width/2,p5.height/2)
+            p5.pop();
+        });
+    }
+}

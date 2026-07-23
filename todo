@@ -43,12 +43,14 @@ x
 x
 
 ---
-https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
-type checking for all packets (need to write some separate thing)
 scared still fires when cloud catted
 fix dcw (and foxy?) being silly. to do this you need to implement client side placed event for opponent
+starting game with brownie is wrong
+investigate 029, 035 not firing all the time
+verify and fix any cards that need a scare instead of a scare attempt
+
+type checking for all packets (need to write some separate thing)
 shuffle everywhere!
 add card texture atlas
-starting game with brownie is wrong
-verify and fix any cards that need a scare instead of a scare attempt
-improve 029, 035 gui, start with relevant stat selected
+
+https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
