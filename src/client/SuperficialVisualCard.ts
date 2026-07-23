@@ -16,14 +16,13 @@ import {
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card, {Stat} from "../Card.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
-import {statTernary} from "../consts.js";
+import {externalPromise, statTernary} from "../consts.js";
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import type ElementScene from "./ElementScene.js";
 import {Side} from "../GameElement.js";
 
 const cardModel = (() => {
-    let resolve : (v:any) => void;
-    let promise = new Promise<Mesh>(r=>resolve=r);
+    let promise = externalPromise<Group>();
 
     modelLoader.load("/assets/card.glb", model => {
         const toReturn = new Group();
@@ -31,9 +30,7 @@ const cardModel = (() => {
         const other = (model.scene.children[0] as Object3D).clone();
         other.rotateX(Math.PI);
         toReturn.add(other);
-        resolve(toReturn);
-    }, undefined, () => {
-        resolve(undefined);
+        promise.resolve(toReturn);
     });
 
     return promise;

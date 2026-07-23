@@ -22,6 +22,7 @@ import {other, Side} from "../GameElement.js";
 import {sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
+    VBeforeGameState,
     VChoosingStartState,
     VGuiState,
     VisualGameState,
@@ -193,7 +194,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         card.removeFromHolder();
         (sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] as FieldMagnet)
             .addCard(card);
-        if(event.data.faceUp) card.flipFaceup();
+        if(!(game.state.getNonVisState() instanceof BeforeGameState)) card.flipFaceup();
         else card.flipFacedown();
         if(game.state instanceof VTurnState && !(event.data.forFree ?? false)){
             game.state.decrementTurn();

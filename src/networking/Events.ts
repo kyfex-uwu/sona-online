@@ -176,7 +176,6 @@ export class PlaceAction extends ActionEvent<{
     cardId:number,
     position:1|2|3,
     side:Side,
-    faceUp:boolean,
     forFree?:boolean//default false
 }>{}
 addToSerializableClasses(PlaceAction);

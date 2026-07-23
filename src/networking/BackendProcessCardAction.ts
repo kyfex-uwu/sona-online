@@ -271,7 +271,6 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                     cardId:data.cards[i] as number,
                     position:(i+1) as 1|2|3,
                     side:actor.side,
-                    faceUp:true,
                 }).force().forceFree());
             }
             return acceptEvent(event);

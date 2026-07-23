@@ -48,7 +48,6 @@ export default class FieldMagnet extends CardMagnet{
                             cardId: card.logicalCard.id,
                             position: this.which,
                             side:this.game.getMySide(),
-                            faceUp: (state instanceof VTurnState)
                         })).onReply(successOrFail(()=>{
                             if(isDecrementable(state) &&//deprecated?
                                 (!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))

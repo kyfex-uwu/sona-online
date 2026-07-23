@@ -293,17 +293,15 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;
-            if(event.data.faceUp)
-                user.send(new ClarifyCardEvent({
-                    id: event.data.cardId,
-                    cardDataName: card.cardData.name,
-                    faceUp: event.data.faceUp,
-                }));
+            user.send(new ClarifyCardEvent({
+                id: event.data.cardId,
+                ...(game.state instanceof BeforeGameState ? {} : {cardDataName:card.cardData.name}),
+                faceUp: !(game.state instanceof BeforeGameState)
+            }));
             user.send(new PlaceAction({
                 cardId:event.data.cardId,
                 position:event.data.position,
                 side:event.data.side,
-                faceUp:event.data.faceUp,
                 forFree:placedForFree,
             }));
         }
