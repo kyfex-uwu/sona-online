@@ -2,7 +2,7 @@ import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {sideTernary, statTernary} from "../consts.js";
+import {externalPromise, sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
@@ -317,6 +317,7 @@ visualCardClientActions["og-038"] = (card)=>{
         getLocalGame().getGame().state);
     return toReturn;
 };
+const og041Highlight = newHighlightLock();
 visualCardClientActions["og-041"] = (card)=>{
     if(card.logicalCard.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true) return new Promise(r=>r(false));
 
@@ -324,23 +325,64 @@ visualCardClientActions["og-041"] = (card)=>{
         return new Promise<boolean>(r=>r(true));
 
     tempHowToUse("Fur Maker", "Click the card to add to your hand");
-    let resolve;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
+    const toReturn = externalPromise<boolean>();
 
     waitForClarify(ClarificationJustification.FURMAKER, ()=>{
-        getLocalGame().setState(new VPickCardsState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],
-            sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (picked)=>{
+        let release:()=>void;
+        let selectedCard:VisualCard|undefined=undefined;
+        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
+            onEnd:(self)=>{
                 getLocalGame().frozen=true;
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
-                    cardData: {id:picked.logicalCard.id},
+                    cardData: {id:selectedCard!.logicalCard.id},
                 })).onReply(successOrFail(()=>{},()=>{},()=>{
                     getLocalGame().frozen=false;
-                    resolve!(true);
+                    toReturn.resolve(true);
                 }));
-            }, EndType.NONE), getLocalGame().getGame().state);
+
+                release();
+            },
+            init:(self)=>{
+                const cards = sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards();
+                let height=1;
+                let scale=0.9;
+
+                if(cards.length>4) height=2;
+                if(cards.length>8 && cards.length%3 === 0) height=3;
+                if(cards.length === 13 || cards.length === 16) height=3;
+
+                const cardPositions:Vector2[] = [];
+                let currCard=0;
+                let width = Math.floor(cards.length/height);
+                for(let y=0;y<height;y++){
+                    let adjWidth = width + (y === 1 ? 1 : 0);
+                    for(let x=0;x<adjWidth;x++){
+                        if(cards[currCard] === undefined) break;
+                        cardPositions[currCard] = new Vector2((x-(adjWidth-1)/2)*scale*4, -(y-(height-0.5)/2)*scale*5.5);
+                        currCard++;
+                    }
+                }
+
+                self.addCards(cards.map((card, i)=>{
+                    return {
+                        card,
+                        position:cardPositions[i]!,
+                        scale
+                    }
+                }), (card)=>{
+                    selectedCard?.highlight(false, og041Highlight);
+                    selectedCard = card;
+                    selectedCard?.highlight(true, og041Highlight);
+                });
+
+                release=registerDrawCallback(0,(p5,scale)=>{
+                    self.finishButton(p5, scale, selectedCard===undefined);
+                })
+            }
+        }),getLocalGame().getGame().state);
     });
 
     network.sendToServer(new ClarifyCardEvent({

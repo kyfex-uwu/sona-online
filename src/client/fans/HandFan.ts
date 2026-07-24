@@ -22,7 +22,7 @@ export default class HandFan extends VisualCardFan{
 
     public setRotation(rotation:Quaternion){
         this.defaultRotation = rotation.clone();
-        this.rotatedRotation = rotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,Math.PI,0)));
+        this.rotatedRotation = rotation.clone().multiply(new Quaternion().setFromEuler(new Euler(Math.PI*4/3,Math.PI,0)));
     }
 
     /**
