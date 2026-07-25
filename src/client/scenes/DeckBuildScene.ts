@@ -36,8 +36,6 @@ const deck:string[] = [
 ];
 const disabledCards = [
     "og-005",
-    "og-009",
-    "og-015",
     "og-020",
     "og-027",
     "og-028",
