@@ -172,7 +172,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                         event.sender === game.player(Side.A)?Side.A:Side.B],
                     attackingWith:"card",
                     failed:false,
-                }).force().forceFree());
+                }).force().forceFree().withGame(game));
                 return acceptEvent(event);
             }
         }

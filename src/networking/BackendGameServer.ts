@@ -137,7 +137,7 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
 
 export function parseEvent(event:GameEvent<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
-    const game = gamesFromUser.get(event.sender);
+    const game = gamesFromUser.get(event.sender) ?? (event instanceof ActionEvent ? event.getGame() : undefined);
 
     if(game === undefined){
         if(event instanceof InternalStartGameEvent){

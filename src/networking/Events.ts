@@ -147,6 +147,7 @@ addToSerializableClasses(DetermineStarterEvent);
 export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends GameEvent<T>{
     private forceMarker?:{};
     private freeMarker?:{};
+    private game?:Game;
     //Forces the scare through
     force(){
         this.forceMarker = backendMarker;
@@ -161,6 +162,13 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
     }
     isForcedFree(){
         return this.freeMarker === backendMarker;
+    }
+    withGame(game:Game){
+        this.game=game;
+        return this;
+    }
+    getGame(){
+        return this.game;
     }
 }
 

@@ -449,32 +449,55 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     }));
 });
 waitToDraw(cards["og-009"]!);
-wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game}) =>{
-    if(orig) orig({self, game});
+const og009Highlight = newHighlightLock();
+wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
+    if(orig) orig({self:card, game});
 
-    const target=sideTernary(self.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
+    const target=sideTernary(card.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
     if(target.length>=2 &&//if there are at least 2 cards on opponent field
         target.some(card => //and at least one card has at least 1 stat less than 2
             ((card.stat(Stat.RED)??99)<2 || (card.stat(Stat.BLUE)??99)<2 || (card.stat(Stat.YELLOW)??99)<2))) {
 
         tempHowToUse("Gremlin Kitten", "Select the card to scare");
-        getLocalGame().setState(new VPickCardsState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],
-            sideTernary(self.side, getLocalGame().fieldsB, getLocalGame().fieldsA).map(field=>field.getCard())
-                .filter(card => card !== undefined &&
-                        ((card.logicalCard.stat(Stat.RED)??99)<2||
-                        (card.logicalCard.stat(Stat.BLUE)??99)<2||
-                        ((card.logicalCard.stat(Stat.YELLOW)??99)<2))) as VisualCard[],
-            (card) => {
-                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
-                    position:(sideTernary(self.side, getLocalGame().fieldsB, getLocalGame().fieldsA)
-                        .findIndex(field => field.getCard()?.logicalCard === card.logicalCard)+1) as 1|2|3
-                }}));
-            }, EndType.CANCEL, ()=>{
-                network.sendToServer(new CardAction({cardId:self.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{}}))
-                    .onReply(successOrFail(()=>{
-                        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+        let selectedCard:1|2|3|undefined;
+        let releases:(()=>void)[] = [];
+        const fields = sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA);
+        let prevPos:Vector3;
+        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],{
+            onEnd:(self,type)=>{
+                for(const field of sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA))
+                    field.getCard()?.highlight(false, og009Highlight);
+                for(const release of releases) release();
+                sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA).position = prevPos;
+
+                if(type === "finished")
+                    network.sendToServer(new CardAction({cardId:card.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
+                        position:selectedCard!
+                    }}));
+            },
+            init:(self)=>{
+                getLocalGame().changeView(sideTernary(getLocalGame().getMySide(), ViewType.CLOSER_BOARD_B, ViewType.CLOSER_BOARD_A));
+                prevPos = sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA).position;
+                sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA).position =
+                    prevPos.clone().add(new Vector3(0,-300,0));
+
+                for(const field of fields){
+                    releases.push(field.addClickListener(()=>{
+                        for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW])
+                            if((field.getCard()?.logicalCard.stat(stat) ?? 99)<2){
+                                fields[(selectedCard ?? 0) - 1]?.getCard()?.highlight(false, og009Highlight);
+                                selectedCard = field.which;
+                                fields[(selectedCard ?? 0) - 1]?.getCard()?.highlight(true, og009Highlight);
+                            }
                     }));
-            }), getLocalGame().getGame().state);
+                }
+
+                releases.push(registerDrawCallback(0, (p5, scale)=>{
+                    self.buttonAndFinish(p5, scale, ()=>self.end("canceled"), "Pass", false, selectedCard === undefined, false);
+                    self.infoText(p5, scale, "Click which of your opponents cards to scare, or Pass without scaring")
+                }));
+            }
+        }), getLocalGame().getGame().state);
     }else{
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
     }

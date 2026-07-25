@@ -39,6 +39,8 @@ export enum ViewType{
     FIELDS_B,
     CLOSE_BOARD_A,
     CLOSE_BOARD_B,
+    CLOSER_BOARD_A,
+    CLOSER_BOARD_B,
 }
 
 const previewImages:{[k:string]:p5.Image|true} = {};
@@ -309,6 +311,14 @@ export default class VisualGame extends ElementScene{
                 break;
             case ViewType.CLOSE_BOARD_B:
                 this.targetCameraPos = new Vector3(0,450,-250);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
+                break;
+            case ViewType.CLOSER_BOARD_A:
+                this.targetCameraPos = new Vector3(0,400,220);
+                this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.4, 0, 0));
+                break;
+            case ViewType.CLOSER_BOARD_B:
+                this.targetCameraPos = new Vector3(0,400,-220);
                 this.targetCameraRot = new Quaternion().setFromEuler(new Euler(-Math.PI * 0.6, 0, Math.PI));
                 break;
         }

@@ -231,7 +231,6 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                 this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
                 if(state.decrementAction(true, toNextTurn)){
                     const shouldEnd = state.shouldEndGame();
-                    console.log(shouldEnd,"shouldEnd", state)
                     if(shouldEnd === undefined)
                         this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
                     else
@@ -576,11 +575,11 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
     buttonAndCancel(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean, center?:boolean){
         this.twoButtons(p5, scale, {onClick, text, disabled},
-            {onClick:()=>this.end("canceled"), text:"Cancel", disabled:cancelDisabled})
+            {onClick:()=>this.end("canceled"), text:"Cancel", disabled:cancelDisabled}, center)
     }
-    buttonAndFinish(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, cancelDisabled:boolean, center:boolean){
+    buttonAndFinish(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean, finishDisabled:boolean, center:boolean){
         this.twoButtons(p5, scale, {onClick, text, disabled},
-            {onClick:()=>this.end("finished"), text:"Finish", disabled:cancelDisabled}, center)
+            {onClick:()=>this.end("finished"), text:"Finish", disabled:finishDisabled}, center)
     }
     finishAndCancel(p5:any, scale:number, finishDisabled:boolean, cancelDisabled:boolean){
         this.twoButtons(p5, scale,

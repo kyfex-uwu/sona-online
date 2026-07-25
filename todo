@@ -6,6 +6,29 @@ x
 
 
 
+
+
+
+
+
+
+x
+
+
+
+
+x
+
+
+
+
+
+
+x
+x
+
+
+x
 x
 
 
@@ -16,29 +39,6 @@ x
 
 
 
-
-x
-
-
-
-
-
-
-x
-x
-
-
-x
-x
-
-
-
-
-
-x
-
-
-x
 
 x
 
@@ -49,6 +49,7 @@ starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
 
+fix 009 staying glowing when placed (maybe others too)
 type checking for all packets (need to write some separate thing)
 shuffle everywhere!
 add card texture atlas
