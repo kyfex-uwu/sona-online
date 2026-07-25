@@ -38,9 +38,8 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 
     if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === undefined) {
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.LITTLEBOSS_IMMUNITY);
-        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, (succeeded?:boolean)=>{
-            console.log(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE), succeeded)
-            next(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === true ? true : succeeded);
+        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, (succeeded:boolean)=>{
+            next(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === true ? false : succeeded);
         });
 
         game.player(self.side)?.send(new CardAction({
@@ -55,7 +54,8 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         return InterruptScareResult.PREVENT_SCARE;
     }else return InterruptScareResult.PASSTHROUGH;
 });
-wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARED, (orig, {self})=>{
+wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scared, scarer, stat, game})=>{
+    if(orig) orig({self, scared, scarer, stat, game});
     self.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, undefined)
 })
 wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,

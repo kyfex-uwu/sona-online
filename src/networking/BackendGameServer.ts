@@ -100,7 +100,7 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     stat: Stat | "card"
     game: Game
     origEvent: ScareAction
-}, next:(succeeded?: boolean) => void){
+}, next:(succeeded: boolean) => void){
     for(let i=0;i<cards.length;i++) {
         const card = cards[i];
         if(card===undefined) continue;
@@ -108,14 +108,17 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
         const result = card.callAction(CardTriggerType.INTERRUPT_SCARE, {
             ...data,
             self: card,
-            next: ()=>internalScareInterrupt(cards.slice(i+1), data, next)
+            next: (succeeded)=> {
+                if(!succeeded) next(false);
+                else internalScareInterrupt(cards.slice(i + 1), data, next);
+            }
         });
         switch(result){
             case InterruptScareResult.FAIL_SCARE: next(false); return;
             case InterruptScareResult.PREVENT_SCARE: return;
         }
     }
-    next();
+    next(true);
 }
 
 /**
@@ -128,7 +131,7 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
  * @param scareType The scare type
  * @param onPass The function to run if/when the scare passes
  */
-export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded?:boolean)=>void){
+export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
     const cards = [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB];
     internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event }, onPass);
 }
@@ -393,7 +396,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         let ranRightAway=false;
-        scareInterrupt(event, game, scarer, scared, event.data.attackingWith, (succeeded)=> {
+        scareInterrupt(event, game, scarer, scared, event.data.attackingWith, (succeeded) => {
             ranRightAway = true;
 
             let scarer = sideTernary(event.data.scarerPos[1], game!.fieldsA, game!.fieldsB)[event.data.scarerPos[0] - 1];
@@ -407,13 +410,12 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 (scarer.stat(event.data.attackingWith) === undefined ||
                     scared.stat(getVictim(event.data.attackingWith)) === undefined));
 
-
             const toSend = new ScareAction({
                 scaredPos: event.data.scaredPos,
                 scarerPos: event.data.scarerPos,
                 attackingWith: event.data.attackingWith,
-                failed: forceFailed ?? succeeded ?? (autofail || (event.data.attackingWith === "card" ||
-                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)))),
+                failed: forceFailed ?? (!succeeded || (autofail || (event.data.attackingWith === "card" ||
+                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))))),
                 free: event.isForcedFree(),
             });
             scarer.hasAttacked = true;

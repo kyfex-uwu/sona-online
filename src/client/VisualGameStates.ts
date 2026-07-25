@@ -561,8 +561,8 @@ export class VGuiState extends VisualGameState<TurnState>{
     finishButton(p5:any, scale:number, disabled:boolean){
         this.button(p5, scale, ()=>this.end("finished"), "Finish", disabled);
     }
-    twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled:boolean},
-               button2:{onClick:()=>void, text:string, disabled:boolean}, center?:boolean){
+    twoButtons(p5:any, scale:number, button1:{onClick:()=>void, text:string, disabled?:boolean},
+               button2:{onClick:()=>void, text:string, disabled?:boolean}, center?:boolean){
         const height = scale * 0.4;
         let splitMaybeWidth = scale * 0.8;
         let splitMaybeX = p5.width/2-scale*0.9;

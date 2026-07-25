@@ -481,18 +481,18 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                     card !== undefined &&
                     card.getMiscData(CardMiscDataStrings.PAUSED_SCARE) !== undefined &&
                     card.cardData.name === "og-015");
-            const data = (event as CardAction<LITTLEBOSS_IMMUNITY>).data.cardData;
+            const shouldSave = (event as CardAction<LITTLEBOSS_IMMUNITY>).data.cardData;
 
             if(actor === undefined || game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !==
                 CardActionOptions.LITTLEBOSS_IMMUNITY)
                 return rejectEvent(event, "failed littleboss check");
 
-            actor.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, data);
+            actor.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, shouldSave);
 
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext();
+            if(scareNext) scareNext(true);
 
             game.unfreeze();
             return acceptEvent(event);
@@ -529,7 +529,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext();
+            if(scareNext) scareNext(true);
 
             game.unfreeze();
             return acceptEvent(event);
@@ -564,7 +564,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext();
+            if(scareNext) scareNext(true);
 
             game.unfreeze();
             return acceptEvent(event);
@@ -586,7 +586,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             }
 
             const next = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
-            if(next) next();
+            if(next) next(true);
             actor.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);

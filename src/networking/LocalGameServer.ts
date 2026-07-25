@@ -372,17 +372,43 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                 tempHowToUse("Lttle Boss", "Press Keep to keep Little Boss, or press Scare to scare them off the field.");
-                const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                    ["temp_keep","temp_scare"].map(name => new VisualCard(game,
-                        new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                    (picked)=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
-                            cardData:picked.logicalCard.cardData.name === "temp_keep"
-                        }));
-                        state.end();
-                    },EndType.NONE);
+                let release:()=>void;
+                const state = new VGuiState(game, [game.state, game.getGame().state],{
+                    onEnd:(self, type)=>{
+                        release();
+                    },
+                    init:(self)=>{
+                        const end = (save:boolean)=>{
+                            network.sendToServer(new CardAction({
+                                cardId:-1,
+                                actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
+                                cardData:save
+                            }));
+                            self.end("finished");
+                        }
+                        release=registerDrawCallback(0,(p5,scale)=>{
+                            self.blackBg(true);
+                            self.twoButtons(p5,scale,{
+                                onClick:()=>end(true),
+                                text:"Save"
+                            },{
+                                onClick:()=>end(false),
+                                text:"Scare"
+                            },true);
+                        })
+                    }
+                });
+                // const state = new VPickCardsState(game, [game.state, game.getGame().state],
+                //     ["temp_keep","temp_scare"].map(name => new VisualCard(game,
+                //         new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
+                //     (picked)=>{
+                //         network.sendToServer(new CardAction({
+                //             cardId:-1,
+                //             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
+                //             cardData:picked.logicalCard.cardData.name === "temp_keep"
+                //         }));
+                //         state.end();
+                //     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
@@ -488,6 +514,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                         let selectedCard = self.cards.find(card=>
                             card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
                             (event.data.cardData as BROY_WEASLA_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id);
+                        selectedCard?.highlight(true, og029Highlight);
 
                         let selectedStat=(event.data.cardData as BROY_WEASLA_INCREASE_DATA).stat;
                         drawCallback = registerDrawCallback(0, (p5, scale)=>{
