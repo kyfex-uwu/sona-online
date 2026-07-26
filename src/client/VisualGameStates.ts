@@ -201,7 +201,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
                     }
                 }
             }
-            if(handSize >= 5 || this.getActionsLeft()===0){
+            if(handSize >= 5 || this.getActionsLeft()<=0){
                 this.features.delete(StateFeatures.DECK_DRAWABLE);
             }else{
                 this.features.add(StateFeatures.DECK_DRAWABLE);

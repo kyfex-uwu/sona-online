@@ -1,13 +1,13 @@
 import CardData, {CardTriggerType, Species} from "../CardData.js";
 import cards from "../Cards.js";
-import {VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
+import {VGuiState, VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {externalPromise, sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
 import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
-import {BeforeGameState, GameState, type TurnState} from "../GameStates.js";
+import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {getLocalGame, waitForClarify} from "../networking/LocalGameServer.js";
@@ -24,12 +24,16 @@ import {
 import {ViewType} from "./VisualGame.js";
 import {EndType, StateFeatures} from "./VisualGameStateTools.js";
 
+function lastAction(){
+    const state = getLocalGame().state.getNonVisState();
+    if(state instanceof TurnState) state.actionsLeft=-1;
+}
+
 export const visualCardClientActions:{[k:string]:(card:VisualCard)=>Promise<boolean>} = {};
 
 const og001Highlight = newHighlightLock();
 visualCardClientActions["og-001"] = (card)=>{
-    let endSignal: (value: boolean | PromiseLike<boolean>) => void;
-    const toReturn = new Promise<boolean>(r=>endSignal=r);
+    const toReturn = externalPromise<boolean>();
     const oldStates:[VisualGameState<any>, GameState] = [getLocalGame().state, getLocalGame().getGame().state];
 
     const toRemove: (() => void)[] = [];
@@ -39,15 +43,6 @@ visualCardClientActions["og-001"] = (card)=>{
     let attackStat:Stat|undefined=undefined;
     let drawCallback: () => void;
 
-    const end = ()=>{
-        getLocalGame().changeView(sideTernary(card.getSide(), ViewType.BOARD_A, ViewType.BOARD_B));
-        for(const remove of toRemove) remove();
-        drawCallback();
-
-        for(const field of [...getLocalGame().fieldsA, ...getLocalGame().fieldsB])
-            field.getCard()?.highlight(false, og001Highlight);
-        attacking?.highlight(false, og001Highlight);
-    }
     getLocalGame().setState(new VGuiState(getLocalGame(), oldStates, {
         onEnd: (self: VGuiState) => {},
         init: (self: VGuiState) => {
@@ -98,13 +93,21 @@ visualCardClientActions["og-001"] = (card)=>{
                                 particles.push(particleStreak(
                                     field.position, card.getStatModel(attackStat!)!.getWorldPosition(new Vector3()),
                                     whiteColor, statTernary(attackStat!, redStatColor, blueStatColor, yellowStatColor)
-                                    ))
+                                    ));
                             }
                             await Promise.all(particles);
-                        })
+                        });
+                        lastAction();
                     },()=>{},()=>{
-                        end();
-                        endSignal(true);
+                        getLocalGame().changeView(sideTernary(card.getSide(), ViewType.BOARD_A, ViewType.BOARD_B));
+                        for(const remove of toRemove) remove();
+                        drawCallback();
+
+                        for(const field of [...getLocalGame().fieldsA, ...getLocalGame().fieldsB])
+                            field.getCard()?.highlight(false, og001Highlight);
+                        attacking?.highlight(false, og001Highlight);
+
+                        toReturn.resolve(true);
                     }));
                 }, "Attack", attacking===undefined || attackStat === undefined, false);
                 self.infoText(p5, scale, "Select any number of your Canine cards to attack with, select a stat to attack with, " +
@@ -120,8 +123,7 @@ visualCardClientActions["og-018"] = async (card) =>{
 
     const toReorder = sideTernary(card.getSide(), getLocalGame().deckA, getLocalGame().deckB).getCards().slice(-2);
     if(toReorder.length === 0) return false;
-    let resolve;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
+    const toReturn = externalPromise<boolean>();
 
     network.sendToServer(new ClarifyCardEvent({
         id:card.logicalCard.id,
@@ -131,8 +133,7 @@ visualCardClientActions["og-018"] = async (card) =>{
         let release:()=>void;
         let discardFirst=true;
         getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
-            onEnd:(self)=>{
-                release();
+            onEnd:(self)=>{release();
 
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 network.sendToServer(new CardAction({
@@ -142,7 +143,7 @@ visualCardClientActions["og-018"] = async (card) =>{
                         which: discardFirst ? AmberData.KEEP_SECOND : AmberData.KEEP_FIRST
                     }
                 }));
-                resolve!(true);
+                toReturn.resolve(true);
             },
             init:(self)=>{
                 self.addCards(toReorder.map((card,i)=>{return{
@@ -175,8 +176,7 @@ visualCardClientActions["og-028"] = (card)=>{
     tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
         "to replace them with, and press Finish again.")
 
-    let resolve:(v:boolean)=>void;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
+    const toReturn = externalPromise<boolean>();
 
     const myFields = sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB);
     const myHand = sideTernary(getLocalGame().getMySide(), getLocalGame().handA, getLocalGame().handB);
@@ -203,9 +203,11 @@ visualCardClientActions["og-028"] = (card)=>{
                     cardId:card.logicalCard.id,
                     actionName:CardActionOptions.KIBBY_SCARE,
                     cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? false) as [number|false,number|false,number|false]}
+                })).onReply(successOrFail(()=>{
+                    lastAction();
+                    toReturn.resolve(true);
                 }));
             }
-            resolve(true);
         },
         init:(self)=>{
             getLocalGame().changeView(sideTernary(getLocalGame().getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
@@ -291,29 +293,29 @@ visualCardClientActions["og-038"] = (card)=>{
 
     const cards = sideTernary(card.getSide(), getLocalGame().runawayA, getLocalGame().runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
-    let resolve;
-    const toReturn = new Promise<boolean>(r=>resolve=r);
+    const toReturn = externalPromise<boolean>();
     if(cards.length===0) {
-        resolve!(false);
+        toReturn.resolve(false);
         return toReturn;
     }
     getLocalGame().setState(new VPickCardsState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],
-            cards, (picked)=>{
-                    getLocalGame().frozen=true;
-                    network.sendToServer(new CardAction({
-                        cardId:card.logicalCard.id,
-                        actionName:CardActionOptions.WORICK_RESCUE,
-                        cardData:{
-                            id:picked.logicalCard.id
-                        }
-                    })).onReply(successOrFail(()=>{
-                        sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).addCard(picked);
-                        (getLocalGame().state as VPickCardsState).end();
-                    },()=>{},()=>{
-                        getLocalGame().frozen=false;
-                        resolve!(true);
-                    }));
-            }, EndType.BOTH),
+        cards, (picked)=>{
+            getLocalGame().frozen=true;
+            network.sendToServer(new CardAction({
+                cardId:card.logicalCard.id,
+                actionName:CardActionOptions.WORICK_RESCUE,
+                cardData:{
+                    id:picked.logicalCard.id
+                }
+            })).onReply(successOrFail(()=>{
+                sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).addCard(picked);
+                lastAction();
+                (getLocalGame().state as VPickCardsState).end();
+            },()=>{},()=>{
+                getLocalGame().frozen=false;
+                toReturn.resolve(true);
+            }));
+        }, EndType.BOTH),
         getLocalGame().getGame().state);
     return toReturn;
 };

@@ -9,6 +9,13 @@ export enum InterruptScareResult{
     PREVENT_SCARE,//a turn is not consumed and the scare does not happen
     FAIL_SCARE,//a turn is consumed, but the scare does not happen
 }
+export enum ScareEffectOwner{
+    SCARER_ONLY=4,//first
+    SCARER_TO_SCARED=3,
+    SCARED_TO_SCARER=2,
+    SCARED_ONLY=1,
+    INTRINSIC=0//last
+}
 
 export class CardTriggerType<P extends {[k:string]:any}, R>{
     private static nextId=0;
@@ -32,6 +39,9 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
     public static readonly INTERRUPT_SCARE = new CardTriggerType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(succeeded:boolean)=>void}, InterruptScareResult>();
+    public static readonly SCARE_INTERRUPT_EFFECT_TYPE = new CardTriggerType<
+        //Should be defined along with INTERRUPT_SCARE
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, event:ScareAction}, ScareEffectOwner>();
     //Returns true if can be placed
     public static readonly SPECIAL_PLACEABLE_CHECK = new CardTriggerType<
         {self:Card, game:Game, normallyValid:boolean}, boolean>();

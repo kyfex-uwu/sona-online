@@ -36,33 +36,27 @@ import {sideTernary} from "../consts.js";
 import {parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {acceptEvent, type processedEvent, rejectEvent} from "./BackendServer.js";
 
+function lastAction(game:Game){
+    const state = game.state;
+    if(state instanceof TurnState) state.actionsLeft=-1;
+}
+
 function defaultIsValid<T extends SerializableType>(event:CardAction<T>, game:Game, cardName:string, optData:{
-    cardActionOption?: CardActionOption<any>,
-    lastAction?:boolean
+    cardActionOption?: CardActionOption<any>
 }){
     const actor = verifyFieldCard(event, game);
-    const data = event.data.cardData;
 
-    // console.log(actor !== undefined ,//actor exists
-    //     game !== undefined , //game exists
-    //     actor!.cardData.name === cardName , //card is cardData
-    //     game!.state instanceof TurnState , //state is turnState
-    //     game!.state.turn === actor!.side , //player's turn
-    //     game!.state.actionsLeft === 1 , //last action
-    //     (optData.cardActionOption === undefined ?
-    //         game!.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side]) === optData.cardActionOption : "") ,//card action option matches
-    //     game!.player(actor!.side) === event.sender)
     if(!(actor !== undefined &&//actor exists
         game !== undefined && //game exists
         actor.cardData.name === cardName && //card is cardData
         game.state instanceof TurnState && //state is turnState
         game.state.turn === actor.side && //player's turn
-        (!(optData.lastAction??false) || game.state.actionsLeft === 1) && //last action
+        game.state.actionsLeft > 0 &&
         (optData.cardActionOption === undefined ||
             game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === optData.cardActionOption) &&//card action option matches
         game.player(actor.side) === event.sender)) //card is sender's
         return false;
-    return {actor:actor!, data, valid:true};
+    return {actor:actor!, data:event.data.cardData};
 }
 
 function findAndRemove(game:Game, card:Card){
@@ -101,14 +95,14 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
     if(game === undefined) return rejectEvent(event, "no game");
     switch(event.data.actionName){
         case CardActionOptions.K9_ALPHA:{//og-001
-            const data = (event as CardAction<K9_ALPHA>).data.cardData;
-            const sender = verifyFieldCard(event, game);
+            const succeeded = defaultIsValid<K9_ALPHA>(event, game, "og-001", {});
+            if(!succeeded) return rejectEvent(event, "failed k9 check");
+            const {actor:sender, data} = succeeded;
+
             const takeFrom = [...(event.sender === game.player(Side.A) ? game.fieldsA : game.fieldsB)]
                 .filter((_,i)=>data.canineFields[i]);
 
-            if(!(game.state instanceof TurnState && game.player(game.state.turn) === event.sender &&//its the senders turn
-                sender !== undefined && sender!.cardData.name === "og-001" &&//atttacking card is k9
-                takeFrom.map(card=>card?.cardData.species === Species.CANINE)//all cards are canines
+            if(!(takeFrom.map(card=>card?.cardData.species === Species.CANINE)//all cards are canines
                     .reduce((a,c)=>a&&c, true)))
                 return rejectEvent(event, "failed k9 check");
 
@@ -124,6 +118,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                 scaredPos:[data.attack, event.sender === game.player(Side.A) ? Side.B : Side.A],
                 attackingWith:data.attackWith,
             }, event.sender, event.id));
+            lastAction(game);
             sender.setMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
             return acceptEvent(event);
         }
@@ -246,7 +241,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             return acceptEvent(event);
         }
         case CardActionOptions.KIBBY_SCARE:{//og-028
-            const succeeded = defaultIsValid<KIBBY_SCARE>(event, game, "og-028", {lastAction:true});
+            const succeeded = defaultIsValid<KIBBY_SCARE>(event, game, "og-028", {});
             if(!succeeded) return rejectEvent(event, "failed default kibby otes check");
             const {actor, data} = succeeded;
 
@@ -262,7 +257,8 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                     scaredPos:[(fields.indexOf(card)+1) as 1|2|3, actor.side],
                     attackingWith:"card",
                     failed:false,
-                }, event.sender).force());
+                }, event.sender).force().withGame(game));
+
             }
             for(let i=0;i<3;i++){
                 if(data.cards[i] === false) continue;
@@ -271,8 +267,9 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                     cardId:data.cards[i] as number,
                     position:(i+1) as 1|2|3,
                     side:actor.side,
-                }).force().forceFree());
+                }).force().forceFree().withGame(game));
             }
+            lastAction(game);
             return acceptEvent(event);
         }
         case CardActionOptions.FOXY_MAGICIAN_PICK:{//og-031
@@ -410,7 +407,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             return acceptEvent(event);
         }
         case CardActionOptions.WORICK_RESCUE:{//og-038
-            const succeeded = defaultIsValid<WORICK_RESCUE>(event, game, "og-038", {lastAction:true});
+            const succeeded = defaultIsValid<WORICK_RESCUE>(event, game, "og-038", {});
             if(!succeeded) return rejectEvent(event, "failed default worick check");
             const {actor, data} = succeeded;
 
@@ -429,10 +426,11 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                     side:actor.side
                 }
             }), game);
+            lastAction(game);
             return acceptEvent(event);
         }
         case CardActionOptions.FURMAKER_PICK:{//og-041
-            const succeeded = defaultIsValid<FURMAKER_PICK>(event, game, "og-041", {lastAction:false});
+            const succeeded = defaultIsValid<FURMAKER_PICK>(event, game, "og-041", {});
             if(!succeeded) return rejectEvent(event, "failed default furmaker check");
             const {actor, data} = succeeded;
 

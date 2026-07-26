@@ -74,7 +74,6 @@ export class TurnState extends GameState{
         if(toNextTurn) this.actionsLeft=-1;
         if(this.actionsLeft<0){
             this.game.setMiscData(GameMiscDataStrings.IS_FIRST_TURN, false);
-            this.game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, false);
             if(!suppressChanges) {
                 this.game.state = new TurnState(this.game, other(this.turn));
 

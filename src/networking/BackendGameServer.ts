@@ -101,8 +101,16 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     game: Game
     origEvent: ScareAction
 }, next:(succeeded: boolean) => void){
-    for(let i=0;i<cards.length;i++) {
-        const card = cards[i];
+    const mappedCards=cards.map(c=>[c, c?.callAction(CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, {
+        self: c,
+        scared: data.scarer,
+        scarer: data.scared,
+        stat: data.stat,
+        game: data.game,
+        event: data.origEvent,
+    })?.valueOf() ?? -1] satisfies [Card|undefined, number]).sort((c1, c2)=> c2[1]-c1[1]);
+    for(let i=0;i<mappedCards.length;i++) {
+        const card = mappedCards[i]![0];
         if(card===undefined) continue;
 
         const result = card.callAction(CardTriggerType.INTERRUPT_SCARE, {
@@ -241,7 +249,9 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return acceptEvent(event);
     }else if(event instanceof PlaceAction){
         const card = [...game.cards.values()]
-            .find(card=>card.id === event.data.cardId)!;
+            .find(card=>card.id === event.data.cardId);
+        if(card === undefined) return rejectEvent(event, "no card found placeaction");
+        const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
 
         // if(!event.isForced()) {
         //     if (event.game.state instanceof TurnState && !event.game.state.drawnToStart)
@@ -262,8 +272,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                     sideTernary(card.side, game.fieldsA, game.fieldsB)
                         .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1) &&//placed card's level is at most 1 above all other cards
                     game.state.drawnToStart &&//player has already started turn
-                    game.state.actionsLeft>0 &&// player has actions left
-                    !game.getMiscData(GameMiscDataStrings.LAST_ACTIONED)))) { //player has not last actioned
+                    game.state.actionsLeft+(placedForFree ? 1 : 0)>0))) {// player has actions left
                 if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
                     self: card,
                     game: game,
@@ -292,8 +301,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] =
             [...game.cards.values()].find(card => card.id === event.data.cardId);
 
-        const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
-
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;
             user.send(new ClarifyCardEvent({
@@ -318,11 +325,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             endTurn(game);
         return acceptEvent(event);
     }else if(event instanceof DrawAction){
-        if(!event.isForced()) {
-            if (game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
-                return rejectEvent(event, "already performed last action d");
-        }
-
         let side:Side|undefined=undefined;//the side of the player drawing
         if(event.sender === game.player(Side.A)){
             side = Side.A;
@@ -366,8 +368,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         if(!event.isForced()) {
             if (game.state instanceof TurnState && !game.state.drawnToStart)
                 return rejectEvent(event, "not draw to start yet s");
-            if (game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
-                return rejectEvent(event, "already performed last action s");
         }
 
         if(!event.isForced() && event.sender !== game.player(event.data.scarerPos[1]))

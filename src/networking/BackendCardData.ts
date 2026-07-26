@@ -1,4 +1,4 @@
-import CardData, {CardTriggerType, InterruptScareResult} from "../CardData.js";
+import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner} from "../CardData.js";
 import cards from "../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
 import {CardActionOptions} from "./CardActionOption.js";
@@ -30,6 +30,9 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
+wrap(cards["og-015"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+    return ScareEffectOwner.INTRINSIC;
+});
 wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
@@ -57,7 +60,10 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scared, scarer, stat, game})=>{
     if(orig) orig({self, scared, scarer, stat, game});
     self.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, undefined)
-})
+});
+wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+    return ScareEffectOwner.SCARED_TO_SCARER;
+});
 wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
@@ -113,6 +119,9 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
+});
+wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+    return ScareEffectOwner.SCARER_ONLY;
 });
 wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{
@@ -206,6 +215,9 @@ wrap(cards["og-032"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     game.player(self.side)?.send(multiClarifyFactory(
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.DCW));
+});
+wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+    return ScareEffectOwner.SCARED_ONLY;
 });
 wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
                                                          {self, scared, scarer, stat, game, origEvent, next})=>{

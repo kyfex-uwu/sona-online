@@ -27,10 +27,7 @@ setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
         if(newStatData !== undefined)
             toReturn[newStatData?.stat]=newStatData.newVal;
         return addTempStats(self, toReturn);
-    }))
-    .with(CardTriggerType.ACTION, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
-    });
+    }));
 setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE)
     .with(CardTriggerType.GET_STATS, ({self, game})=>{
@@ -99,10 +96,7 @@ setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
     .with(CardTriggerType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
-setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE))
-    .with(CardTriggerType.ACTION, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
-    });
+setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE));
 setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
 setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES));
@@ -113,9 +107,6 @@ setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE));
 setCard(new CardData("og-036", [7,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE));
 setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID))
-    .with(CardTriggerType.ACTION, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.LAST_ACTIONED, true);
-    });
 setCard(new CardData("og-039", [5,7,undefined], 2, Species.FELINE));
 setCard(new CardData("og-040", [undefined,undefined,5], 2, Species.CANINE));
 setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN)//todo

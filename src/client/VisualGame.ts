@@ -159,7 +159,7 @@ export default class VisualGame extends ElementScene{
                 let width=scale*1.3;
                 let height=scale*0.4;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
-                        this.state.getActionsLeft() === 0 ? "End Turn" : "Pass", ()=>{
+                        this.state.getActionsLeft() <= 0 ? "End Turn" : "Pass", ()=>{
                     this.frozen=true;
                     this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
                         (this.state as VTurnState).decrementTurn(true);
