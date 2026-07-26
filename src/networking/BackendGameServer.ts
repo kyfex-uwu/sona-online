@@ -29,6 +29,7 @@ import {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
+import dev from "../dev.js";
 
 export const usersFromGameIDs:{[k:string]:Array<Client>}={};
 const gamesFromUser:Map<any, Game> = new Map();
@@ -548,8 +549,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return rejectEvent(event, "no suitable cards found");
     }
 
-    else if(event instanceof RequestServerDumpEvent){
-
+    else if(event instanceof RequestServerDumpEvent && dev){
         network.replyToClient(event, new ServerDumpEvent({
             fieldsA:game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             fieldsB:game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
