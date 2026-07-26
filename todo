@@ -25,7 +25,7 @@ x
 
 
 x
-x
+
 
 
 x
@@ -48,6 +48,7 @@ fix dcw (and foxy?) being silly. to do this you need to implement client side pl
 starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
+make sure the client can start the turn on their terms when they cant draw to start
 
 fix 009 staying glowing when placed (maybe others too)
 type checking for all packets (need to write some separate thing)

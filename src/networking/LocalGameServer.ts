@@ -30,7 +30,7 @@ import {
     VTurnState
 } from "../client/VisualGameStates.js";
 import {
-    animation,
+    animation, animationEnd,
     blueStatColor,
     particleStreak,
     redStatColor,
@@ -102,6 +102,8 @@ export function getLocalGame(){ return game; }
 export async function gameReceiveFromServer(event:GameEvent<any>) {
     log("%c -> "+event.constructor.name+"\n"+event.serialize(),
         `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
+
+    await animationEnd();
 
     if(event instanceof GameStartEvent){
         game = new VisualGame(scene);

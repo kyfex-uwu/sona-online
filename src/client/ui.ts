@@ -286,3 +286,10 @@ let animChain = new Promise<void>(r=>r());
 export function animation(callback:()=>Promise<any>){
     animChain=animChain.then(async ()=>await callback());
 }
+export async function animationEnd(){
+    let currentAnimChain;
+    do{
+        currentAnimChain=animChain;
+        await currentAnimChain;
+    }while(currentAnimChain!==animChain);
+}
