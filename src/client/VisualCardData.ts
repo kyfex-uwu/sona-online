@@ -23,6 +23,7 @@ import {
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 import {EndType, StateFeatures} from "./VisualGameStateTools.js";
+import type VisualCardClone from "./VisualCardClone.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -185,7 +186,7 @@ visualCardClientActions["og-028"] = (card)=>{
     const listeners:(()=>void)[]=[];
 
     let release:()=>void;
-    const state = new VGuiState(getLocalGame(), oldStates, {
+    getLocalGame().setState(new VGuiState(getLocalGame(), oldStates, {
         onEnd:(self, type)=>{
             release();
             for(const other of sideTernary(getLocalGame().getMySide(), getLocalGame().handA, getLocalGame().handB).cards)
@@ -244,47 +245,7 @@ visualCardClientActions["og-028"] = (card)=>{
         canSelectHandCard:(self, card)=>{
             return card.logicalCard.cardData.level === 3;
         }
-    });
-
-    // const state = new VPickCardsState(getLocalGame(), oldStates,
-    //     fields.map(field=>field.getCard()).filter(card=>card!==undefined),
-    //     (picked)=>{
-    //         if(toScare.has(picked.logicalCard.id)) toScare.delete(picked.logicalCard.id);
-    //         else toScare.add(picked.logicalCard.id);
-    //
-    //         state.endType = (toScare.size <= sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).cards
-    //             .filter(card=>card.logicalCard.cardData.level === 3).length &&
-    //             toScare.size >=1)?EndType.BOTH:EndType.CANCEL;
-    //     }, EndType.CANCEL, ()=>{
-    //         if(toScare.size===0) return resolve!(true);
-    //
-    //         const toReplace:number[] = [];
-    //         const state2 = new VPickCardsState(getLocalGame(), oldStates,
-    //             sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).cards
-    //                 .filter(card=>card.logicalCard.cardData.level === 3),
-    //             (picked)=>{
-    //                 if(toReplace.indexOf(picked.logicalCard.id) !== -1)
-    //                     toReplace.splice(toReplace.indexOf(picked.logicalCard.id),1);
-    //                 else toReplace.push(picked.logicalCard.id);
-    //
-    //                 state2.endType = toScare.size === toReplace.length ? EndType.BOTH : EndType.CANCEL;
-    //             },EndType.CANCEL,()=>{
-    //                 let toSend:[number|false,number|false,number|false] = [false,false,false];
-    //                 for(let i=0;i<3;i++){
-    //                     if(toScare.has(fields[i]!.getCard()?.logicalCard.id ?? -1))
-    //                         toSend[i] = toReplace.pop()!;
-    //                 }
-    //
-    //                 network.sendToServer(new CardAction({
-    //                     cardId:card.logicalCard.id,
-    //                     actionName:CardActionOptions.KIBBY_SCARE,
-    //                     cardData:{cards:toSend}
-    //                 }));
-    //                 resolve!(true);
-    //             });
-    //         getLocalGame().setState(state2, getLocalGame().getGame().state);
-    //     });
-    getLocalGame().setState(state, getLocalGame().getGame().state);
+    }), getLocalGame().getGame().state);
 
     return toReturn;
 };
@@ -348,33 +309,7 @@ visualCardClientActions["og-041"] = (card)=>{
                 release();
             },
             init:(self)=>{
-                const cards = sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards();
-                let height=1;
-                let scale=0.9;
-
-                if(cards.length>4) height=2;
-                if(cards.length>8 && cards.length%3 === 0) height=3;
-                if(cards.length === 13 || cards.length === 16) height=3;
-
-                const cardPositions:Vector2[] = [];
-                let currCard=0;
-                let width = Math.floor(cards.length/height);
-                for(let y=0;y<height;y++){
-                    let adjWidth = width + (y === 1 ? 1 : 0);
-                    for(let x=0;x<adjWidth;x++){
-                        if(cards[currCard] === undefined) break;
-                        cardPositions[currCard] = new Vector2((x-(adjWidth-1)/2)*scale*4, -(y-(height-0.5)/2)*scale*5.5);
-                        currCard++;
-                    }
-                }
-
-                self.addCards(cards.map((card, i)=>{
-                    return {
-                        card,
-                        position:cardPositions[i]!,
-                        scale
-                    }
-                }), (card)=>{
+                self.addCardsGrid(sideTernary(card.getSide(), card.game.deckA, card.game.deckB).getCards(), (card)=>{
                     selectedCard?.highlight(false, og041Highlight);
                     selectedCard = card;
                     selectedCard?.highlight(true, og041Highlight);
@@ -514,53 +449,99 @@ wrap(cards["og-018"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
 
     self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
-wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
+const og027highlight = newHighlightLock();
+wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
+    if(orig) orig({self:card, game});
 
     tempHowToUse("Yashi MauMau", "Select your three cards, then press Finish. "+
         "Click the cards in order of top to bottom: the first card will be on top of " +
         "the deck and the last card will be third (or second or whatever)");
-    waitForClarify(ClarificationJustification.YASHI, ()=>{
-        getLocalGame().frozen=false;
+    waitForClarify(ClarificationJustification.YASHI, ()=> {
+        getLocalGame().frozen = false;
 
-        let toSend:[number?,number?,number?] = [];
-        const origState = getLocalGame().state;
-        const firstState = new VPickCardsState(getLocalGame(), [origState, game.state],
-            sideTernary(self.side, getLocalGame().deckA, getLocalGame().deckB).getCards(),
-            (picked)=>{
-                const index = toSend.indexOf(picked.logicalCard.id);
-                if(index !== -1)
-                    toSend.splice(index,1);
-                else
-                    toSend.push(picked.logicalCard.id);
-                if(toSend.length>3)
-                    //@ts-ignore
-                    toSend=toSend.slice(1);
-                firstState.endType = toSend.length > 0 ? EndType.FINISH : EndType.NONE;
-            }, EndType.NONE, ()=>{
-                let newOrder:[number?,number?,number?]=[];
-                const toCancel = new VPickCardsState(getLocalGame(), [origState, game.state],
-                    sideTernary(self.side, getLocalGame().deckA, getLocalGame().deckB).getCards()
-                        .filter(card=>toSend.indexOf(card.logicalCard.id) !== -1),
-                    (picked)=>{
-                        const index = newOrder.indexOf(picked.logicalCard.id);
-                        if(index !== -1)
-                            newOrder.splice(index,1);
-                        else
-                            newOrder.push(picked.logicalCard.id);
-
-                        if(newOrder.length === toSend.length){
-                            network.sendToServer(new CardAction({
-                                cardId:self.id,
-                                actionName:CardActionOptions.YASHI_REORDER,
-                                cardData:{cards:newOrder},
-                            }));
-                            toCancel.end();
+        let ordered: [number?, number?, number?] = [];
+        let release: () => void;
+        let cardsRelease:()=>void;
+        const selected = new Set<VisualCardClone>();
+        let state:[boolean,"pick"|"order"]=[false,"pick"];
+        let orderingSelected:VisualCardClone|undefined;
+        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
+            onEnd: (self, type) => {
+                release();
+                network.sendToServer(new CardAction({
+                    cardId:card.id,
+                    actionName:CardActionOptions.YASHI_REORDER,
+                    cardData:{cards:ordered},
+                }));
+            },
+            init: (self) => {
+                self.blackBg(true);
+                release = registerDrawCallback(0, (p5, scale) => {
+                    if(state[1] === "pick") {
+                        if(!state[0]){
+                            cardsRelease=self.addCardsGrid(sideTernary(getLocalGame().getMySide(), getLocalGame().deckA, getLocalGame().deckB).getCards(),
+                                (picked) => {
+                                    if (selected.has(picked)) {
+                                        selected.delete(picked);
+                                        picked.highlight(false, og027highlight);
+                                    } else if(selected.size<3) {
+                                        selected.add(picked);
+                                        picked.highlight(true, og027highlight);
+                                    }
+                                });
+                            for(const card of selected.values()){
+                                self.cards.find(c=>c.logicalCard.id === card.logicalCard.id)?.highlight(true, og027highlight);
+                            }
                         }
-                    },EndType.NONE);
-                getLocalGame().setState(toCancel, game.state);
-            })
-        getLocalGame().setState(firstState, game.state);
+
+                        self.button(p5, scale, () => {
+                            for (const vCard of self.cards)
+                                vCard.removeFromScene();
+                            cardsRelease();
+
+                            ordered = [...selected.values()].map(v=>v.logicalCard.id) as [number?, number?, number?];
+                            state=[false,"order"];
+                        }, "Continue", selected.size === 0);
+                        self.infoText(p5, scale, "Pick up to 3 cards to reorder on top of the deck");
+                    }else{
+                        if(!state[0]){
+                            cardsRelease=self.addCardsGrid([...selected.values()],
+                                (picked) => {
+                                    if(!orderingSelected){
+                                        orderingSelected = picked;
+                                        orderingSelected.highlight(true, og027highlight);
+                                    }else{
+                                        [orderingSelected.position, picked.position] = [picked.position, orderingSelected.position];
+                                        const p1 = ordered.indexOf(orderingSelected.logicalCard.id);
+                                        const p2 = ordered.indexOf(picked.logicalCard.id);
+                                        [ordered[p1], ordered[p2]] = [ordered[p2], ordered[p1]];
+
+                                        orderingSelected.highlight(false, og027highlight);
+                                        orderingSelected = undefined;
+                                    }
+                                });
+                        }
+
+                        self.buttonAndFinish(p5, scale, ()=>{
+                            for (const vCard of self.cards)
+                                vCard.removeFromScene();
+                            cardsRelease();
+
+                            state=[false,"pick"];
+                        }, "Back", false, false, false);
+                        self.infoText(p5, scale, "Swap the cards around to determine the new order");
+                        p5.push();
+                        p5.textSize(scale*50/128/2.5);
+                        p5.textAlign(p5.CENTER,p5.CENTER);
+                        for(let i=0;i<ordered.length;i++)
+                            p5.text((["Top","Second","Third"])[i],p5.width/2 + (i-(ordered.length-1)/2)*scale*0.6,p5.height/2-scale*0.7);
+                        p5.pop();
+                    }
+
+                    state[0]=true;
+                })
+            }
+        }), getLocalGame().getGame().state);
     });
     getLocalGame().frozen=true;
 });

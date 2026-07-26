@@ -7,7 +7,7 @@ import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
 import {camera, clickListener, removeClickListener} from "./clientConsts.js";
-import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, type Vector2, Vector3} from "three";
+import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {CardTriggerType} from "../CardData.js";
@@ -446,11 +446,10 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.initFunc = data.init;
         this.canSelectHandCardImpl = data.canSelectHandCard ?? (()=>false);
     }
-    private readonly cardsListeners:number[] = [];
     public readonly cards:VisualCardClone[]=[];
     addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCardClone)=>void){
         const newModels:VisualCardClone[] = [];
-        this.cardsListeners.push(clickListener(() => {
+        const listener = clickListener(() => {
             const intersects = this.game.raycaster.intersectObjects(newModels
                 .map(card=>card.model));
             if (intersects[0] !== undefined) {
@@ -460,7 +459,7 @@ export class VGuiState extends VisualGameState<TurnState>{
             }
 
             return false;
-        }));
+        });
 
         for (let i = 0; i < cards.length; i++) {
             const newCard = new VisualCardClone(cards[i]!.card);
@@ -479,47 +478,74 @@ export class VGuiState extends VisualGameState<TurnState>{
             newModels.push(newCard);
         }
 
-        return this;
+        return ()=>removeClickListener(listener);
     }
-    private readonly fans: { cards:VisualCardClone[], pos:Vector2, width:number, inited:boolean }[]=[];
-    addCardsFan(cards:VisualCard[], position:Vector2, width:number, onPick:(card:VisualCardClone)=>void){
-        const newModels:VisualCardClone[] = [];
-        this.cardsListeners.push(clickListener(() => {
-            const intersects = this.game.raycaster.intersectObjects(newModels
-                .map(card=>card.model));
-            if (intersects[0] !== undefined) {
-                onPick(newModels.find(card=>card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
-                    .userData.card.logicalCard.id)!);
-                return true;
+    addCardsGrid(cards:VisualCard[], onPick:(card:VisualCardClone)=>void){
+        let height=1;
+        let scale=0.9;
+
+        if(cards.length>4) height=2;
+        if(cards.length>10 || cards.length === 9) height=3;
+
+        const cardPositions:Vector2[] = [];
+        let currCard=0;
+        let width = Math.floor(cards.length/height);
+        if(height === 3) width = Math.floor((cards.length+1)/height)
+        for(let y=0;y<height;y++){
+            let adjWidth = width + ((height === 3 && y === 1) ? ((cards.length+1) % 3 - 1)  : 0);
+            for(let x=0;x<adjWidth;x++){
+                if(cards[currCard] === undefined) break;
+                cardPositions[currCard] = new Vector2((x-(adjWidth-1)/2)*scale*4, -(y-(height-0.5)/2)*scale*5.5);
+                currCard++;
             }
-
-            return false;
-        }));
-
-        for (let i = 0; i < cards.length; i++) {
-            console.trace("b",i,cards[i]!)
-            const newCard = new VisualCardClone(cards[i]!);
-            this.game.addElement(newCard);
-            newCard.populate(newCard.logicalCard);
-            newCard.createModel().then(()=>{
-                camera.add(newCard.model);
-            });
-
-            newCard.flipFaceup();
-
-            this.cards.push(newCard);
-            newModels.push(newCard);
         }
 
-        this.fans.push({
-            cards:newModels,
-            pos:position,
-            width,
-            inited:false,
-        });
-
-        return this;
+        return this.addCards(cards.map((card, i)=>{
+            return {
+                card,
+                position:cardPositions[i]!,
+                scale
+            }
+        }), onPick);
     }
+    private readonly fans: { cards:VisualCardClone[], pos:Vector2, width:number, inited:boolean }[]=[];
+'''' bbbbb    // addCardsFan(cards:VisualCard[], position:Vector2, width:number, onPick:(card:VisualCardClone)=>void){
+    //     const newModels:VisualCardClone[] = [];
+    //     this.cardsListeners.push(clickListener(() => {
+    //         const intersects = this.game.raycaster.intersectObjects(newModels
+    //             .map(card=>card.model));
+    //         if (intersects[0] !== undefined) {
+    //             onPick(newModels.find(card=>card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
+    //                 .userData.card.logicalCard.id)!);
+    //             return true;
+    //         }
+    //
+    //         return false;
+    //     }));
+    //
+    //     for (let i = 0; i < cards.length; i++) {
+    //         const newCard = new VisualCardClone(cards[i]!);
+    //         this.game.addElement(newCard);
+    //         newCard.populate(newCard.logicalCard);
+    //         newCard.createModel().then(()=>{
+    //             camera.add(newCard.model);
+    //         });
+    //
+    //         newCard.flipFaceup();
+    //
+    //         this.cards.push(newCard);
+    //         newModels.push(newCard);
+    //     }
+    //
+    //     this.fans.push({
+    //         cards:newModels,
+    //         pos:position,
+    //         width,
+    //         inited:false,
+    //     });
+    //
+    //     return this;
+    // }
     visualTick() {
         super.visualTick();
 
