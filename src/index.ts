@@ -1,7 +1,7 @@
 import {camera, renderer, scene} from "./client/clientConsts.js";
 import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
-import {lerp, particles} from "./client/ui.js";
+import {lerp, particles, registerDrawCallback} from "./client/ui.js";
 import {LoadScene} from "./client/scenes/LoadScene.js";
 import {loadLocalNetwork} from "./networking/LocalServer.js";
 
@@ -72,5 +72,14 @@ renderer.setAnimationLoop((time) => {
     stats.end();
     lastTime=time;
 });
+
+registerDrawCallback(100,(p5,scale)=>{
+    p5.push();
+    p5.textSize(scale*0.1);
+    p5.textAlign(p5.RIGHT,p5.BOTTOM);
+    p5.text(`Version ${VERSION_NUMBER}`,p5.width-scale*0.02,p5.height-scale*0.02);
+    p5.pop();
+});
+const VERSION_NUMBER = "beta 0.9.0"
 
 loadLocalNetwork();
