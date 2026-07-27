@@ -6,7 +6,12 @@ import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
-import {AmberData, CardActionOptions, type FOXY_MAGICIAN_GUESS} from "../networking/CardActionOption.js";
+import {
+    AmberData,
+    CardActionOptions,
+    type DCW_GUESS,
+    type FOXY_MAGICIAN_GUESS
+} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
@@ -630,52 +635,138 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
         }), game.state);
     });
 });
-wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
+const og032Highlight = newHighlightLock();
+wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
+    if(orig) orig({self:card, game});
 
     tempHowToUse("Dark Cat Wizard", "Pick any card; your opponent will try to guess its level.")
 
-    game.freeze(()=>true);
-
     waitForClarify(ClarificationJustification.DCW, ()=>{
-        const oldStates:[VisualGameState<any>,GameState]=[getLocalGame().state,game.state];
-        const state = new VPickCardsState(getLocalGame(), oldStates,
-            sideTernary(self.side, getLocalGame().deckA, getLocalGame().deckB).getCards(),
-                (picked)=>{
-                    network.sendToServer(new CardAction({
-                        cardId:self.id,
-                        actionName:CardActionOptions.DCW_PICK,
-                        cardData:picked.logicalCard.id
-                    }));
-                    state.end();
+        let release:()=>void;
+        let selectedCard:SuperficialVisualCard|undefined;
+        let uiState:"pick"|"wait"|"end"="pick";
+        let frame=0;
+        let guess:Level|undefined;
 
-                    waitForClarify(ClarificationJustification.DCW, (event)=>{
-                        if(event instanceof ClarifyCardEvent && event.data.id === -1) {
-                            tempHowToUse("Dark Cat Wizard - Scaring", "Click the card you want to scare off.")
+        const oldState = [getLocalGame().state, game.state] satisfies [VisualGameState<any>, GameState];
+        getLocalGame().setState(new VGuiState(getLocalGame(), oldState, {
+            onEnd: (self, type) => {
+                release();
 
-                            //scare any card
-                            const state2 = new VPickCardsState(getLocalGame(), oldStates,
-                                [...getLocalGame().fieldsA, ...getLocalGame().fieldsB].map(field=>field.getCard())
-                                    .filter(card=>card !== undefined),
-                                (picked2)=>{
-                                    network.sendToServer(new CardAction({
-                                        cardId:self.id,
-                                        actionName:CardActionOptions.DCW_SCARE,
-                                        cardData:{
-                                            side:picked2.getSide(),
-                                            pos:sideTernary(picked2.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
-                                                .findIndex(field=>field.getCard()?.logicalCard.id === picked2.logicalCard.id) + 1
-                                        }
-                                    })).onReply(successOrFail(()=>{
-                                        game.unfreeze();
-                                    },()=>{},()=>{}));
-                                    state2.end();
-                                },EndType.NONE);
-                            getLocalGame().setState(state2, oldStates[1]);
+                if (guess !== selectedCard?.logicalCard.cardData.level) {
+                    let scareSelected:[VisualCard,1|2|3]|undefined;
+                    let listeners:(()=>void)[]=[];
+                    let release:()=>void;
+                    getLocalGame().setState(new VGuiState(getLocalGame(), oldState, {
+                        onEnd:(self, type)=>{
+                            for(const release of listeners) release();
+                            release();
+
+                            network.sendToServer(new CardAction({
+                                cardId:card.id,
+                                actionName:CardActionOptions.DCW_SCARE,
+                                cardData:{
+                                    side:scareSelected![0].getSide(),
+                                    pos:scareSelected![1]
+                                }
+                            })).onReply(successOrFail(()=>{
+                                game.unfreeze();
+                            }));
+                        },
+                        init:(self)=>{
+                            getLocalGame().changeView(sideTernary(getLocalGame().getMySide(), ViewType.CLOSER_BOARD_A, ViewType.CLOSER_BOARD_B));
+
+                            for(const field of [...getLocalGame().fieldsA, ...getLocalGame().fieldsB]){
+                                listeners.push(field.addClickListener(()=>{
+                                    const card = field.getCard();
+                                    if(!card) return;
+                                    scareSelected?.[0].highlight(false, og032Highlight);
+                                    scareSelected = [card, field.which];
+                                    scareSelected[0].highlight(true, og032Highlight);
+                                }));
+                            }
+
+                            release=registerDrawCallback(0,(p5,scale)=>{
+                                self.finishButton(p5, scale, scareSelected === undefined);
+
+                                self.infoText(p5, scale, "You opponent didn't guess the card's level. Select a card to scare off");
+                            });
                         }
+                    }), oldState[1]);
+                }
+                return true;
+            },
+            init: (self) => {
+                self.blackBg(true);
+
+                release = registerDrawCallback(0, (p5, scale)=>{
+                    if(uiState === "pick")
+                        self.button(p5, scale, ()=>{
+                            for(const other of self.cards)
+                                if(other !== selectedCard) other.removeFromScene();
+                                else{
+                                    other.position = new Vector3(0,0,-20);
+                                    other.highlight(false, og031Highlight);
+                                }
+
+                            network.sendToServer(new CardAction({
+                                cardId:card.id,
+                                actionName:CardActionOptions.DCW_PICK,
+                                cardData:selectedCard!.logicalCard.id
+                            }));
+
+                            uiState = "wait";
+                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                (guessEvent)=>{
+                                    guess=((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
+                                    if(guess!==undefined && guess === selectedCard?.logicalCard.cardData.level)
+                                        uiState = "end";
+                                    else {
+                                        uiState = "wait";
+
+                                        waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                            (guessEvent)=>{
+                                                guess=((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
+                                                uiState = "end";
+                                                return false;
+                                            });
+                                    }
+                                    return false;
+                                });
+                        }, "Select", selectedCard === undefined);
+                    else if(uiState === "wait"){
+                        p5.push();
+                        p5.textSize(scale*50/128/2.5);
+                        p5.textAlign(p5.CENTER,p5.CENTER);
+                        if(guess !== undefined)
+                            p5.text("Guessed Level "+guess,p5.width/2,p5.height/2-scale);
+                        p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
+                        frame=(frame+1)%200;
+                        p5.pop();
+                    }else{
+                        p5.push();
+                        p5.textSize(scale*50/128/2.5);
+                        p5.textAlign(p5.CENTER,p5.CENTER);
+                        const guessedRight = guess === selectedCard!.logicalCard.cardData.level;
+                        p5.text(`Opponent guessed ${guessedRight ? "right" : "wrong" }: Level `+guess,p5.width/2,p5.height/2-scale*0.7);
+                        frame=(frame+1)%200;
+                        p5.pop();
+
+                        self.button(p5, scale, ()=>self.end("finished"),guessedRight ? "Finish" : "Scare",false)
+                        self.finishButton(p5, scale, false);
+                    }
+                })
+
+                self.addCardsGrid(sideTernary(getLocalGame().getMySide(), getLocalGame().deckA, getLocalGame().deckB).getCards(),
+                    (picked)=>{
+                        if(uiState === "wait") return;
+
+                        selectedCard?.highlight(false, og031Highlight);
+                        selectedCard = picked;
+                        selectedCard?.highlight(true, og031Highlight);
                     });
-                },EndType.NONE);
-        getLocalGame().setState(state, game.state);
+            }
+        }), getLocalGame().getGame().state);
     });
 });
 wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{

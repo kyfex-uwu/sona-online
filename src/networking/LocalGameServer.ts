@@ -112,8 +112,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     log("%c -> "+event.constructor.name+"\n"+event.serialize(),
         `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
 
-    await animationEnd();
-
     if(event instanceof GameStartEvent){
         game = new VisualGame(scene);
         network.clientGame = game.getGame();
@@ -197,7 +195,11 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 finish();
             }
         }
-    }else if(event instanceof PlaceAction){
+    }
+
+    await animationEnd();
+
+    if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);
@@ -305,61 +307,100 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                     game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
             }break;
             case CardActionOptions.DCW_GUESS:{
-                tempHowToUse("Dark Cat Wizard - Guessing", "Pick the level you think the card your opponent " +
-                    "picked might be.")
+                let guess:Level;
+                const endWaiter = externalPromise();
+                const buttons = (p5:any, scale:number, disabled:boolean)=>{
+                    for (let i = 0; i < 3; i++)
+                        button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
+                            network.sendToServer(new CardAction({
+                                cardId: -1,
+                                actionName: CardActionOptions.DCW_GUESS,
+                                cardData: i + 1
+                            }));
+                            guess=i+1;
 
-                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-                const state = new VPickCardsState(game, oldStates,
-                    [1,2,3].map(level => new VisualCard(game,
-                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
-                    (picked)=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.DCW_GUESS,
-                            cardData:picked.logicalCard.cardData.level
-                        }));
-                        state.end();
+                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                (guessEvent)=>{
+                                    state = (guessed === undefined) ? "guess" : "end";
+                                    guessed=i+1;
+                                    animation(()=>endWaiter);
+                                    return false;
+                                });
 
-                        waitForClarify(ClarificationJustification.DCW, (event)=>{
-                            if(event instanceof ClarifyCardEvent && event.data.cardDataName === ""){
-                                const state2 = new VPickCardsState(game,oldStates,
-                                    [1,2,3].map(level => new VisualCard(game,
-                                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
-                                    (picked2)=>{
-                                        waitForClarify(ClarificationJustification.DCW, (event)=>{
-                                            if(event instanceof ClarifyCardEvent)
-                                                console.log("The card was "+event.data.cardDataName);
-                                        });
+                            state="wait";
+                        }, scale, foxyMagicianLevelButtons[i]!, disabled || guessed === i+1);
+                }
 
-                                        waitFor(event=>{
-                                            return event instanceof ScareAction && event.data.free === true
-                                        }, ()=> {
-                                            game.getGame().unfreeze();
-                                            return true;
-                                        });
-                                        network.sendToServer(new CardAction({
-                                            cardId:-1,
-                                            actionName:CardActionOptions.DCW_GUESS,
-                                            cardData:picked2.logicalCard.cardData.level
-                                        }));
-                                        game.getGame().unfreeze();
-                                        state.end();
-                                    },EndType.NONE);
-                                game.setState(state2, oldStates[1]);
-                            }else if(event instanceof ClarifyCardEvent){
-                                console.log("The card was "+event.data.cardDataName);
-                                game.getGame().unfreeze();
+                let release:()=>void;
+                let state:"guess"|"wait"|"end"="guess";
+                let guessed:Level|undefined=undefined;
+                let frame=0;
+                let repopulating=false;
+                const targetCard = game.elements.find(card=>card instanceof SuperficialVisualCard &&
+                    card.logicalCard.id === event.data.cardId) as VisualCard;
+                game.setState(new VGuiState(game, [game.state, game.getGame().state], {
+                    onEnd:(self,type)=>{
+                        release();
+                        endWaiter.resolve();
+                    },
+                    init:(self)=>{
+                        self.blackBg(true);
+
+                        self.addCards([{
+                            card:"unknown.jpg",
+                            position: new Vector2(0,0),
+                        }],()=>{});
+                        self.cards[0]!.flipFacedown();
+
+                        release = registerDrawCallback(0,(p5, scale)=>{
+                            if(!repopulating && targetCard.logicalCard.cardData.name!=="unknown") {
+                                repopulating=true;
+                                state="end";
+                                self.cards[0]!.repopulate(new Card(targetCard.logicalCard.cardData,
+                                    Side.A, null!,-1).flipFacedown()).then(()=>{
+                                    self.cards[0]!.flipFaceup();
+                                });
                             }
-                        });
-                    },EndType.NONE);
-                game.setState(state, game.getGame().state);
+
+                            if(state === "guess") {
+                                p5.push();
+                                p5.textSize(scale * 50 / 128 / 2.5);
+                                p5.textAlign(p5.CENTER, p5.CENTER);
+                                p5.text("Guess the card's level", p5.width / 2, p5.height / 2 - scale * 0.7);
+                                p5.pop();
+
+                                buttons(p5, scale, false);
+
+                            }else if(state === "wait"){
+                                    p5.push();
+                                    p5.textSize(scale*50/128/2.5);
+                                    p5.textAlign(p5.CENTER,p5.CENTER);
+                                    p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
+                                    frame=(frame+1)%200;
+                                    p5.pop();
+
+                                    buttons(p5, scale, true);
+                            }else{
+                                p5.push();
+                                p5.textSize(scale*50/128/2.5);
+                                p5.textAlign(p5.CENTER,p5.CENTER);
+                                p5.text("You guessed "+(targetCard.logicalCard.cardData.level === guess ? "right" : "wrong"),
+                                    p5.width/2,p5.height/2-scale*0.7);
+                                frame=(frame+1)%200;
+                                p5.pop();
+
+                                self.finishButton(p5, scale, false);
+                            }
+                        })
+                    }
+                }), game.getGame().state);
             }break;
             case CardActionOptions.FOXY_MAGICIAN_GUESS:{
                 tempHowToUse("The Foxy Magician - Guessing", "Pick the level you think the card your opponent " +
                     "picked might be.")
 
                 let guess:Level;
-                let endWaiter = externalPromise();
+                const endWaiter = externalPromise();
                 const buttons = (p5:any, scale:number, disabled:boolean)=>{
                     for (let i = 0; i < 3; i++)
                         button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {

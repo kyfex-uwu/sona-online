@@ -16,7 +16,7 @@ import {
     type CLOUD_CAT_PICK,
     type COWGIRL_COYOTE_INCREASE,
     type DCW_PICK,
-    type DCW_SCARE,
+    type DCW_SCARE, type FOXY_MAGICIAN_GUESS,
     type FOXY_MAGICIAN_PICK,
     type FURMAKER_PICK,
     type GREMLIN_SCARE,
@@ -298,18 +298,18 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                 [guesserSide]) !== CardActionOptions.FOXY_MAGICIAN_GUESS) //should be guessing
                 return rejectEvent(event, "failed foxy guess check");
 
-            const toDraw = sideTernary(guesserSide, game.deckB, game.deckA)
+            const answer = sideTernary(guesserSide, game.deckB, game.deckA)
                 .find(card=>card.id === game!.getMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED))!;
-            const guess = (event as CardAction<FOXY_MAGICIAN_PICK>).data.cardData;
+            const guess = (event as CardAction<FOXY_MAGICIAN_GUESS>).data.cardData;
 
-            if(toDraw.cardData.level !== guess) {
+            if(answer.cardData.level !== guess) {
                 event.sender?.send(new ClarifyCardEvent({
-                    id: toDraw.id,
-                    cardDataName: toDraw.cardData.name,
+                    id: answer.id,
+                    cardDataName: answer.cardData.name,
                     justification: ClarificationJustification.FOXY_MAGICIAN
                 }));
 
-                sideTernary(guesserSide, game.handB, game.handA).push(toDraw);
+                sideTernary(guesserSide, game.handB, game.handA).push(answer);
             }
 
             sendToGame(new CardAction({
@@ -356,7 +356,8 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                 .find(card=>card.id === pickedData.cardId)!;
 
             let failed=false;
-            if(answer.cardData.level === (event as CardAction<DCW_PICK>).data.cardData){
+            const guess = (event as CardAction<DCW_PICK>).data.cardData;
+            if(answer.cardData.level === guess){
                 pickedData.guesses=1;//skip straight to the end
             }else if(pickedData.guesses === 1){
                 failed=true;
@@ -364,21 +365,21 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             pickedData.guesses++;
             if(pickedData.guesses >= 2){
                 game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[guesserSide], undefined);
-                sendToGame(new ClarifyCardEvent({
+                event.sender?.send(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
-                    justification:ClarificationJustification.DCW
-                }), game);
+                    justification: ClarificationJustification.FOXY_MAGICIAN
+                }));
                 game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(guesserSide)],
                     failed?CardActionOptions.DCW_SCARE:undefined);
+                shuffleBackend(sideTernary(other(guesserSide), game.deckA, game.deckB));
                 if(!failed) game.unfreeze();
-            }else{
-                game.player(guesserSide)?.send(new CardAction({
-                    cardId:-1,
-                    actionName:CardActionOptions.DCW_GUESS,
-                    cardData:1,
-                }));
             }
+            sendToGame(new CardAction({
+                cardId:-1,
+                actionName:CardActionOptions.DCW_GUESS,
+                cardData:guess
+            }), game);
             return acceptEvent(event);
         }
         case CardActionOptions.DCW_SCARE:{
@@ -394,8 +395,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                 failed:false
                 //note: the freeze filter is specifically letting through forced scares without senders.
                 //if you need to add a sender to this event in the future make sure to modify the freeze filter as well
-            }).force().forceFree());
-            shuffleBackend(sideTernary(actor.side, game.deckA, game.deckB));
+            }).force().forceFree().withGame(game));
             game.unfreeze();
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             return acceptEvent(event);

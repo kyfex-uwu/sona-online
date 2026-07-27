@@ -190,8 +190,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.FOXY_MAGICIAN));
 });
-//has to be preplaced because first turn waiter pushes it to next frame
-wrap(cards["og-032"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
+wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.DCW_PICK);

@@ -418,12 +418,12 @@ const vGuiStates = {
 }
 export class VGuiState extends VisualGameState<TurnState>{
     private parentState: [VisualGameState<any>, GameState];
-    private endFunc: (self: VGuiState, state:"finished"|"canceled") => void;
+    private endFunc: (self: VGuiState, state:"finished"|"canceled") => boolean|void;
     private initFunc: (self: VGuiState) => void;
     private canSelectHandCardImpl: (self:VGuiState, card:VisualCard) => boolean;
     constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState],
             data:{
-                onEnd:(self:VGuiState, type:"finished"|"canceled")=>void,
+                onEnd:(self:VGuiState, type:"finished"|"canceled")=>boolean|void,
                 init:(self:VGuiState)=>void,
                 canSelectHandCard?:(self:VGuiState, card:VisualCard)=>boolean
             }) {
@@ -557,8 +557,8 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
 
     end(type:"finished"|"canceled") {
-        this.endFunc(this, type);
-        this.game.setState(this.parentState[0], this.parentState[1]);
+        if(!this.endFunc(this, type))
+            this.game.setState(this.parentState[0], this.parentState[1]);
     }
 
     canSelectHandCard(card:VisualCard){
