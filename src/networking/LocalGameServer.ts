@@ -19,10 +19,9 @@ import cards from "../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
 import VisualGame, {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
-import {sideTernary, statTernary, wait} from "../consts.js";
+import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
 import {
-    VBeforeGameState,
     VChoosingStartState,
     VGuiState,
     VisualGameState,
@@ -30,8 +29,11 @@ import {
     VTurnState
 } from "../client/VisualGameStates.js";
 import {
-    animation, animationEnd,
+    animation,
+    animationEnd,
     blueStatColor,
+    button,
+    buttonId,
     particleStreak,
     redStatColor,
     registerDrawCallback,
@@ -44,9 +46,11 @@ import {
     type AMBER_PICK,
     AmberData,
     type BOTTOM_DRAW,
-    type BROWNIE_DRAW, type BROY_WEASLA_INCREASE_DATA,
+    type BROWNIE_DRAW,
+    type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
-    type CLOUD_CAT_PICK, type COWGIRL_COYOTE_INCREASE_DATA,
+    type CLOUD_CAT_PICK,
+    type COWGIRL_COYOTE_INCREASE_DATA,
     type FURMAKER_PICK,
     type WORICK_RESCUE,
     type YASHI_REORDER
@@ -57,6 +61,9 @@ import {log, scene} from "../client/clientConsts.js";
 import {waitFor} from "./LocalServer.js";
 import {setScene} from "../index.js";
 import {GameScene} from "../client/scenes/GameScene.js";
+import type VisualCardClone from "../client/VisualCardClone.js";
+import SuperficialVisualCard from "../client/SuperficialVisualCard.js";
+import type {Level} from "../CardData.js";
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
     const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
@@ -96,6 +103,8 @@ const logColors:{[key:string]:string}= {
     DetermineStarterEvent: "#fb8",
     ClarifyCardEvent: "#8fc"
 }
+
+const foxyMagicianLevelButtons = [buttonId(), buttonId(), buttonId()];
 
 let game:VisualGame;
 export function getLocalGame(){ return game; }
@@ -197,20 +206,18 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             .addCard(card);
         if(!(game.state.getNonVisState() instanceof BeforeGameState)) card.flipFaceup();
         else card.flipFacedown();
-        if(game.state instanceof VTurnState && !(event.data.forFree ?? false)){
+        if(!(event.data.forFree ?? false)){
             game.state.decrementTurn();
         }
     }else if(event instanceof DrawAction){
         sideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
 
-        if(game.state instanceof VTurnState && event.data.isAction !== false){
+        if(event.data.isAction !== false){
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
         animation(async ()=>{
-            if(game.state instanceof VTurnState){
-                game.state.decrementTurn(true);
-            }
+            game.state.decrementTurn(true);
         });
     }else if(event instanceof ScareAction){
         if(event.data.failed !== true) {
@@ -229,7 +236,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsB, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
         if(maybeAttacked) maybeAttacked.hasAttacked=true;
         game.frozen=false;//todo: this is not how it should be solved
-        if(game.state instanceof VTurnState && !event.data.free){
+        if(!event.data.free){
             game.state.decrementTurn();
         }
     }else if(event instanceof CardAction){
@@ -351,26 +358,100 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 tempHowToUse("The Foxy Magician - Guessing", "Pick the level you think the card your opponent " +
                     "picked might be.")
 
-                const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                    [1,2,3].map(level => new VisualCard(game,
-                        new Card(cards["temp_lv"+level]!, Side.A, game.getGame(), -1), new Vector3())),
-                    (picked)=>{
-                        network.sendToServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                            cardData:picked.logicalCard.cardData.level
-                        }));
-                        waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
-                            if(event instanceof ClarifyCardEvent && event.data.cardDataName !== "") {
-                                console.log("You guessed wrong. The card was: " + event.data.cardDataName);
-                                sideTernary(game.getMySide(), game.handB, game.handA)
-                                    .addCard(sideTernary(game.getMySide(), game.deckB, game.deckA).getCards()
-                                        .find(card=>card.logicalCard.id === event.data.id)!);
+                let guess:Level;
+                let endWaiter = externalPromise();
+                const buttons = (p5:any, scale:number, disabled:boolean)=>{
+                    for (let i = 0; i < 3; i++)
+                        button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
+                            network.sendToServer(new CardAction({
+                                cardId: -1,
+                                actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
+                                cardData: i + 1
+                            }));
+                            guess=i+1;
+
+                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                                (guessEvent)=>{
+                                    state = "end";
+                                    animation(()=>endWaiter);
+                                    return false;
+                                });
+
+                            state="wait";
+                        }, scale, foxyMagicianLevelButtons[i]!, disabled);
+                }
+
+                let release:()=>void;
+                let state:"guess"|"wait"|"end"="guess";
+                let frame=0;
+                let repopulating=false;
+                const targetCard = game.elements.find(card=>card instanceof SuperficialVisualCard &&
+                    card.logicalCard.id === event.data.cardId) as VisualCard;
+                game.setState(new VGuiState(game, [game.state, game.getGame().state], {
+                    onEnd:(self,type)=>{
+                        release();
+                        endWaiter.resolve();
+                    },
+                    init:(self)=>{
+                        self.blackBg(true);
+
+                        self.addCards([{
+                            card:"unknown.jpg",
+                            position: new Vector2(0,0),
+                        }],()=>{});
+                        self.cards[0]!.flipFacedown();
+
+                        release = registerDrawCallback(0,(p5, scale)=>{
+                            if(state === "guess") {
+                                p5.push();
+                                p5.textSize(scale * 50 / 128 / 2.5);
+                                p5.textAlign(p5.CENTER, p5.CENTER);
+                                p5.text("Guess the card's level", p5.width / 2, p5.height / 2 - scale * 0.7);
+                                p5.pop();
+
+                                buttons(p5, scale, false);
+
+                            }else if(state === "wait"){
+                                p5.push();
+                                p5.textSize(scale*50/128/2.5);
+                                p5.textAlign(p5.CENTER,p5.CENTER);
+                                p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
+                                frame=(frame+1)%200;
+                                p5.pop();
+
+                                buttons(p5, scale, true);
+                            }else{
+                                if(!repopulating && targetCard.logicalCard.cardData.name!=="unknown") {
+                                    repopulating=true;
+                                    self.cards[0]!.repopulate(new Card(targetCard.logicalCard.cardData,
+                                        Side.A, null!,-1).flipFacedown()).then(()=>{
+                                            self.cards[0]!.flipFaceup();
+                                    });
+
+                                    if(targetCard.logicalCard.cardData.level !== guess) {
+                                        const removeFrom = sideTernary(other(getLocalGame().getMySide()), getLocalGame().deckA, getLocalGame().deckB);
+                                        const realCard = getLocalGame().elements.find(element => element instanceof VisualCard &&
+                                            element.logicalCard.id === event.data.cardId)! as VisualCard;
+                                        removeFrom.removeCard(realCard);
+                                        sideTernary(other(getLocalGame().getMySide()), getLocalGame().handA, getLocalGame().handB)
+                                            .addCard(realCard);
+                                        realCard.flipFaceup();
+                                    }
+                                }
+
+                                p5.push();
+                                p5.textSize(scale*50/128/2.5);
+                                p5.textAlign(p5.CENTER,p5.CENTER);
+                                p5.text("You guessed "+(targetCard.logicalCard.cardData.level === guess ? "right" : "wrong"),
+                                    p5.width/2,p5.height/2-scale*0.7);
+                                frame=(frame+1)%200;
+                                p5.pop();
+
+                                self.finishButton(p5, scale, false);
                             }
-                        });
-                        state.end();
-                    },EndType.NONE);
-                game.setState(state, game.getGame().state);
+                        })
+                    }
+                }), game.getGame().state);
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                 tempHowToUse("Lttle Boss", "Press Keep to keep Little Boss, or press Scare to scare them off the field.");
@@ -400,17 +481,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                         })
                     }
                 });
-                // const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                //     ["temp_keep","temp_scare"].map(name => new VisualCard(game,
-                //         new Card(cards[name]!, Side.A, game.getGame(), -1), new Vector3())),
-                //     (picked)=>{
-                //         network.sendToServer(new CardAction({
-                //             cardId:-1,
-                //             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
-                //             cardData:picked.logicalCard.cardData.name === "temp_keep"
-                //         }));
-                //         state.end();
-                //     },EndType.NONE);
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
@@ -435,12 +505,12 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                         .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
                                 }}).filter(data=>data!==undefined), (card)=>{
                             selectedCard?.highlight(false, og029Highlight);
-                            selectedCard=card;
+                            selectedCard=card as VisualCardClone;
                             selectedCard?.highlight(true, og029Highlight);
                         });
                         let selectedCard = self.cards.find(card=>
                             card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
-                            (event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id);
+                            (event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id) as VisualCardClone;
                         selectedCard?.highlight(true, og029Highlight);
 
                         let selectedStat=getVictim((event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).stat);
@@ -509,13 +579,13 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                         .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
                             }}).filter(data=>data!==undefined), (card)=>{
                             selectedCard?.highlight(false, og029Highlight);
-                            selectedCard=card;
+                            selectedCard=card as VisualCardClone;
                             selectedCard?.highlight(true, og029Highlight);
                         });
 
                         let selectedCard = self.cards.find(card=>
                             card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
-                            (event.data.cardData as BROY_WEASLA_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id);
+                            (event.data.cardData as BROY_WEASLA_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id) as VisualCardClone;
                         selectedCard?.highlight(true, og029Highlight);
 
                         let selectedStat=(event.data.cardData as BROY_WEASLA_INCREASE_DATA).stat;

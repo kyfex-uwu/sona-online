@@ -8,14 +8,7 @@ export enum StateFeatures {
     DECK_DRAWABLE,
     CAN_DISCARD_FROM_HAND,
 } //todo: i think theres only gonna be 2 cancellable states? (attacking and pick+subclasses) so do we really need this
-//i think this is deprecated? todo
-export interface Decrementable {
-    readonly __isDecrementableInterface: boolean;
 
-    decrementTurn(): void;
-}
-
-export const isDecrementable = (state: VisualGameState<any>) => (state as unknown as Decrementable).__isDecrementableInterface !== undefined;
 export const canSelectCardHighlight = newHighlightLock();
 
 export interface Cancellable {

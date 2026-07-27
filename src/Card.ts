@@ -69,10 +69,12 @@ export default class Card implements GameElement{
     //Flips the logical card facedown
     flipFacedown(){
         this.faceUp=false;
+        return this;
     }
     //Flips the logical card faceup
     flipFaceup(){
         this.faceUp=true;
+        return this;
     }
     //Returns this card's side
     getSide(){ return this.side; }

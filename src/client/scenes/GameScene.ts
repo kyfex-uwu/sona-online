@@ -11,7 +11,7 @@ export class GameScene extends Scene{
 
 // @ts-ignore
         window.logGame =
-            ()=> console.log(getLocalGame());
+            ()=> getLocalGame();
 // @ts-ignore
         window.serverDump =
             ()=>network.sendToServer(new RequestServerDumpEvent({}));

@@ -120,7 +120,7 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
 });
-wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+wrap(cards["og-029"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
     return ScareEffectOwner.SCARER_ONLY;
 });
 wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
@@ -216,7 +216,7 @@ wrap(cards["og-032"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.DCW));
 });
-wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
+wrap(cards["og-035"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
     return ScareEffectOwner.SCARED_ONLY;
 });
 wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,

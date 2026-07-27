@@ -19,7 +19,7 @@ export class LoadScene extends Scene{
             p5.textAlign(p5.CENTER,p5.CENTER);
             p5.fill(255,255,255,this.fadeTimer/30*255);
             p5.textSize(scale*0.25);
-            p5.text("Loading"+new Array(Math.floor(frame/50)%4).fill(".").join(""),p5.width/2,p5.height/2);
+            p5.text("Loading"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2);
 
             frame++;
             if(this.fade) this.fadeTimer--;

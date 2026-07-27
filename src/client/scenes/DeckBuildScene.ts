@@ -13,7 +13,7 @@ import {setScene} from "../../index.js";
 import {MainMenuScene} from "./MainMenuScene.js";
 
 const deck:string[] = [
-    "og-027",
+    "og-031",
     // "og-018",
     "og-035",
     "og-021",
@@ -38,7 +38,6 @@ const deck:string[] = [
 const disabledCards = [
     "og-005",
     "og-020",
-    "og-031",
     "og-032",
     "og-038",
     "og-043",

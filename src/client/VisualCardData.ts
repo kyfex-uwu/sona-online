@@ -1,12 +1,12 @@
-import CardData, {CardTriggerType, Species} from "../CardData.js";
+import CardData, {CardTriggerType, type Level, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {VGuiState, VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {externalPromise, sideTernary, statTernary} from "../consts.js";
+import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
-import {AmberData, CardActionOptions} from "../networking/CardActionOption.js";
+import {AmberData, CardActionOptions, type FOXY_MAGICIAN_GUESS} from "../networking/CardActionOption.js";
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
@@ -23,7 +23,8 @@ import {
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 import {EndType, StateFeatures} from "./VisualGameStateTools.js";
-import type VisualCardClone from "./VisualCardClone.js";
+import {waitFor} from "../networking/LocalServer.js";
+import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -292,7 +293,7 @@ visualCardClientActions["og-041"] = (card)=>{
 
     waitForClarify(ClarificationJustification.FURMAKER, ()=>{
         let release:()=>void;
-        let selectedCard:VisualCard|undefined=undefined;
+        let selectedCard:SuperficialVisualCard|undefined=undefined;
         getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
             onEnd:(self)=>{
                 getLocalGame().frozen=true;
@@ -462,9 +463,9 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
         let ordered: [number?, number?, number?] = [];
         let release: () => void;
         let cardsRelease:()=>void;
-        const selected = new Set<VisualCardClone>();
+        const selected = new Set<SuperficialVisualCard>();
         let state:[boolean,"pick"|"order"]=[false,"pick"];
-        let orderingSelected:VisualCardClone|undefined;
+        let orderingSelected:SuperficialVisualCard|undefined;
         getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
             onEnd: (self, type) => {
                 release();
@@ -545,30 +546,88 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     });
     getLocalGame().frozen=true;
 });
-wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
+const og031Highlight = newHighlightLock();
+wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
+    if(orig) orig({self:card, game});
 
     tempHowToUse("The Foxy Magician", "Pick the card you want to potentially add to your hand.")
 
     waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
-        const state = new VPickCardsState(getLocalGame(), [getLocalGame().state,game.state],
-            sideTernary(self.side, getLocalGame().deckA, getLocalGame().deckB).getCards(),
-            (picked)=>{
-                network.sendToServer(new CardAction({
-                    cardId:self.id,
-                    actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
-                    cardData:picked.logicalCard.id
-                }));
-                state.end();
+        let release:()=>void;
+        let selectedCard:SuperficialVisualCard|undefined;
+        let uiState:"pick"|"wait"|"end"="pick";
+        let frame=0;
+        let guess:Level|undefined;
+        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, game.state], {
+            onEnd:(self, type)=>{
+                release();
 
-                waitForClarify(ClarificationJustification.FOXY_MAGICIAN, (event)=>{
-                    if(event instanceof ClarifyCardEvent && event.data.id === picked.logicalCard.id) {
-                        picked.flipFaceup();
-                        sideTernary(self.side, getLocalGame().handA, getLocalGame().handB).addCard(picked);
+                if(guess!==selectedCard?.logicalCard.cardData.level){
+                    const removeFrom = sideTernary(game.mySide, getLocalGame().deckA, getLocalGame().deckB);
+                    const realCard = getLocalGame().elements.find(element=>element instanceof VisualCard &&
+                        element.logicalCard.id === selectedCard?.logicalCard.id)! as VisualCard;
+                    removeFrom.removeCard(realCard);
+                    sideTernary(game.mySide, getLocalGame().handA, getLocalGame().handB)
+                        .addCard(realCard);
+                    realCard.flipFaceup();
+                }
+            },
+            init:(self)=>{
+                self.blackBg(true);
+
+                release = registerDrawCallback(0, (p5, scale)=>{
+                    if(uiState === "pick")
+                        self.button(p5, scale, ()=>{
+                            for(const other of self.cards)
+                                if(other !== selectedCard) other.removeFromScene();
+                                else{
+                                    other.position = new Vector3(0,0,-20);
+                                    other.highlight(false, og031Highlight);
+                                }
+
+                            network.sendToServer(new CardAction({
+                                cardId:card.id,
+                                actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
+                                cardData:selectedCard!.logicalCard.id
+                            }));
+
+                            uiState = "wait";
+                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                                (guessEvent)=>{
+                                    guess=((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS);
+                                    uiState = "end";
+                                    return false;
+                                });
+                        }, "Select", selectedCard === undefined);
+                    else if(uiState === "wait"){
+                        p5.push();
+                        p5.textSize(scale*50/128/2.5);
+                        p5.textAlign(p5.CENTER,p5.CENTER);
+                        p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
+                        frame=(frame+1)%200;
+                        p5.pop();
+                    }else{
+                        p5.push();
+                        p5.textSize(scale*50/128/2.5);
+                        p5.textAlign(p5.CENTER,p5.CENTER);
+                        p5.text(`Opponent guessed ${guess === selectedCard!.logicalCard.cardData.level ? "right" : "wrong" }: Level `+guess,p5.width/2,p5.height/2-scale*0.7);
+                        frame=(frame+1)%200;
+                        p5.pop();
+
+                        self.finishButton(p5, scale, false);
                     }
-                });
-            },EndType.NONE);
-        getLocalGame().setState(state, game.state);
+                })
+
+                self.addCardsGrid(sideTernary(getLocalGame().getMySide(), getLocalGame().deckA, getLocalGame().deckB).getCards(),
+                    (picked)=>{
+                        if(uiState === "wait") return;
+
+                        selectedCard?.highlight(false, og031Highlight);
+                        selectedCard = picked;
+                        selectedCard?.highlight(true, og031Highlight);
+                    });
+            }
+        }), game.state);
     });
 });
 wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{

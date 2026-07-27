@@ -280,15 +280,15 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
 
     //Flips both this visual card and its logical card facedown
     flipFacedown(){
-        if(!this.logicalCard.getFaceUp()) return;
-        this.logicalCard.flipFacedown();
+        if(this.logicalCard.getFaceUp())
+            this.logicalCard.flipFacedown();
         this.flipRotation = new Quaternion(0,0,1,0);
         this.flipTimer = 20;
     }
     //Flips both this visual card and its logical card faceup
     flipFaceup(){
-        if(this.logicalCard.getFaceUp()) return;
-        this.logicalCard.flipFaceup();
+        if(!this.logicalCard.getFaceUp())
+            this.logicalCard.flipFaceup();
         this.flipRotation = new Quaternion(0,0,0,1);
         this.flipTimer = 20;
     }

@@ -12,7 +12,7 @@ import {sideTernary} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {canSelectCardHighlight, type Decrementable, isDecrementable, StateFeatures} from "../VisualGameStateTools.js";
+import {canSelectCardHighlight, StateFeatures} from "../VisualGameStateTools.js";
 
 export const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
@@ -49,9 +49,8 @@ export default class FieldMagnet extends CardMagnet{
                             position: this.which,
                             side:this.game.getMySide(),
                         })).onReply(successOrFail(()=>{
-                            if(isDecrementable(state) &&//deprecated?
-                                (!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))
-                                (state as unknown as Decrementable).decrementTurn();
+                            if((!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))
+                                state.decrementTurn();
                         },()=>{
                             card.removeFromHolder();
                             this.game.selectedCard = card;

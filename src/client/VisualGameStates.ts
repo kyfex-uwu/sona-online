@@ -14,12 +14,11 @@ import {CardTriggerType} from "../CardData.js";
 import {
     type Cancellable,
     canSelectCardHighlight,
-    type Decrementable,
     EndType,
-    isDecrementable,
     StateFeatures
 } from "./VisualGameStateTools.js";
 import {attackLock} from "./magnets/FieldMagnet.js";
+import SuperficialVisualCard from "./SuperficialVisualCard.js";
 
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
@@ -47,6 +46,22 @@ export abstract class VisualGameState<T extends GameState>{
     }
     canSelectHandCard(card:VisualCard){
         return true;
+    }
+
+    decrementTurn(toNextTurn=false){
+        this.game.getGame().freezableAction(()=>{
+            const state = this.game.getGame().state;
+            if(state instanceof TurnState) {
+                this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
+                if(state.decrementAction(true, toNextTurn)){
+                    const shouldEnd = state.shouldEndGame();
+                    if(shouldEnd === undefined)
+                        this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
+                    else
+                        this.game.setState(new VEndState(this.game, shouldEnd), new EndGameState(this.game.getGame(), shouldEnd));
+                }
+            }
+        });
     }
 }
 
@@ -142,7 +157,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
  *
  * If the player click on a placed card, should swap to {@link VAttackingState}
  */
-export class VTurnState extends VisualGameState<TurnState> implements Decrementable{
+export class VTurnState extends VisualGameState<TurnState>{
     public readonly currTurn;
     public canInit;
     constructor(currTurn:Side, game:VisualGame, canInit=true) {
@@ -223,22 +238,6 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
         }
     }
 
-    readonly __isDecrementableInterface=true;
-    decrementTurn(toNextTurn=false){
-        this.game.getGame().freezableAction(()=>{
-            const state = this.game.getGame().state;
-            if(state instanceof TurnState) {
-                this.game.getGame().setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
-                if(state.decrementAction(true, toNextTurn)){
-                    const shouldEnd = state.shouldEndGame();
-                    if(shouldEnd === undefined)
-                        this.game.setState(new VTurnState(other(state.turn), this.game),new TurnState(this.game.getGame(), other(state.turn)));
-                    else
-                        this.game.setState(new VEndState(this.game, shouldEnd), new EndGameState(this.game.getGame(), shouldEnd));
-                }
-            }
-        });
-    }
     getActionsLeft(){
         const state = this.game.getGame().state;
         return state instanceof TurnState ? state.actionsLeft : 0;
@@ -255,7 +254,7 @@ export class VTurnState extends VisualGameState<TurnState> implements Decrementa
 }
 
 //During this state the player either chooses which stat to attack with, which card action to attack with, or cancel
-export class VAttackingState extends VisualGameState<TurnState> implements Cancellable, Decrementable{
+export class VAttackingState extends VisualGameState<TurnState> implements Cancellable{
     public cardIndex;
     public readonly parentState;
     public readonly attackData:{
@@ -291,14 +290,9 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     canSelectHandCard(card: VisualCard): boolean {
         return false;
     }
-
-    readonly __isDecrementableInterface=true;
-    decrementTurn() {
-        this.parentState.decrementTurn();
-    }
 }
 
-export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable, Decrementable {
+export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable {
     public readonly cards;
     private readonly parentState;
     private listener?:number;
@@ -411,13 +405,6 @@ export class VPickCardsState extends VisualGameState<TurnState> implements Cance
             }
         });
     }
-
-    readonly __isDecrementableInterface=true;
-    decrementTurn() {
-        if(isDecrementable(this.parentState[0]))
-            (this.parentState[0] as unknown as Decrementable).decrementTurn();
-
-    }
 }
 
 const bgPlane = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({color:new Color(0,0,0), opacity:0.5, transparent:true}));
@@ -446,15 +433,17 @@ export class VGuiState extends VisualGameState<TurnState>{
         this.initFunc = data.init;
         this.canSelectHandCardImpl = data.canSelectHandCard ?? (()=>false);
     }
-    public readonly cards:VisualCardClone[]=[];
-    addCards(cards:{card:VisualCard, position:Vector2, scale?:number}[], onPick:(card:VisualCardClone)=>void){
-        const newModels:VisualCardClone[] = [];
+    public readonly cards:SuperficialVisualCard[]=[];
+    addCards(cards:{card:SuperficialVisualCard|string, position:Vector2, scale?:number}[], onPick:(card:SuperficialVisualCard)=>void){
+        const newModels:SuperficialVisualCard[] = [];
         const listener = clickListener(() => {
             const intersects = this.game.raycaster.intersectObjects(newModels
                 .map(card=>card.model));
             if (intersects[0] !== undefined) {
-                onPick(newModels.find(card=>card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
-                    .userData.card.logicalCard.id)!);
+                onPick(newModels.find(card=>{
+                    return card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
+                        .userData.card.logicalCard.id;
+                })!);
                 return true;
             }
 
@@ -462,7 +451,10 @@ export class VGuiState extends VisualGameState<TurnState>{
         });
 
         for (let i = 0; i < cards.length; i++) {
-            const newCard = new VisualCardClone(cards[i]!.card);
+            let data = cards[i]!.card;
+            const newCard = new SuperficialVisualCard(this.game,
+                (data instanceof SuperficialVisualCard) ? data.logicalCard : data,
+                new Vector3(cards[i]!.position.x, cards[i]!.position.y, -20));
             this.game.addElement(newCard);
             newCard.populate(newCard.logicalCard);
             newCard.createModel().then(()=>{
@@ -470,7 +462,6 @@ export class VGuiState extends VisualGameState<TurnState>{
             });
 
             newCard.flipFaceup();
-            newCard.position.copy(new Vector3(cards[i]!.position.x, cards[i]!.position.y, -20));
             newCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
             newCard.scale = new Vector3(cards[i]!.scale??1,cards[i]!.scale??1,cards[i]!.scale??1).multiplyScalar(0.05);
 
@@ -480,7 +471,7 @@ export class VGuiState extends VisualGameState<TurnState>{
 
         return ()=>removeClickListener(listener);
     }
-    addCardsGrid(cards:VisualCard[], onPick:(card:VisualCardClone)=>void){
+    addCardsGrid(cards:SuperficialVisualCard[], onPick:(card:SuperficialVisualCard)=>void){
         let height=1;
         let scale=0.9;
 
@@ -509,7 +500,7 @@ export class VGuiState extends VisualGameState<TurnState>{
         }), onPick);
     }
     private readonly fans: { cards:VisualCardClone[], pos:Vector2, width:number, inited:boolean }[]=[];
-'''' bbbbb    // addCardsFan(cards:VisualCard[], position:Vector2, width:number, onPick:(card:VisualCardClone)=>void){
+    // addCardsFan(cards:VisualCard[], position:Vector2, width:number, onPick:(card:VisualCardClone)=>void){
     //     const newModels:VisualCardClone[] = [];
     //     this.cardsListeners.push(clickListener(() => {
     //         const intersects = this.game.raycaster.intersectObjects(newModels

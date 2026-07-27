@@ -1,4 +1,4 @@
-import CardData, {CardTriggerType, InterruptScareResult, Species} from "./CardData.js";
+import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner, Species} from "./CardData.js";
 import {sideTernary} from "./consts.js";
 import {BeforeGameState, TurnState} from "./GameStates.js";
 import Card, {CardMiscDataStrings, getVictim} from "./Card.js";
@@ -57,7 +57,7 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
         if(self!==scared) return InterruptScareResult.PASSTHROUGH;
 
         if(self.getMiscData(CardMiscDataStrings.TRASH_PANDA_IMMUNITY) !== "not immune") return InterruptScareResult.PREVENT_SCARE;
-    return InterruptScareResult.PASSTHROUGH;
+        return InterruptScareResult.PASSTHROUGH;
     });
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
@@ -80,12 +80,7 @@ setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN));
 setCard(new CardData("og-017", [5,3,undefined], 1, Species.FELINE));
 setCard(new CardData("og-018", [3,1,undefined], 1, Species.CANINE));
 setCard(new CardData("og-019", [undefined,3,5], 1, Species.CANINE));
-setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA)//todo
-    .with(CardTriggerType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
-        if(self!==scared) return InterruptScareResult.PASSTHROUGH;
-
-        return InterruptScareResult.PASSTHROUGH;
-    }));
+setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA));
 setCard(new CardData("og-021", [2,1,8], 1, Species.FELINE));
 setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN));//DONE
 setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID));
@@ -154,13 +149,5 @@ function setSpecialCard(data:CardData){
 }
 setSpecialCard(new CardData("unknown", [0,0,0], 1, Species.UNKNOWN));
 setSpecialCard(new CardData("utility", [0,0,0], 1, Species.UNKNOWN, "utility.png"));
-// setSpecialCard(new CardData("temp_red", [0,0,0], 1, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_blue", [0,0,0], 1, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_yellow", [0,0,0], 1, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_lv1", [0,0,0], 1, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_lv2", [0,0,0], 2, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_lv3", [0,0,0], 3, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_keep", [0,0,0], 1, Species.UNKNOWN));
-// setSpecialCard(new CardData("temp_scare", [0,0,0], 1, Species.UNKNOWN));
 
 export default cards;
