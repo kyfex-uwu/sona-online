@@ -208,8 +208,8 @@ export class CardAction<T extends SerializableType> extends ActionEvent<{
 addToSerializableClasses(CardAction);
 
 //Discards a card
-export class DiscardEvent extends GameEvent<{which:number}>{}
-addToSerializableClasses(DiscardEvent);
+export class DiscardAction extends ActionEvent<{which:number, side?:Side}>{}
+addToSerializableClasses(DiscardAction);
 
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}

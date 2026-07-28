@@ -30,6 +30,7 @@ import {ViewType} from "./VisualGame.js";
 import {EndType, StateFeatures} from "./VisualGameStateTools.js";
 import {waitFor} from "../networking/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
+import type VisualCardClone from "./VisualCardClone.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -255,6 +256,7 @@ visualCardClientActions["og-028"] = (card)=>{
 
     return toReturn;
 };
+const og038Highlight = newHighlightLock();
 visualCardClientActions["og-038"] = (card)=>{
     tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
 
@@ -265,25 +267,42 @@ visualCardClientActions["og-038"] = (card)=>{
         toReturn.resolve(false);
         return toReturn;
     }
-    getLocalGame().setState(new VPickCardsState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],
-        cards, (picked)=>{
-            getLocalGame().frozen=true;
-            network.sendToServer(new CardAction({
-                cardId:card.logicalCard.id,
-                actionName:CardActionOptions.WORICK_RESCUE,
-                cardData:{
-                    id:picked.logicalCard.id
-                }
-            })).onReply(successOrFail(()=>{
-                sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).addCard(picked);
-                lastAction();
-                (getLocalGame().state as VPickCardsState).end();
-            },()=>{},()=>{
-                getLocalGame().frozen=false;
-                toReturn.resolve(true);
-            }));
-        }, EndType.BOTH),
-        getLocalGame().getGame().state);
+    let selected:VisualCardClone|undefined;
+    let release:()=>void;
+    getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state],{
+        onEnd:(self,type)=>{
+            release();
+            if(type === "finished")
+                network.sendToServer(new CardAction({
+                    cardId:card.logicalCard.id,
+                    actionName:CardActionOptions.WORICK_RESCUE,
+                    cardData:{
+                        id:selected!.logicalCard.id
+                    }
+                })).onReply(successOrFail(()=>{
+                    console.log(selected, selected)
+                    sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB)
+                        .addCard(selected!);
+                    lastAction();
+                },()=>{},()=>{
+                    getLocalGame().frozen=false;
+                    toReturn.resolve(true);
+                    console.log("hi")
+                }));
+        },
+        init:(self)=>{
+            self.blackBg(true);
+            self.addCardsGrid(cards, (picked)=>{
+                selected?.highlight(false,og038Highlight);
+                selected=picked as VisualCardClone;
+                selected.highlight(true,og038Highlight);
+            });
+            release=registerDrawCallback(0,(p5,scale)=>{
+                self.finishAndCancel(p5,scale,selected === undefined, false);
+                self.infoText(p5, scale, "Pick the card to add to your hand")
+            })
+        }
+    }),getLocalGame().getGame().state);
     return toReturn;
 };
 const og041Highlight = newHighlightLock();

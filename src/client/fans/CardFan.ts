@@ -95,7 +95,7 @@ export default class CardFan extends SidedPositionedVisualGameElement implements
         const radius = this.cards.length;
         for(const card of this.cards){
             card.position = new Vector3(posInc*radius*Math.sin(pos/radius),0,posInc*(-Math.cos(pos/radius)+0.9)*radius*3/5);
-            card.rotation.slerp(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)),1);
+            card.rotation.copy(new Quaternion().setFromEuler(new Euler(0,Math.PI*pos*-0.02,-0.01)));
             pos++;
         }
     }

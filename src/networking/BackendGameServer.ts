@@ -5,7 +5,7 @@ import {
     ClarificationJustification,
     ClarifyCardEvent,
     DetermineStarterEvent,
-    DiscardEvent,
+    DiscardAction,
     DrawAction,
     GameEvent,
     GameStartEvent,
@@ -21,7 +21,7 @@ import {
     StartRequestEvent
 } from "./Events.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
-import {Side} from "../GameElement.js";
+import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary} from "../consts.js";
 import Card, {getVictim, Stat} from "../Card.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
@@ -457,7 +457,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }
         }
         return processCardAction(event, game);
-    }else if(event instanceof DiscardEvent){
+    }else if(event instanceof DiscardAction){
         // if(event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
         //     return rejectEvent(event, "already performed last action d");
 
@@ -478,6 +478,10 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
             return rejectEvent(event, "failed discard check");
         }
+        game.player(other(side))?.send(new DiscardAction({
+            which:event.data.which,
+            side
+        }));
 
         sideTernary(side, game.runawayA, game.runawayB).push(
             hand.splice(hand.indexOf(toDiscard),1)[0]!);

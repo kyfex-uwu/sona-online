@@ -3,7 +3,7 @@ import {
     CardAction,
     ClarificationJustification,
     ClarifyCardEvent,
-    DetermineStarterEvent,
+    DetermineStarterEvent, DiscardAction,
     DrawAction,
     GameEvent,
     GameStartEvent,
@@ -707,6 +707,9 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 game.setState(state, game.getGame().state);
             }break;
         }
+    }else if(event instanceof DiscardAction){
+        sideTernary(event.data.side!, game.runawayA, game.runawayB).addCard(game.elements.find(card=>
+            VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.which) as VisualCard);
     }
 
     else if(event instanceof ServerDumpEvent){

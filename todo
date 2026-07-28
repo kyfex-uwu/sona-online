@@ -49,6 +49,7 @@ starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
 make sure the client can start the turn on their terms when they cant draw to start
+something is wrong with crisis mode
 
 fix 009 staying glowing when placed (maybe others too)
 type checking for all packets (need to write some separate thing)

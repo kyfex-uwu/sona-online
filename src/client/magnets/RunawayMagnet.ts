@@ -5,7 +5,7 @@ import type {Side} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {sideTernary} from "../../consts.js";
-import {DiscardEvent} from "../../networking/Events.js";
+import {DiscardAction} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
 
@@ -28,18 +28,12 @@ export default class RunawayMagnet extends CardMagnet{
                     this.game.frozen=true;
                     const card = this.game.selectedCard;
                     this.game.selectedCard = undefined;
-                    this.game.sendEvent(new DiscardEvent({which:card.logicalCard.id})).onReply(cancelCallback(()=>{
+                    this.game.sendEvent(new DiscardAction({which:card.logicalCard.id})).onReply(cancelCallback(()=>{
                         this.removeCard();
                         this.game.selectedCard = card;
                     },()=>{
                         this.game.frozen=false;
                     }));
-                    return true;
-                }else if(false){
-                    let tempCard = this.cards[this.cards.length-1];
-                    if(this.removeCard()) {
-                        this.game.selectedCard = tempCard?.card;
-                    }
                     return true;
                 }
 
@@ -54,7 +48,7 @@ export default class RunawayMagnet extends CardMagnet{
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
-        const rotAmt = (Math.random()*0.3-0.15)*5;
+        const rotAmt = (Math.random()-0.5)*1.5;
         const newRot = new Euler().setFromQuaternion(this.rotation);
         newRot.y+=rotAmt;
         card.rotation.copy(new Quaternion().setFromEuler(newRot))
@@ -90,7 +84,7 @@ export default class RunawayMagnet extends CardMagnet{
         super.visualTick();
         for(const data of this.cards){
             data.card.rotation = this.rotation.clone();
-            data.card.rotation.y+=data.rot;
+            data.card.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,data.rot,0)));
         }
         this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide(),

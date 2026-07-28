@@ -193,7 +193,8 @@ export default class FieldMagnet extends CardMagnet{
     visualTick() {
         super.visualTick();
         if(this.card !== undefined){
-            this.card.rotation = this.rotation.clone();//bruh
+            this.card.position = this.position.clone();
+            this.card.rotation = this.rotation.clone();
         }
         // this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide());
     }
