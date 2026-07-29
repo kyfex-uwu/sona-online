@@ -89,6 +89,8 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
 
         for(const field of sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB))
             field.getCard()?.highlight(false, beforeGameHighlight);
+        for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards)
+            card.highlight(false, beforeGameHighlight);
     }
 
     canSelectHandCard(card: VisualCard): boolean {
