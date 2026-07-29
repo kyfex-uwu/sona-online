@@ -190,10 +190,7 @@ export class VTurnState extends VisualGameState<TurnState>{
                     this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
 
                     const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
-                    if (!this.getNonVisState().drawnToStart) {
-                        this.deleteFeatures(StateFeatures.FIELDS_SELECTABLE,
-                            StateFeatures.FIELDS_PLACEABLE);
-                    } else if (this.getActionsLeft() > 0) {
+                    if (this.getActionsLeft() > 0) {
                         this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
                             StateFeatures.FIELDS_PLACEABLE);
                         let maxLevel = fieldCards.map(field => field.getCard())

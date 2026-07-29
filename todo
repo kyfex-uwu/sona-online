@@ -24,18 +24,18 @@ x
 
 
 
-x
-
-
-
-
-x
 
 
 
 
 
-x
+
+
+
+
+
+
+
 
 
 
@@ -43,15 +43,14 @@ x
 x
 
 ---
+hasAttacked is sometimes not updated
+
 scared still fires when cloud catted
-fix dcw (and foxy?) being silly. to do this you need to implement client side placed event for opponent
 starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
-make sure the client can start the turn on their terms when they cant draw to start
-something is wrong with crisis mode
 
-fix 009 staying glowing when placed (maybe others too)
+make sure the client can start the turn on their terms when they cant draw to start
 type checking for all packets (need to write some separate thing)
 shuffle everywhere!
 add card texture atlas

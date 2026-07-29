@@ -31,6 +31,7 @@ import {EndType, StateFeatures} from "./VisualGameStateTools.js";
 import {waitFor} from "../networking/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";
+import type FieldMagnet from "./magnets/FieldMagnet.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -823,24 +824,41 @@ wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
         self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
     }
 });
-wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
-    if(self.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
+const og043Highlight = newHighlightLock();
+wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
+    if(orig) orig({self:card, game});
+    if(card.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
 
-    tempHowToUse("Cloud Cat", "Click the card to disable");
-    const state = new VPickCardsState(getLocalGame(), [getLocalGame().state, game.state],
-        sideTernary(self.side, getLocalGame().fieldsB, getLocalGame().fieldsA)
-            .map(magnet=>magnet.getCard())
-            .filter(card=>card!==undefined),
-        (card)=>{
+    let releases:(()=>void)[]=[];
+    let release:()=>void;
+    let selected:FieldMagnet|undefined;
+    getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, game.state],{
+        onEnd:(self,type)=>{
+            for(const release of releases) release();
+            release();
+            for(const field of sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA))
+                field.getCard()?.highlight(false, og043Highlight);
+
             network.sendToServer(new CardAction({
-                cardId:self.id,
+                cardId:card.id,
                 actionName:CardActionOptions.CLOUD_CAT_PICK,
-                cardData:sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
-                    .map(magnet=>magnet.getCard())
-                    .findIndex(mCard=>mCard?.logicalCard.id === card.logicalCard.id)+1
+                cardData:selected!.which
             }));
-            state.end();
-        }, EndType.NONE);
-    getLocalGame().setState(state, game.state);
+        },
+        init:(self)=>{
+            getLocalGame().changeView(sideTernary(getLocalGame().getMySide(),ViewType.FIELDS_A, ViewType.FIELDS_B));
+            for(const field of sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA))
+                releases.push(field.addClickListener(()=>{
+                    const card = field.getCard();
+                    if(!card) return;
+                    selected?.getCard()?.highlight(false, og043Highlight);
+                    selected=field;
+                    selected.getCard()?.highlight(true, og043Highlight);
+                }));
+
+            release=registerDrawCallback(0,(p5,scale)=>{
+                self.finishButton(p5,scale,selected === undefined);
+            });
+        }
+    }), game.state);
 });

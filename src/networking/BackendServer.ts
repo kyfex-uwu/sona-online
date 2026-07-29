@@ -66,12 +66,12 @@ export function parseEvent(event:Event<any>):processedEvent{
             waiter.then((other) => {
                 let id=0;
 
-                let firstA = event.data.deck[0];
-                let firstB = other.data.deck[0];
+                // let firstA = event.data.deck[0];
+                // let firstB = other.data.deck[0];
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
-                deckA.push(...deckA.splice(deckA.findIndex(v=>v.type === firstA),1));
-                deckB.push(...deckB.splice(deckB.findIndex(v=>v.type === firstB),1));
+                // deckA.push(...deckA.splice(deckA.findIndex(v=>v.type === firstA),1));
+                // deckB.push(...deckB.splice(deckB.findIndex(v=>v.type === firstB),1));
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;
