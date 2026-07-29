@@ -1,5 +1,4 @@
 import {newHighlightLock} from "./VisualCard.js";
-import {VisualGameState} from "./VisualGameStates.js";
 
 export enum StateFeatures {
     FIELDS_PLACEABLE,
@@ -7,9 +6,8 @@ export enum StateFeatures {
     ALL_FIELDS_SELECTABLE,
     DECK_DRAWABLE,
     CAN_DISCARD_FROM_HAND,
-} //todo: i think theres only gonna be 2 cancellable states? (attacking and pick+subclasses) so do we really need this
-
-export const canSelectCardHighlight = newHighlightLock();
+}
+export const canSelectHandCardHighlight = newHighlightLock();
 
 export interface Cancellable {
     isCancellable(): boolean;

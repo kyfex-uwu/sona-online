@@ -11,12 +11,7 @@ import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion,
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {CardTriggerType} from "../CardData.js";
-import {
-    type Cancellable,
-    canSelectCardHighlight,
-    EndType,
-    StateFeatures
-} from "./VisualGameStateTools.js";
+import {type Cancellable, canSelectHandCardHighlight, EndType, StateFeatures} from "./VisualGameStateTools.js";
 import {attackLock} from "./magnets/FieldMagnet.js";
 import SuperficialVisualCard from "./SuperficialVisualCard.js";
 
@@ -180,44 +175,56 @@ export class VTurnState extends VisualGameState<TurnState>{
     }
 
     visualTick(): void {
-        if(this.game.getMySide() === this.currTurn){
-            const handSize=sideTernary(this.game.getMySide(), this.game.getGame().handA, this.game.getGame().handB).length + (this.game.selectedCard !== undefined ? 1 : 0 );
-            if(handSize > 5){
-                this.features.clear();
-                this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
-            }else{
-                this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
+        const toHighlight = new Set<VisualCard>();
 
-                const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
-                if(!this.getNonVisState().drawnToStart){
-                    this.deleteFeatures(StateFeatures.FIELDS_SELECTABLE,
-                        StateFeatures.FIELDS_PLACEABLE);
-                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                        card.highlight(false, canSelectCardHighlight);
-                    }
-                }else if(this.getActionsLeft()>0){
-                    this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
-                        StateFeatures.FIELDS_PLACEABLE);
-                    let maxLevel = fieldCards.map(field => field.getCard())
-                        .filter(card => card !== undefined)
-                        .reduce((a,c)=>Math.max(a,c.logicalCard.cardData.level),0)+1;
-                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                        if(card.logicalCard.cardData.level <= maxLevel || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                            {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
-                            card.highlight(true, canSelectCardHighlight);
+        if(this.game.getMySide() === this.currTurn && this.getNonVisState().actionsLeft>0){
+            const handSize = sideTernary(this.game.getMySide(), this.game.getGame().handA, this.game.getGame().handB).length + (this.game.selectedCard !== undefined ? 1 : 0);
+
+            if(this.getNonVisState().drawnToStart) {
+                if (handSize > 5) {
+                    this.features.clear();
+                    this.features.add(StateFeatures.CAN_DISCARD_FROM_HAND);
+                } else {
+                    this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
+
+                    const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
+                    if (!this.getNonVisState().drawnToStart) {
+                        this.deleteFeatures(StateFeatures.FIELDS_SELECTABLE,
+                            StateFeatures.FIELDS_PLACEABLE);
+                    } else if (this.getActionsLeft() > 0) {
+                        this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
+                            StateFeatures.FIELDS_PLACEABLE);
+                        let maxLevel = fieldCards.map(field => field.getCard())
+                            .filter(card => card !== undefined)
+                            .reduce((a, c) => Math.max(a, c.logicalCard.cardData.level), 0) + 1;
+                        for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                            if (card.logicalCard.cardData.level <= maxLevel ?
+                                card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                                    {self: card.logicalCard, game: this.game.getGame(), normallyValid: true}) ?? true :
+                                card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                                    {
+                                        self: card.logicalCard,
+                                        game: this.game.getGame(),
+                                        normallyValid: false
+                                    }) ?? false) {
+                                toHighlight.add(card);
+                            }
                         }
-                    }
-                }else{
-                    for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                        if(!card.logicalCard.cardData.isFree() && !card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                            {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})) {
-                            card.highlight(false, canSelectCardHighlight);
+                    } else {
+                        for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+                            if (card.logicalCard.cardData.isFree() || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                                {self: card.logicalCard, game: this.game.getGame(), normallyValid: false})) {
+                                toHighlight.add(card);
+                            }
                         }
                     }
                 }
             }
             if(handSize >= 5 || this.getActionsLeft()<=0){
-                this.features.delete(StateFeatures.DECK_DRAWABLE);
+                this.deleteFeatures(
+                    StateFeatures.FIELDS_SELECTABLE,
+                    StateFeatures.FIELDS_PLACEABLE,
+                    StateFeatures.DECK_DRAWABLE);
             }else{
                 this.features.add(StateFeatures.DECK_DRAWABLE);
             }
@@ -226,15 +233,19 @@ export class VTurnState extends VisualGameState<TurnState>{
 
             for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
                 card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                    {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})??false, canSelectCardHighlight);
+                    {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})??false, canSelectHandCardHighlight);
             }
+        }
+
+        for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
+            card.highlight(toHighlight.has(card), canSelectHandCardHighlight);
         }
     }
     swapAway() {
         super.swapAway();
 
         for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-            card.highlight(false, canSelectCardHighlight);
+            card.highlight(false, canSelectHandCardHighlight);
         }
     }
 

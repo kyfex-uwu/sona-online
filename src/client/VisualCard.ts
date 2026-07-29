@@ -1,29 +1,11 @@
-import {
-    BoxGeometry,
-    CylinderGeometry,
-    Euler,
-    Group,
-    Material,
-    Mesh,
-    MeshBasicMaterial,
-    MirroredRepeatWrapping,
-    type Object3D,
-    Quaternion,
-    RepeatWrapping,
-    ShaderMaterial,
-    Texture,
-    Vector3
-} from "three";
-import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
-import Card, {Stat} from "../Card.js";
+import {Euler, Quaternion, Vector3} from "three";
+import {updateOrder} from "./clientConsts.js";
+import Card from "../Card.js";
 import type VisualGame from "./VisualGame.js";
-import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import type {CardHoldable} from "./CardHoldable.js";
-import {sideTernary, statTernary} from "../consts.js";
-import {CardTriggerType} from "../CardData.js";
+import {sideTernary} from "../consts.js";
 import SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type {SidedVisualGameElement} from "./VisualGameElement.js";
-import type ElementScene from "./ElementScene.js";
 
 //A *visual* card. This wraps a logical {@link Card}
 export default class VisualCard extends SuperficialVisualCard implements SidedVisualGameElement{

@@ -1,8 +1,8 @@
 import CardData, {CardTriggerType, type Level, Species} from "../CardData.js";
 import cards from "../Cards.js";
-import {VGuiState, VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import {VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
+import {externalPromise, sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";

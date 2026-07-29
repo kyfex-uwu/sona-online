@@ -119,7 +119,7 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
             self: card,
             next: (succeeded)=> {
                 if(!succeeded) next(false);
-                else internalScareInterrupt(cards.slice(i + 1), data, next);
+                else internalScareInterrupt(mappedCards.slice(i + 1).map(v=>v[0]), data, next);
             }
         });
         switch(result){
@@ -141,7 +141,7 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
  * @param onPass The function to run if/when the scare passes
  */
 export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
-    const cards = [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB];
+    const cards = [...game.fieldsA, ...game.fieldsB];
     internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event }, onPass);
 }
 
@@ -380,7 +380,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         if(!event.isForced()) {
             if (!(game.state instanceof TurnState &&
-                game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false &&
+                game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN) === false && //not first turn
                 event.sender === game.player(game.state.turn) &&//if its the player's turn
                 game.state.actionsLeft>0 && //player has actions left
                 scarer !== undefined && scared !== undefined &&//the cards exist

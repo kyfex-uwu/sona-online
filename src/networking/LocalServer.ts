@@ -2,7 +2,8 @@ import {
     AcceptEvent,
     Event,
     GameEvent,
-    InvalidEvent, PerchanceEvent,
+    InvalidEvent,
+    PerchanceEvent,
     RejectEvent,
     SerializableClasses,
     type SerializableType

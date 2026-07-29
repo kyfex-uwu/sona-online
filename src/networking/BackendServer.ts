@@ -2,7 +2,8 @@ import {eventReplyIds, network, Replyable} from "./Server.js";
 import {
     AcceptEvent,
     Event,
-    FindGameEvent, GameEvent,
+    FindGameEvent,
+    GameEvent,
     InternalStartGameEvent,
     InvalidEvent,
     RejectEvent,

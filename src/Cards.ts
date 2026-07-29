@@ -1,4 +1,4 @@
-import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner, Species} from "./CardData.js";
+import CardData, {CardTriggerType, InterruptScareResult, Species} from "./CardData.js";
 import {sideTernary} from "./consts.js";
 import {BeforeGameState, TurnState} from "./GameStates.js";
 import Card, {CardMiscDataStrings, getVictim} from "./Card.js";

@@ -48,7 +48,7 @@ export default class RunawayMagnet extends CardMagnet{
 
         card.position.copy(this.position);
         card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
-        const rotAmt = (Math.random()-0.5)*1.5;
+        const rotAmt = (Math.random()-0.5)*0.1;
         const newRot = new Euler().setFromQuaternion(this.rotation);
         newRot.y+=rotAmt;
         card.rotation.copy(new Quaternion().setFromEuler(newRot))

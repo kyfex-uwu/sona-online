@@ -3,7 +3,8 @@ import {
     CardAction,
     ClarificationJustification,
     ClarifyCardEvent,
-    DetermineStarterEvent, DiscardAction,
+    DetermineStarterEvent,
+    DiscardAction,
     DrawAction,
     GameEvent,
     GameStartEvent,
@@ -525,36 +526,49 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 game.setState(state, game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
-                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
-
-                let drawCallback;
-                const state = new VGuiState(game, oldStates, {
+                let drawCallback:()=>void;
+                let releases:(()=>void)[] = [];
+                let particler:number;
+                const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
+                const particleData = [
+                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
+                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.position,
+                ] satisfies [Vector3, Vector3];
+                game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self)=>{
-                        drawCallback!();
-                        self.blackBg(false);
+                        drawCallback();
+                        for(const release of releases) release();
+
+                        for(const field of [...game.fieldsA, ...game.fieldsB])
+                            field.getCard()?.highlight(false, og029Highlight);
+
+                        clearInterval(particler);
                     },
                     init: (self: VGuiState) => {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
-                        self.blackBg(true);
 
-                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
-                            // .filter(card=>card !== undefined)
-                            .map((card,i, arr)=>{
-                                return card === undefined ? undefined : {
-                                    card,
-                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
-                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
-                                }}).filter(data=>data!==undefined), (card)=>{
-                            selectedCard?.highlight(false, og029Highlight);
-                            selectedCard=card as VisualCardClone;
-                            selectedCard?.highlight(true, og029Highlight);
-                        });
-                        let selectedCard = self.cards.find(card=>
-                            card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
-                            (event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id) as VisualCardClone;
-                        selectedCard?.highlight(true, og029Highlight);
+                        const setTarget = (card:VisualCard)=>{
+                            selectedCard.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard.highlight(true, og029Highlight);
+                        }
 
-                        let selectedStat=getVictim((event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA).stat);
+                        let selectedCard:VisualCard;
+                        for(const field of [...game.fieldsA, ...game.fieldsB]){
+                            const card = field.getCard();
+                            if(card !== undefined) {
+                                releases.push(field.addClickListener(() => {
+                                    setTarget(card);
+                                }));
+
+                                if(field.which === data.pos[0] && field.getSide() === data.pos[1]){
+                                    selectedCard = card;
+                                    selectedCard.highlight(true, og029Highlight);
+                                }
+                            }
+                        }
+
+                        let selectedStat=getVictim(data.stat);
                         drawCallback = registerDrawCallback(0, (p5, scale)=>{
                             self.statButtons(p5, scale,
                                 (stat)=>selectedStat=stat,
@@ -591,45 +605,64 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 text:"Pass",
                                 disabled:false
                             });
-                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                            self.infoText(p5, scale, "Select the card whose stat you want to increase and the stat you " +
                                 "want to increase by 2");
                         });
+
+                        particler = setInterval(()=>{
+                            // particleStreak(particleData[0], particleData[1],
+                            //     statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                            //     statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                        },500);
                     },
-                });
-                game.setState(state, oldStates[1]);
+                }), game.getGame().state);
             }break;
             case CardActionOptions.BROY_WEASLA_INCREASE:{
-                const oldStates:[VisualGameState<any>,GameState] = [game.state, game.getGame().state];
+                let drawCallback:()=>void;
+                let releases:(()=>void)[] = [];
+                let particler:number;
+                const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
+                const particleData = [
+                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
+                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.position,
+                ] satisfies [Vector3, Vector3];
 
-                let drawCallback;
-                const state = new VGuiState(game, oldStates, {
+                game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self)=>{
-                        drawCallback!();
-                        self.blackBg(false);
+                        drawCallback();
+                        console.log("brooo")
+                        for(const release of releases) release();
+
+                        for(const field of [...game.fieldsA, ...game.fieldsB])
+                            field.getCard()?.highlight(false, og029Highlight);
+
+                        clearInterval(particler);
                     },
                     init: (self: VGuiState) => {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
-                        self.blackBg(true);
 
-                        self.addCards([...game.fieldsA, ...game.fieldsB].map(field=> field.getCard())
-                            // .filter(card=>card !== undefined)
-                            .map((card,i, arr)=>{
-                                return card === undefined ? undefined : {
-                                    card,
-                                    position: new Vector2((i%3-1)*4,(Math.floor(i/3)*6-3))
-                                        .multiply(new Vector2(sideTernary(game.getMySide(),-1,1),sideTernary(game.getMySide(),1,-1))),
-                            }}).filter(data=>data!==undefined), (card)=>{
-                            selectedCard?.highlight(false, og029Highlight);
-                            selectedCard=card as VisualCardClone;
-                            selectedCard?.highlight(true, og029Highlight);
-                        });
+                        const setTarget = (card:VisualCard)=>{
+                            selectedCard.highlight(false, og029Highlight);
+                            selectedCard=card;
+                            selectedCard.highlight(true, og029Highlight);
+                        }
 
-                        let selectedCard = self.cards.find(card=>
-                            card.logicalCard.id === sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[
-                            (event.data.cardData as BROY_WEASLA_INCREASE_DATA).pos[0]-1]!.getCard()?.logicalCard.id) as VisualCardClone;
-                        selectedCard?.highlight(true, og029Highlight);
+                        let selectedCard:VisualCard;
+                        for(const field of [...game.fieldsA, ...game.fieldsB]){
+                            const card = field.getCard();
+                            if(card !== undefined) {
+                                releases.push(field.addClickListener(() => {
+                                    setTarget(card);
+                                }));
 
-                        let selectedStat=(event.data.cardData as BROY_WEASLA_INCREASE_DATA).stat;
+                                if(field.which === data.pos[0] && field.getSide() === data.pos[1]){
+                                    selectedCard = card;
+                                    selectedCard.highlight(true, og029Highlight);
+                                }
+                            }
+                        }
+
+                        let selectedStat=data.stat;
                         drawCallback = registerDrawCallback(0, (p5, scale)=>{
                             self.statButtons(p5, scale,
                                 (stat)=>selectedStat=stat,
@@ -647,18 +680,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }
-                                    })).onReply(successOrFail(()=>{
-                                        const pos = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
-                                            .find(field=>field.getCard()?.logicalCard.cardData.name === "og-029");
-                                        if(pos){
-                                            animation(async ()=>{
-                                                await particleStreak(pos.position, selectedCard?.clonedFrom.getStatModel(selectedStat!)!
-                                                    .getWorldPosition(new Vector3())!,
-                                                    whiteColor, statTernary(selectedStat!,
-                                                        redStatColor, blueStatColor, yellowStatColor));
-                                            });
-                                        }
-                                    },()=>{},()=>{
+                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -677,12 +699,17 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 text:"Pass",
                                 disabled:false
                             });
-                            self.infoText(p5, scale, "Select the card who's stat you want to increase and the stat you " +
+                            self.infoText(p5, scale, "Select the card whose stat you want to increase and the stat you " +
                                     "want to increase by 2");
                         });
+
+                        particler = setInterval(()=>{
+                            // particleStreak(particleData[0], particleData[1],
+                            //     statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                            //     statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                        },500);
                     },
-                });
-                game.setState(state, oldStates[1]);
+                }), game.getGame().state);
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
                 tempHowToUse("Noble Rat", "Select Noble Rat if you want to retarget the opponent's attack to Noble Rat, " +

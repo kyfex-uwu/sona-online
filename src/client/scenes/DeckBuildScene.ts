@@ -1,21 +1,16 @@
 import {Scene} from "./Scene.js";
 import cards, {specialCards} from "../../Cards.js";
 import type CardData from "../../CardData.js";
-import {
-    dragListener,
-    removeDragListener,
-    removeWheelListener,
-    wheelListener
-} from "../clientConsts.js";
+import {dragListener, removeDragListener, removeWheelListener, wheelListener} from "../clientConsts.js";
 import {button, buttonId, invisibleButton, registerDrawCallback} from "../ui.js";
 import p5 from "p5";
 import {setScene} from "../../index.js";
 import {MainMenuScene} from "./MainMenuScene.js";
 
 const deck:string[] = [
-    "og-038",
-    // "og-018",
+    // "og-029",
     "og-035",
+    "og-018",
     "og-021",
     "og-024",
     "og-023",

@@ -12,7 +12,7 @@ import {sideTernary} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {canSelectCardHighlight, StateFeatures} from "../VisualGameStateTools.js";
+import {canSelectHandCardHighlight, StateFeatures} from "../VisualGameStateTools.js";
 
 export const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
@@ -40,7 +40,6 @@ export default class FieldMagnet extends CardMagnet{
                             {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){
                     if(this.addCard(this.game.selectedCard)) {
                         const card = this.game.selectedCard;
-                        card.highlight(false, canSelectCardHighlight);
                         this.game.selectedCard = undefined;
 
                         this.game.frozen=true;
@@ -88,9 +87,6 @@ export default class FieldMagnet extends CardMagnet{
                             this.card !== undefined) {
                         if(this.getSide() === this.game.getMySide()) {
                             const intersects = this.game.raycaster.intersectObjects([
-                                ...(this.card.logicalCard.hasAttacked?[]:[this.card.getStatModel(Stat.RED),
-                                this.card.getStatModel(Stat.BLUE),
-                                this.card.getStatModel(Stat.YELLOW)]),
                                 this.card.model
                             ].filter(mesh => mesh !== undefined));
 
@@ -101,15 +97,16 @@ export default class FieldMagnet extends CardMagnet{
                                 const cardClicked = sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard();
 
                                 let hitStat=false;
-                                for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW]){
-                                    if (this.card.logicalCard.stat(stat) !== undefined &&
-                                        intersects[0].object === this.card.getStatModel(stat)) {
-                                        state.attackData.type = stat;
-                                        cardClicked?.highlightStat({[stat]:true}, attackLock);
-                                        hitStat=true;
-                                        break;
+                                if(!this.card.logicalCard.hasAttacked && !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN))
+                                    for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW]){
+                                        if (this.card.logicalCard.stat(stat) !== undefined &&
+                                            intersects[0].object === this.card.getStatModel(stat)) {
+                                            state.attackData.type = stat;
+                                            cardClicked?.highlightStat({[stat]:true}, attackLock);
+                                            hitStat=true;
+                                            break;
+                                        }
                                     }
-                                }
                                 if(!hitStat && intersects[0].object.parent?.parent?.parent === this.card.model){
                                     if(visualCardClientActions[this.card.logicalCard.cardData.name] !== undefined){
                                         visualCardClientActions[this.card.logicalCard.cardData.name]!(this.card).then((cancel)=>{
@@ -195,6 +192,7 @@ export default class FieldMagnet extends CardMagnet{
         if(this.card !== undefined){
             this.card.position = this.position.clone();
             this.card.rotation = this.rotation.clone();
+            this.card.highlight(false, canSelectHandCardHighlight);
         }
         // this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide());
     }

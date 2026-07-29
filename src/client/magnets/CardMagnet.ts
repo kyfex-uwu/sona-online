@@ -1,7 +1,7 @@
 import {Side} from "../../GameElement.js";
 import {clickListener, removeClickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, Vector3} from "three";
-import {PositionedVisualGameElement, SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
+import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualGame from "../VisualGame.js";
 import VisualCard from "../VisualCard.js";
 import type {CardHoldable} from "../CardHoldable.js";

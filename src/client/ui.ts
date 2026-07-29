@@ -247,7 +247,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
         dead:false,
     });
 }
-export async function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor?:Color){
+export async function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor:Color|undefined=startColor){
     let pos = startPos.clone();
     const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
     let timeout=0;

@@ -1,7 +1,7 @@
-import {Quaternion, Raycaster, type Scene, Vector3} from "three";
+import {Raycaster, type Scene, Vector3} from "three";
 import type {VisualGameElement} from "./VisualGameElement.js";
 import Card from "../Card.js";
-import {camera, updateOrder} from "./clientConsts.js";
+import {updateOrder} from "./clientConsts.js";
 
 
 export default class ElementScene{
