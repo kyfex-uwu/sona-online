@@ -43,7 +43,9 @@ x
 x
 
 ---
-hasAttacked is sometimes not updated
+fieldsPlaceable not being added sometimes
+cards not being allowed to scare despite seemingly having all the requirements
+can select fields before draw to start turn
 
 scared still fires when cloud catted
 starting game with brownie is wrong

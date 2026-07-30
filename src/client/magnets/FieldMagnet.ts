@@ -84,7 +84,8 @@ export default class FieldMagnet extends CardMagnet{
                         return true;
                     }
                     if(state instanceof VAttackingState &&
-                            this.card !== undefined) {
+                            this.card !== undefined &&
+                            !(sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB)[state.cardIndex-1]!.card?.logicalCard.hasAttacked ?? true)) {
                         if(this.getSide() === this.game.getMySide()) {
                             const intersects = this.game.raycaster.intersectObjects([
                                 this.card.model
@@ -120,11 +121,9 @@ export default class FieldMagnet extends CardMagnet{
                             if(state.attackData.type !== undefined) {
                                 const intersects = this.game.raycaster.intersectObjects([
                                     this.card.model
-                                ].filter(mesh => mesh !== undefined));
+                                ]);
                                 if (intersects[0] !== undefined) {
-                                    if (getVictim(state.attackData.type) !== undefined &&
-                                        !this.card.logicalCard.hasAttacked &&
-                                        !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
+                                    if (!this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
                                         this.game.sendEvent(new ScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],

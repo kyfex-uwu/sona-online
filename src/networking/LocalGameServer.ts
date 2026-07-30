@@ -238,9 +238,8 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 });
             }
         }
-        const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsB, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
-        if(maybeAttacked) maybeAttacked.hasAttacked=true;
-        console.log("hasattacked", maybeAttacked === undefined);
+        const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;
+        if(maybeAttacked) maybeAttacked.hasAttacked=true
         game.frozen=false;//todo: this is not how it should be solved
         if(!event.data.free){
             game.state.decrementTurn();
