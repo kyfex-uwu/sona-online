@@ -8,7 +8,7 @@ export function init(website){
                         rr.concat(i.family==='IPv4' && !i.internal && i.address || []),
                     [])),
             []).filter(ip => ip.startsWith("192."))[0]+":4000";
-    console.log(`Scan the above link or visit ${linkUrl} if you are on a different device (must be on the same wifi network`)
+    if(linkUrl) console.log(`Scan the above link or visit ${linkUrl} if you are on a different device (must be on the same wifi network`)
     console.log("App hosted at http://localhost:4000");
 
     website.get("/src/dev.js", (req, res) => {

@@ -1,7 +1,7 @@
 import {camera, renderer, scene} from "./client/clientConsts.js";
 import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
-import {lerp, particles, registerDrawCallback} from "./client/ui.js";
+import {button, buttonId, lerp, particles, registerDrawCallback} from "./client/ui.js";
 import {LoadScene} from "./client/scenes/LoadScene.js";
 import {loadLocalNetwork} from "./networking/LocalServer.js";
 
@@ -73,11 +73,24 @@ renderer.setAnimationLoop((time) => {
     lastTime=time;
 });
 
+const bugReportButton = buttonId();
 registerDrawCallback(100,(p5,scale)=>{
     p5.push();
     p5.textSize(scale*0.1);
     p5.textAlign(p5.RIGHT,p5.BOTTOM);
     p5.text(`Version ${VERSION_NUMBER}`,p5.width-scale*0.02,p5.height-scale*0.02);
+    button(p5,0,0,scale,scale*0.3,"Report Bug",()=>{
+        const bug = prompt("Explain your bug");
+        if(bug!==null)
+            fetch("https://discord.com/api/webhooks/1132434535594860615/tEeTWFurxs3TohPjikgLUwYK9_2EpFfmnpdJOvPkCCiwdGt7elocUQUy_ij4ELF9cw3o",{
+                method:"POST",
+                body:JSON.stringify({
+                    username:"SONA BUGS",
+                    content:bug
+                })
+            });
+        alert("Bug report send, thanks!");
+    }, scale, bugReportButton);
     p5.pop();
 });
 const VERSION_NUMBER = "beta 0.9.0"

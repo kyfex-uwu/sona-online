@@ -270,6 +270,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 card2?.flipFaceup();
                 if(card1 !== undefined) sideTernary(data.side!, game.handA, game.handB).addCard(card1);
                 if(card2 !== undefined) sideTernary(data.side!, game.runawayA, game.runawayB).addCard(card2);
+                game.state.decrementTurn();
             }break;
             case CardActionOptions.WORICK_RESCUE:{
                 const data = (event as CardAction<WORICK_RESCUE>).data.cardData;

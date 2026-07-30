@@ -47,6 +47,7 @@ fieldsPlaceable not being added sometimes
 cards not being allowed to scare despite seemingly having all the requirements
 can select fields before draw to start turn
 
+make sure all actions decrement turn if needed
 scared still fires when cloud catted
 starting game with brownie is wrong
 investigate 029, 035 not firing all the time

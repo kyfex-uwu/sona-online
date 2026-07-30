@@ -220,6 +220,7 @@ export class VTurnState extends VisualGameState<TurnState>{
                 }
             }
             if(handSize >= 5 || this.getActionsLeft()<=0){
+                console.trace(handSize, this.getActionsLeft());//do not remove until FIELDS_SELECTABLE bug is fixed
                 this.deleteFeatures(
                     StateFeatures.FIELDS_SELECTABLE,
                     StateFeatures.FIELDS_PLACEABLE,

@@ -52,7 +52,7 @@ function defaultIsValid<T extends SerializableType>(event:CardAction<T>, game:Ga
         actor.cardData.name === cardName && //card is cardData
         game.state instanceof TurnState && //state is turnState
         game.state.turn === actor.side && //player's turn
-        game.state.actionsLeft > 0 &&
+        game.state.actionsLeft > 0 && //has actions left
         (optData.cardActionOption === undefined ||
             game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === optData.cardActionOption) &&//card action option matches
         game.player(actor.side) === event.sender)) //card is sender's
@@ -198,7 +198,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
             }
 
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side], undefined);
-
+            (game.state as TurnState).actionsLeft--;
             sendToGame(new CardAction({
                 cardId:-1,
                 actionName:CardActionOptions.AMBER_PICK,
