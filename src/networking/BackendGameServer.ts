@@ -15,7 +15,7 @@ import {
     PassAction,
     PerchanceEvent,
     PlaceAction,
-    RequestServerDumpEvent,
+    RequestServerDumpAction,
     ScareAction,
     ServerDumpEvent,
     StartRequestEvent
@@ -144,8 +144,6 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
     const cards = [...game.fieldsA, ...game.fieldsB];
     internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event }, onPass);
 }
-
-// const bypassInterruptScareMarker = {};//todo: is this needed?
 
 export function parseEvent(event:GameEvent<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
@@ -411,31 +409,32 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 (scarer.stat(event.data.attackingWith) === undefined ||
                     scared.stat(getVictim(event.data.attackingWith)) === undefined));
 
+            const failed = forceFailed ?? (!succeeded || (autofail || (event.data.attackingWith === "card" ||
+                !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)))));
+            if(failed) scared = scarer;
             const toSend = new ScareAction({
-                scaredPos: event.data.scaredPos,
-                scarerPos: event.data.scarerPos,
+                scaredPos: scared.getCardPos()!,
+                scarerPos: scarer.getCardPos()!,
                 attackingWith: event.data.attackingWith,
-                failed: forceFailed ?? (!succeeded || (autofail || (event.data.attackingWith === "card" ||
-                    !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!))))),
+                failed,
                 free: event.isForcedFree(),
             });
             scarer.hasAttacked = true;
             for (const user of (usersFromGameIDs[game.gameID] || [])) {
                 user.send(toSend);
             }
-            if (!toSend.data.failed) {
-                sideTernary(scared.side, game.runawayA, game.runawayB).push(
-                    sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
-                sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                scared.callAction(CardTriggerType.AFTER_SCARED,
-                    {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
-                for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
-                    if (card === undefined) continue;
+            sideTernary(scared.side, game.runawayA, game.runawayB).push(
+                sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
+            sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                    card.callAction(CardTriggerType.AFTER_SCARED,
-                        {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
-                }
+            scared.callAction(CardTriggerType.AFTER_SCARED,
+                {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
+            for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
+                if (card === undefined) continue;
+
+                card.callAction(CardTriggerType.AFTER_SCARED,
+                    {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
             }
 
 
@@ -504,7 +503,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                             card.isAlwaysFree());
                 }
                 break;
-            case ClarificationJustification.AMBER://todo
+            case ClarificationJustification.AMBER:
                 if(game.state instanceof TurnState &&
                     event.sender === game.player(game.state.turn) &&
                     sideTernary(game.state.turn, game.fieldsA, game.fieldsB)
@@ -553,7 +552,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return rejectEvent(event, "no suitable cards found");
     }
 
-    else if(event instanceof RequestServerDumpEvent && dev){
+    else if(event instanceof RequestServerDumpAction && dev){
         network.replyToClient(event, new ServerDumpEvent({
             fieldsA:game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             fieldsB:game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],

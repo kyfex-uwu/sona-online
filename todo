@@ -43,9 +43,7 @@ x
 x
 
 ---
-fieldsPlaceable not being added sometimes
 cards not being allowed to scare despite seemingly having all the requirements
-can select fields before draw to start turn
 
 make sure all actions decrement turn if needed
 scared still fires when cloud catted
@@ -53,10 +51,11 @@ starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
 
+card "accessory" system (allow for custom models to be attached to the card)
+"concede" button
 make sure the client can start the turn on their terms when they cant draw to start
 type checking for all packets (need to write some separate thing)
 shuffle everywhere!
 add card texture atlas
-
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
-figure out why cards shrink sometimes when going in discard
+figure out why cards shrink sometimes when going in discard (fixed?)

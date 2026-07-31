@@ -17,6 +17,7 @@ export function getVictim(stat:Stat){
 export function getAttacker(stat:Stat){
     return statTernary(stat, Stat.BLUE, Stat.YELLOW, Stat.RED);
 }
+export type CardPos = [1|2|3,Side];
 
 export type CardMiscDataString<T> = {};
 export const CardMiscDataStrings = {
@@ -119,5 +120,12 @@ export default class Card implements GameElement{
     //@return if this card should decrement the turn when placed
     isFreeNow(){
         return this.callAction(CardTriggerType.IS_SOMETIMES_FREE, {self:this, game:this.game})??false;
+    }
+
+    getCardPos():CardPos|undefined{
+        const APos = this.game.fieldsA.indexOf(this);
+        if(APos>=0) return [APos+1 as 1|2|3, Side.A];
+        const BPos = this.game.fieldsB.indexOf(this);
+        if(BPos>=0) return [BPos+1 as 1|2|3, Side.B];
     }
 }

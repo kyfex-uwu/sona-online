@@ -1,5 +1,5 @@
 import {Scene} from "./Scene.js";
-import {RequestServerDumpEvent} from "../../networking/Events.js";
+import {RequestServerDumpAction} from "../../networking/Events.js";
 import {getLocalGame} from "../../networking/LocalGameServer.js";
 import {network} from "../../networking/Server.js";
 import {tempHowToUse} from "../ui.js";
@@ -14,7 +14,7 @@ export class GameScene extends Scene{
             ()=> getLocalGame();
 // @ts-ignore
         window.serverDump =
-            ()=>network.sendToServer(new RequestServerDumpEvent({}));
+            ()=>network.sendToServer(new RequestServerDumpAction({}));
 
         console.log("important lines of code:\n\n" +
             "logGame() outputs the game as the CLIENT sees it\n\n" +

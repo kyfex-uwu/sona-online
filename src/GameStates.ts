@@ -90,7 +90,7 @@ export class TurnState extends GameState{
         if(this.actionsLeft<0){
             if(this.crisis && !sideTernary(this.turn, this.game.fieldsA, this.game.fieldsB).some(card=>card!==undefined)){
                 return other(this.turn);
-            }else if(this.game.getCrisis(other(this.turn))>=3){
+            }else if(this.game.getCrisis(other(this.turn))>=3 || sideTernary(other(this.turn), this.game.deckA, this.game.deckB).length===0){//todo: if you cant draw to start bc you have 5 cards, then what?
                 return this.turn;
             }
         }

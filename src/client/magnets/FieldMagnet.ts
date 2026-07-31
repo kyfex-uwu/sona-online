@@ -100,9 +100,8 @@ export default class FieldMagnet extends CardMagnet{
                                 let hitStat=false;
                                 if(!this.card.logicalCard.hasAttacked && !this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN))
                                     for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW]){
-                                        if (this.card.logicalCard.stat(stat) !== undefined &&
-                                            intersects[0].object === this.card.getStatModel(stat)) {
-                                            state.attackData.type = stat;
+                                        if (intersects[0].object === this.card.getStatModel(stat)) {
+                                            state.attackData.type = this.card.logicalCard.stat(stat) !== undefined ? stat : undefined;
                                             cardClicked?.highlightStat({[stat]:true}, attackLock);
                                             hitStat=true;
                                             break;
@@ -118,7 +117,7 @@ export default class FieldMagnet extends CardMagnet{
                                 }
                             }
                         }else{
-                            if(state.attackData.type !== undefined) {
+                            if(state.attackData.type !== undefined && this.card.logicalCard.stat(getVictim(state.attackData.type)) !== undefined) {
                                 const intersects = this.game.raycaster.intersectObjects([
                                     this.card.model
                                 ]);
@@ -141,12 +140,6 @@ export default class FieldMagnet extends CardMagnet{
                         }
                         return true;
                     }
-
-                    // let tempCard = this.card;
-                    // if(this.removeCard(game)) {
-                    //     game.selectedCard = tempCard;
-                    //     return true;
-                    // }
                 }
 
                 return false;

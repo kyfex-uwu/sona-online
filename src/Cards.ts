@@ -20,7 +20,7 @@ export const addTempStats = (self:Card, toAdd:[number|undefined,number|undefined
     return toAdd;
 }
 
-setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)//todo
+setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE)
     .with(CardTriggerType.GET_STATS, ({self, game})=>{
         const toReturn:[number|undefined,number|undefined,number|undefined] = [...self.cardData.stats];
         const newStatData = self.getMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE);
@@ -41,7 +41,7 @@ setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE).setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE).setFree());
 setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.BAT).setFree());
-setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)//todo
+setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID)
     .with(CardTriggerType.PLACED, ({self, game})=>{
         self.setMiscData(CardMiscDataStrings.TRASH_PANDA_IMMUNITY, "wait");
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
@@ -87,7 +87,7 @@ setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID));
 setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE));//DONE
 setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE));//DONE
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE));
-setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)//todo
+setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)
     .with(CardTriggerType.PLACED, ({self, game})=>{
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
     }));
@@ -104,11 +104,11 @@ setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE));
 setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID))
 setCard(new CardData("og-039", [5,7,undefined], 2, Species.FELINE));
 setCard(new CardData("og-040", [undefined,undefined,5], 2, Species.CANINE));
-setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN)//todo
+setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN)
     .with(CardTriggerType.SHOULD_SHOW_HAND, ({self, game})=>{
         return true;
     }));
-setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
+setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)
     .with(CardTriggerType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game})=>{
         if(sideTernary(self.side, game.fieldsA, game.fieldsB).findIndex(card=>card?.id === self.id) === undefined)
             return InterruptScareResult.PASSTHROUGH;
@@ -125,7 +125,7 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)//todo
         }
         return InterruptScareResult.PASSTHROUGH;
     }));
-setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)//todo
+setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)
     .with(CardTriggerType.PRE_PLACED, ({self, game})=>{
         if(game.state instanceof BeforeGameState){
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";

@@ -78,8 +78,8 @@ registerDrawCallback(100,(p5,scale)=>{
     p5.push();
     p5.textSize(scale*0.1);
     p5.textAlign(p5.RIGHT,p5.BOTTOM);
-    p5.text(`Version ${VERSION_NUMBER}`,p5.width-scale*0.02,p5.height-scale*0.02);
-    button(p5,0,0,scale,scale*0.3,"Report Bug",()=>{
+    p5.text(`Version ${VERSION_NUMBER}\nThis is only a beta build,\neverything is subject to change`,p5.width-scale*0.02,p5.height-scale*0.02);
+    button(p5,0,0,scale*0.7,scale*0.2,"Report Bug",()=>{
         const bug = prompt("Explain your bug");
         if(bug!==null)
             fetch("https://discord.com/api/webhooks/1132434535594860615/tEeTWFurxs3TohPjikgLUwYK9_2EpFfmnpdJOvPkCCiwdGt7elocUQUy_ij4ELF9cw3o",{
@@ -89,10 +89,10 @@ registerDrawCallback(100,(p5,scale)=>{
                     content:bug
                 })
             });
-        alert("Bug report send, thanks!");
-    }, scale, bugReportButton);
+        alert("Bug report sent, thanks!");
+    }, scale/2, bugReportButton);
     p5.pop();
 });
-const VERSION_NUMBER = "beta 0.9.0"
+const VERSION_NUMBER = "beta 1.0.0"
 
 loadLocalNetwork();

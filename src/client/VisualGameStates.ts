@@ -166,8 +166,7 @@ export class VTurnState extends VisualGameState<TurnState>{
     private initedAlready=false;
     init() {
         super.init();
-        this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
-            StateFeatures.FIELDS_PLACEABLE,
+        this.addFeatures(StateFeatures.FIELDS_PLACEABLE,
             StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready && this.canInit) {
@@ -197,30 +196,14 @@ export class VTurnState extends VisualGameState<TurnState>{
                             .filter(card => card !== undefined)
                             .reduce((a, c) => Math.max(a, c.logicalCard.cardData.level), 0) + 1;
                         for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                            if (card.logicalCard.cardData.level <= maxLevel ?
-                                card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                                    {self: card.logicalCard, game: this.game.getGame(), normallyValid: true}) ?? true :
-                                card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                                    {
-                                        self: card.logicalCard,
-                                        game: this.game.getGame(),
-                                        normallyValid: false
-                                    }) ?? false) {
-                                toHighlight.add(card);
-                            }
-                        }
-                    } else {
-                        for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                            if (card.logicalCard.cardData.isFree() || card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                                {self: card.logicalCard, game: this.game.getGame(), normallyValid: false})) {
+                            if (card.logicalCard.cardData.level <= maxLevel) {
                                 toHighlight.add(card);
                             }
                         }
                     }
                 }
             }
-            if(handSize >= 5 || this.getActionsLeft()<=0){
-                console.trace(handSize, this.getActionsLeft());//do not remove until FIELDS_SELECTABLE bug is fixed
+            if(handSize > 5 || this.getActionsLeft()<=0){
                 this.deleteFeatures(
                     StateFeatures.FIELDS_SELECTABLE,
                     StateFeatures.FIELDS_PLACEABLE,
@@ -230,15 +213,11 @@ export class VTurnState extends VisualGameState<TurnState>{
             }
         }else{
             this.features.clear();
-
-            for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                    {self:card.logicalCard,game:this.game.getGame(), normallyValid:false})??false, canSelectHandCardHighlight);
-            }
         }
 
         for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-            card.highlight(toHighlight.has(card), canSelectHandCardHighlight);
+            card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
+                {self: card.logicalCard, game: this.game.getGame(), normallyValid: toHighlight.has(card)}) ?? toHighlight.has(card), canSelectHandCardHighlight);
         }
     }
     swapAway() {
@@ -269,9 +248,11 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     public cardIndex;
     public readonly parentState;
     public readonly attackData:{
-        type?:Stat,
+        type:Stat|undefined,
         cardAttack?:string,
-    }={};
+    }={
+        type:undefined,
+    };
     constructor(cardIndex:1|2|3, game:VisualGame) {
         super(game);
         this.cardIndex=cardIndex;

@@ -225,17 +225,20 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             game.state.decrementTurn(true);
         });
     }else if(event instanceof ScareAction){
-        if(event.data.failed !== true) {
-            const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
-            if (scared !== undefined) {
+        const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
+        if (scared !== undefined) {
+            if(event.data.failed !== true)
                 animation(async ()=>{
-                    await particleStreak(
-                        sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
-                        sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
-                    ).then(()=>{
-                        sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
-                    });
+                await particleStreak(
+                    sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
+                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
+                ).then(()=>{
+                    sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
                 });
+            });
+            else{
+                sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                //todo: animation
             }
         }
         const maybeAttacked = sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]?.getCard()?.logicalCard;

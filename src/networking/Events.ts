@@ -1,4 +1,4 @@
-import IngameCard, {Stat} from "../Card.js";
+import IngameCard, {type CardPos, Stat} from "../Card.js";
 import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
 import type {Client} from "./BackendServer.js";
@@ -191,8 +191,8 @@ addToSerializableClasses(PlaceAction);
 const backendMarker = {};
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
 export class ScareAction extends ActionEvent<{
-    scarerPos:[1|2|3, Side],
-    scaredPos:[1|2|3, Side],
+    scarerPos:CardPos,
+    scaredPos:CardPos,
     attackingWith:Stat|"card",
     failed?:boolean,
     free?:boolean,
@@ -246,8 +246,8 @@ export function cardsTransform(cards:Array<IngameCard>, {cardData = true, faceUp
     return cards.map(c => card(c, {cardData, faceUp}));
 }
 
-export class RequestServerDumpEvent extends Event<{}>{}
-addToSerializableClasses(RequestServerDumpEvent);
+export class RequestServerDumpAction extends ActionEvent<{}>{}
+addToSerializableClasses(RequestServerDumpAction);
 export class ServerDumpEvent extends Event<{
     fieldsA:[string|undefined,string|undefined,string|undefined],
     fieldsB:[string|undefined,string|undefined,string|undefined],
