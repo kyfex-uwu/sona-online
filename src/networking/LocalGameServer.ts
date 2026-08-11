@@ -38,7 +38,6 @@ import {
     particleStreak,
     redStatColor,
     registerDrawCallback,
-    tempHowToUse,
     whiteColor,
     yellowStatColor
 } from "../client/ui.js";
@@ -403,9 +402,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 }), game.getGame().state);
             }break;
             case CardActionOptions.FOXY_MAGICIAN_GUESS:{
-                tempHowToUse("The Foxy Magician - Guessing", "Pick the level you think the card your opponent " +
-                    "picked might be.")
-
                 let guess:Level;
                 const endWaiter = externalPromise();
                 const buttons = (p5:any, scale:number, disabled:boolean)=>{
@@ -502,7 +498,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 }), game.getGame().state);
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
-                tempHowToUse("Lttle Boss", "Press Keep to keep Little Boss, or press Scare to scare them off the field.");
                 let release:()=>void;
                 const state = new VGuiState(game, [game.state, game.getGame().state],{
                     onEnd:(self, type)=>{
@@ -534,7 +529,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                let particler:number;
+                let particler:NodeJS.Timeout;
                 const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
                 const particleData = [
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
@@ -626,7 +621,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             case CardActionOptions.BROY_WEASLA_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                let particler:number;
+                let particler:NodeJS.Timeout;
                 const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
                 const particleData = [
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
@@ -718,8 +713,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 }), game.getGame().state);
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
-                tempHowToUse("Noble Rat", "Select Noble Rat if you want to retarget the opponent's attack to Noble Rat, " +
-                    "or press Finish to keep the attack as is.");
                 const state = new VPickCardsState(game, [game.state, game.getGame().state],
                     [new VisualCard(game, new Card(cards["og-020"]!, Side.A, game.getGame(), -1), new Vector3())],
                     (picked) => {

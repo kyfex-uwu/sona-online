@@ -9,7 +9,7 @@ import {
     DrawAction,
     GameEvent,
     GameStartEvent,
-    GameStartEventWatcher,
+    GameStartEventWatcher, GameWinDefaultEvent,
     InternalStartGameEvent,
     multiClarifyFactory,
     PassAction,
@@ -24,7 +24,7 @@ import Game, {GameMiscDataStrings} from "../Game.js";
 import {other, Side} from "../GameElement.js";
 import {shuffled, sideTernary} from "../consts.js";
 import Card, {getVictim, Stat} from "../Card.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, EndGameState, TurnState} from "../GameStates.js";
 import {CardTriggerType, InterruptScareResult} from "../CardData.js";
 import {CardActionOptions} from "./CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
@@ -32,7 +32,7 @@ import {acceptEvent, type Client, type processedEvent, processedEventMarker, rej
 import dev from "../dev.js";
 
 export const usersFromGameIDs:{[k:string]:Array<Client>}={};
-const gamesFromUser:Map<any, Game> = new Map();
+const gamesFromUser:Map<Client, Game> = new Map();
 
 //--
 
@@ -42,6 +42,14 @@ export function sendToGame(event:GameEvent<any>, game:Game, ...toIgnore:(Client|
             user.send(event);
         }
     }
+}
+
+export function gameServerWSClose(client:Client){
+    const game = gamesFromUser.get(client);
+    if(!game) return;
+
+    game.state = new EndGameState(game, game.player(Side.A) === client ? Side.B : Side.A);
+    sendToGame(new GameWinDefaultEvent({}),game);
 }
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
@@ -147,7 +155,7 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
 
 export function parseEvent(event:GameEvent<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
-    const game = gamesFromUser.get(event.sender) ?? (event instanceof ActionEvent ? event.getGame() : undefined);
+    const game = gamesFromUser.get(event.sender!) ?? (event instanceof ActionEvent ? event.getGame() : undefined);
 
     if(game === undefined){
         if(event instanceof InternalStartGameEvent){
@@ -447,14 +455,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return processedEventMarker;
         }
     }else if(event instanceof CardAction){
-        if(!event.isForced()) {
-            if (game.state instanceof TurnState) {
-                if(!game.state.drawnToStart)
-                    return rejectEvent(event, "not draw to start yet c");
-                if(!(game.state.actionsLeft>0))
-                    return rejectEvent(event, "no more actions c");
-            }
-        }
         return processCardAction(event, game);
     }else if(event instanceof DiscardAction){
         // if(event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))

@@ -30,7 +30,7 @@ import {
 } from "./CardActionOption.js";
 import {other, Side} from "../GameElement.js";
 import {BeforeGameState, TurnState} from "../GameStates.js";
-import {Species} from "../CardData.js";
+import {CardTriggerType, Species} from "../CardData.js";
 import Card, {CardMiscDataStrings} from "../Card.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import {sideTernary} from "../consts.js";
@@ -92,8 +92,29 @@ function verifyFieldCard(event:CardAction<any>, game:Game){
             .find(card => card?.id === event.data.cardId));
 }
 
-export default function(event:CardAction<any>, game:Game):processedEvent{
+export default function(event:CardAction<any>, game:Game|undefined):processedEvent{
     if(game === undefined) return rejectEvent(event, "no game");
+
+    if(!event.isForced()) {
+        const card = verifyFieldCard(event, game);
+        let shouldContinue=undefined;
+        if(card)
+            shouldContinue = card.callAction(CardTriggerType.CARD_ACTION_CAN_HAPPEN, {
+                self:card,
+                game,
+                event
+            });
+        if(shouldContinue===false) return rejectEvent(event, "failed custom cardaction check");
+        if(shouldContinue===undefined) {
+            if (game.state instanceof TurnState) {
+                if (!game.state.drawnToStart)
+                    return rejectEvent(event, "not draw to start yet c");
+                if (!(game.state.actionsLeft > 0))
+                    return rejectEvent(event, "no more actions c");
+            } else
+                return rejectEvent(event, "game not started yet");
+        }
+    }
     switch(event.data.actionName){
         case CardActionOptions.K9_ALPHA:{//og-001
             const succeeded = defaultIsValid<K9_ALPHA>(event, game, "og-001", {});
@@ -139,7 +160,7 @@ export default function(event:CardAction<any>, game:Game):processedEvent{
                 cardId: -1,
                 actionName:CardActionOptions.BROWNIE_DRAW,
                 cardData:{id:card.id},
-            }), game, event.sender);
+            }), game);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
             game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
             shuffleBackend(sideTernary(card.side, game.deckA, game.deckB));

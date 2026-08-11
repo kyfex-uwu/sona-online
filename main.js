@@ -33,22 +33,4 @@ website.post("/api/flags/:flag", (req, res)=>{
     flags[req.params.flag].val=JSON.parse(req.body);
 });
 
-const wsServer = new ws.WebSocketServer({ noServer: true });
-backendInit();
-server.on('upgrade', (req, socket, head) => {
-    wsServer.handleUpgrade(req, socket, head, (ws) => {
-        const sender = {send:event=> {
-                // console.trace(event.id)
-                ws.send(event.serialize());
-            }};
-        ws.on("message", async (message) => {
-            await new Promise(r=>setTimeout(r,50));
-
-            try{
-                receiveFromClient(JSON.parse(message.toString()), sender);
-            }catch(e){
-                ws.send("{\"error\":\"Couldn't process event\"}");
-            }
-        })
-    })
-})
+backendInit(server);

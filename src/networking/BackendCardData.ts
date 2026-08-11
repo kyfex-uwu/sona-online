@@ -1,7 +1,7 @@
 import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner} from "../CardData.js";
 import cards from "../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
-import {CardActionOptions} from "./CardActionOption.js";
+import {type CardActionOption, CardActionOptions} from "./CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
 import {sideTernary} from "../consts.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -17,9 +17,39 @@ function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardTrig
         return wrapper(oldAction, args);
     });
 }
+enum State{
+    REQUIRED_VALID,
+    EITHER,
+    REQUIRED_INVALID
+}
+function customAllowWhen(card:CardData,action:CardActionOption<any>,data:{
+    turnState?:State,
+    drawnToStart?:State,
+    free?:boolean,
+}){
+    data.turnState = data.turnState ?? State.REQUIRED_VALID;
+    data.drawnToStart = data.drawnToStart ?? State.REQUIRED_VALID;
+    data.free = data.free ?? false;
+
+    wrap(card, CardTriggerType.CARD_ACTION_CAN_HAPPEN, (orig, {self, game, event})=>{
+        if(event.data.actionName === action){
+            if (!(game.state instanceof TurnState))
+                return data.turnState !== State.REQUIRED_VALID;
+            if(data.drawnToStart !== State.EITHER)
+                return data.drawnToStart === (game.state.drawnToStart ? State.REQUIRED_VALID : State.REQUIRED_INVALID);
+            if(!(game.state.actionsLeft>0)) return data.free!;
+            return true;
+        }
+    })
+}
 
 wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROWNIE_DRAW);
+});
+customAllowWhen(cards["og-005"]!, CardActionOptions.BROWNIE_DRAW, {
+    turnState:State.EITHER,
+    drawnToStart:State.EITHER,
+    free:true
 });
 wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(sideTernary(self.side, game.fieldsB, game.fieldsB)
@@ -115,7 +145,6 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 });
 wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
-
     game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);

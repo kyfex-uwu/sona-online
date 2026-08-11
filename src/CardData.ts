@@ -1,6 +1,6 @@
 import Card, {Stat} from "./Card.js";
 import type Game from "./Game.js";
-import {ScareAction} from "./networking/Events.js";
+import {CardAction, ScareAction} from "./networking/Events.js";
 
 let globalID=0;
 
@@ -52,6 +52,8 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
         {self:Card,game:Game}, boolean>();
     public static readonly SHOULD_SHOW_HAND = new CardTriggerType<
         {self:Card,game:Game}, boolean>();
+    public static readonly CARD_ACTION_CAN_HAPPEN = new CardTriggerType<
+        {self:Card,game:Game,event:CardAction<any>}, boolean|undefined>();
 
     //Only for use on the client
     public static readonly VISUAL_TICK = new CardTriggerType<{self:Card}, void>();

@@ -1,5 +1,6 @@
 if deck is empty, can the player still use furmaker's action? (does it consume an action or is it not allowed to use) (Add any card from your deck to your hand)
  - similar for worick
+* cannot perform
 
 how do k9 agent alpha and broy weasla interact?
 - code it how i think, then verify
@@ -15,13 +16,20 @@ do gremlin kitten/kibby otes/dcw abilities consume a scare?
 - and can they be countered by noble rat?
 
 how does amber function with 0 or 1 cards left in the deck?
-- assuming 1 card: you can choose to discard or keep the 1
-- assuming 0 cards: action is not consumed
-
-is kibby otes allowed to use their action on the first turn?
-does kibby otes's "replacing" count as placing a card? (should it trigger placed card effect)
-
-should cowgirl/broy weasla be allowed to raise a stat if the scare is not made with a stat?
-cowgirl can't increase null stats, right
+- cannot perform
 
 can you retarget to noble rat if that means the resulting scare will target a null stat?
+- yes, but then the scare does nt happen (NOT scare failed)
+
+###
+
+if you dont have enough cards to do an action, you cannot do the action
+- formaker
+- amber
+- etc
+
+scare has already passed the check, scare attempt needs the check
+
+gremlin cat ability does not comsume a scare
+
+retarget to rodent and it triggers null: scare attempt doesnt happen (NOT failed)

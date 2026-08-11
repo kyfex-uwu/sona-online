@@ -51,7 +51,7 @@ starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
 
-card "accessory" system (allow for custom models to be attached to the card)
+card "accessory" system (allow for custom models to be attached to the card) (3d and 2d)
 "concede" button
 make sure the client can start the turn on their terms when they cant draw to start
 type checking for all packets (need to write some separate thing)
@@ -59,3 +59,21 @@ shuffle everywhere!
 add card texture atlas
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
 figure out why cards shrink sometimes when going in discard (fixed?)
+
+###
+in crisis mode indicator
+actions left counter
+coin flip animation
+view your deck + discard pile
+when hovering field card, show cards you will win/lose against and cards you cant target
+- also show this for noble rat on target and noble rat
+rework 014 to be more player friendly
+revisit hand cards showing if they can be placed
+highlight if ability is available
+if a stat can change (think mob boss), changed stat should be green/red and replace *not show in preview
+additional free to play indicator
+
+###
+add game culler to the backend
+- when games are done
+- when player has lost connection

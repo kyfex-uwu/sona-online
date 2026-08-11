@@ -60,6 +60,8 @@ export default class Game{
         this._state = newState;
         newState.init();
         oldState.swapAway();
+
+        //todo: if state === end
     }
 
     private miscData: { [k: string]: any } = {};

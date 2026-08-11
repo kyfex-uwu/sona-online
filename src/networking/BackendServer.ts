@@ -15,12 +15,41 @@ import {v4 as uuid} from "uuid"
 import {shuffled} from "../consts.js";
 import cards from "../Cards.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
-import {parseEvent as gameParseEvent} from "./BackendGameServer.js";
+import {gameServerWSClose, parseEvent as gameParseEvent} from "./BackendGameServer.js";
+import * as ws from "ws";
+import type {Server} from "ws";
 
-export type Client ={send:(v:Event<any>)=>void};
+export type Client ={
+    send:(v:Event<any>)=>void,
+};
 const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
 
-export function backendInit(){
+export function backendInit(server:Server){
+    const wsServer = new ws.WebSocketServer({ noServer: true });
+    server.on('upgrade', (req, socket, head) => {
+        wsServer.handleUpgrade(req, socket, head, (ws) => {
+            const sender = {
+                send:(event:Event<any>)=> {
+                    ws.send(event.serialize());
+                }
+            };
+
+            ws.on("message", async (message) => {
+                await new Promise(r=>setTimeout(r,50));
+
+                try{
+                    receiveFromClient(JSON.parse(message.toString()), sender);
+                }catch(e){
+                    ws.send("{\"error\":\"Couldn't process event\"}");
+                }
+            });
+            ws.on("close", ()=>{
+                gameServerWSClose(sender);
+            })
+        })
+    })
+
+
     loadBackendWrappers();
     console.log("Backend initialized");
 }
@@ -59,6 +88,13 @@ export function parseEvent(event:Event<any>):processedEvent{
         if(unfilledGames.length>0){
             const gamePromise = unfilledGames.shift()!;
             gamePromise(event);
+
+            if(event.data.requestCPU){
+                setTimeout(()=>{
+
+                });
+            }
+
             return acceptEvent(event);
         }else{
             let resolve:(v:FindGameEvent)=>void;
@@ -106,7 +142,7 @@ export function parseEvent(event:Event<any>):processedEvent{
     else return rejectEvent(event, "not a recognized event");
 }
 
-export async function receiveFromClient (packed:{
+export async function receiveFromClient(packed:{
     type:string,
     data:SerializableType,
     id:string

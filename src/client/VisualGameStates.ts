@@ -233,6 +233,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         return state instanceof TurnState ? state.actionsLeft : 0;
     }
     canSelectHandCard(card: VisualCard): boolean {
+        if(card === undefined) console.trace("canSelectCard is undefined?");
         if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
         const toReturn = card.logicalCard.cardData.level === 1 ||
             sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>

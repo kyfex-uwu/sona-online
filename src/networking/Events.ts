@@ -99,6 +99,7 @@ addToSerializableClasses(PerchanceEvent);
 //(C2S) Asks the server to find this client a game
 export class FindGameEvent extends Event<{
     deck:Array<string>,
+    requestCPU:boolean
 }>{}
 addToSerializableClasses(FindGameEvent);
 //only for use internally
@@ -220,6 +221,9 @@ export type Card = {
     cardData?:string,
     faceUp:boolean
 }
+
+export class GameWinDefaultEvent extends Event<{}>{}
+addToSerializableClasses(GameWinDefaultEvent);
 
 /**
  * Transforms a logical card into one that can be sent in an event

@@ -22,7 +22,6 @@ import {
     particleStreak,
     redStatColor,
     registerDrawCallback,
-    tempHowToUse,
     whiteColor,
     yellowStatColor
 } from "./ui.js";
@@ -138,7 +137,6 @@ visualCardClientActions["og-018"] = async (card) =>{
         id:card.logicalCard.id,
         justification:ClarificationJustification.AMBER
     })).onReply(()=>{
-        tempHowToUse("Amber", "Click the card you want to keep; don't click the card you want to discard");
         let release:()=>void;
         let discardFirst=true;
         getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
@@ -181,9 +179,6 @@ visualCardClientActions["og-018"] = async (card) =>{
 const kibbyHighlightLock = newHighlightLock();
 visualCardClientActions["og-028"] = (card)=>{
     if(card.logicalCard.hasAttacked) return new Promise(r=>r(false));
-
-    tempHowToUse("Kibby Otes", "Click the cards you want to scare, then press Finish. Then, select the cards you want " +
-        "to replace them with, and press Finish again.")
 
     const toReturn = externalPromise<boolean>();
 
@@ -259,8 +254,6 @@ visualCardClientActions["og-028"] = (card)=>{
 };
 const og038Highlight = newHighlightLock();
 visualCardClientActions["og-038"] = (card)=>{
-    tempHowToUse("Worick the Wild Whisperer", "Click the card to add to your hand.");
-
     const cards = sideTernary(card.getSide(), getLocalGame().runawayA, getLocalGame().runawayB).getCards()
         .filter(card => card?.logicalCard.cardData.level === 1);
     const toReturn = externalPromise<boolean>();
@@ -313,7 +306,6 @@ visualCardClientActions["og-041"] = (card)=>{
     if(sideTernary(card.getSide(), card.game.getGame().deckA, card.game.getGame().deckB).length<=0)
         return new Promise<boolean>(r=>r(true));
 
-    tempHowToUse("Fur Maker", "Click the card to add to your hand");
     const toReturn = externalPromise<boolean>();
 
     waitForClarify(ClarificationJustification.FURMAKER, ()=>{
@@ -371,44 +363,46 @@ function waitToDraw(data:CardData){
     });
 }
 
+const og005Highlight = newHighlightLock();
 waitToDraw(cards["og-005"]!);
-wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
+wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
+    if(orig) orig({self:card, game});
 
-    tempHowToUse("Brownie","Click the card you want to add to your hand")
     network.sendToServer(new ClarifyCardEvent({
-        id:self.id,
+        id:card.id,
         justification:ClarificationJustification.BROWNIE,
     })).onReply(successOrFail(()=>{
-        const cards = sideTernary(self.side, game.deckA, game.deckB).filter(card =>
-            card.cardData.level === 1 && card.isAlwaysFree());
-        getLocalGame().setState(new VPickCardsState(getLocalGame(), [getLocalGame().state, (game.state as TurnState)], getLocalGame().elements.filter(element =>
-            VisualCard.getExactVisualCard(element) && cards.some(card => (element as VisualCard).logicalCard.id === card.id)) as VisualCard[], (card)=>{
+        let selected:SuperficialVisualCard|undefined;
+        let release:()=>void;
+        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, (game.state as TurnState)], {
+            onEnd:(self)=>{
+                release();
 
-            const state = getLocalGame().state as VPickCardsState;
-            state.cards.splice(state.cards.indexOf(card),1)[0]?.removeFromScene();
-
-            const deck = sideTernary(card.getSide(), getLocalGame().deckA, getLocalGame().deckB);
-            const toRemove =deck.getCards().find(c => c.logicalCard.id === card.logicalCard.id);
-            if(toRemove) {
-                deck.removeCard(toRemove);
-                toRemove.setRealPosition(card.position.clone());
-                toRemove.setRealRotation(card.rotation.clone());
-                toRemove.flipFaceup();
-                sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB).addCard(toRemove);
                 network.sendToServer(new CardAction({
-                    cardId:self.id,
+                    cardId:card.id,
                     actionName: CardActionOptions.BROWNIE_DRAW,
                     cardData: {
-                        id:toRemove.logicalCard.id
+                        id:selected!.logicalCard.id
                     },
                 })).onReply(successOrFail(()=>{
                     game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                 }));
-            }
+            },
+            init:(self)=>{
+                self.blackBg(true);
+                self.addCardsGrid(sideTernary(card.side, getLocalGame().deckA, getLocalGame().deckB).getCards()
+                    .filter(card=>card.logicalCard.isAlwaysFree() && card.logicalCard.cardData.level === 1), (picked)=>{
+                    selected?.highlight(false, og005Highlight);
+                    selected = picked;
+                    selected.highlight(true, og005Highlight);
+                });
 
-            state.end();
-        }, EndType.NONE), game.state);
+                release=registerDrawCallback(0,(p5,scale)=>{
+                    self.finishButton(p5,scale,selected===undefined);
+                    self.infoText(p5, scale, "Select the card to add to your hand");
+                })
+            }
+        }),game.state);
     }));
 });
 waitToDraw(cards["og-009"]!);
@@ -421,7 +415,6 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
         target.some(card => //and at least one card has at least 1 stat less than 2
             ((card.stat(Stat.RED)??99)<2 || (card.stat(Stat.BLUE)??99)<2 || (card.stat(Stat.YELLOW)??99)<2))) {
 
-        tempHowToUse("Gremlin Kitten", "Select the card to scare");
         let selectedCard:1|2|3|undefined;
         let releases:(()=>void)[] = [];
         const fields = sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA);
@@ -479,9 +472,6 @@ const og027highlight = newHighlightLock();
 wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     if(orig) orig({self:card, game});
 
-    tempHowToUse("Yashi MauMau", "Select your three cards, then press Finish. "+
-        "Click the cards in order of top to bottom: the first card will be on top of " +
-        "the deck and the last card will be third (or second or whatever)");
     waitForClarify(ClarificationJustification.YASHI, ()=> {
         getLocalGame().frozen = false;
 
@@ -575,8 +565,6 @@ const og031Highlight = newHighlightLock();
 wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     if(orig) orig({self:card, game});
 
-    tempHowToUse("The Foxy Magician", "Pick the card you want to potentially add to your hand.")
-
     waitForClarify(ClarificationJustification.FOXY_MAGICIAN, ()=>{
         let release:()=>void;
         let selectedCard:SuperficialVisualCard|undefined;
@@ -658,8 +646,6 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
 const og032Highlight = newHighlightLock();
 wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     if(orig) orig({self:card, game});
-
-    tempHowToUse("Dark Cat Wizard", "Pick any card; your opponent will try to guess its level.")
 
     waitForClarify(ClarificationJustification.DCW, ()=>{
         let release:()=>void;
@@ -815,7 +801,6 @@ wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
     if(game.state instanceof BeforeGameState){
-        tempHowToUse("Cloud Cat", "Whatever the opponent places will be disabled :)");
         network.sendToServer(new CardAction({
             cardId:self.id,
             actionName:CardActionOptions.CLOUD_CAT_PICK,

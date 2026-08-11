@@ -34,9 +34,11 @@ const disabledCards = [
     "og-005",
     "og-020",
     "og-043",
+    "ky-fex"
 ];
 export const getDeck = ()=>deck;
 const backButtonId = buttonId();
+const clearButtonId = buttonId();
 export class DeckBuildScene extends Scene{
     private readonly cards = Object.values(cards).filter(card=>!specialCards.has(card.name)).map(v=>
         [v,buttonId()] satisfies [CardData,number]);
@@ -110,12 +112,15 @@ export class DeckBuildScene extends Scene{
             },scale,backButtonId,
                 deck.length !== 20 ||
                 !deck.some(name=>cards[name]?.level === 1));
+            button(p5, p5.width-scale*1.46,scale*0.03,scale*0.7,scale*0.3,"Clear",()=>{
+                deck.length=0;
+            },scale,clearButtonId,false);
 
             p5.push();
             p5.textAlign(p5.LEFT,p5.TOP);
             p5.textSize(scale*0.1)
             p5.fill(255);
-            p5.text((deck.length === 20 ? "" : "Deck must be 20 cards\n") +
+            p5.text((deck.length === 20 ? "" : `Deck must be 20 cards, currently ${deck.length}\n`) +
                 (deck.some(name=>cards[name]?.level === 1) ? "" : "Deck must have at least 1 level 1 card"),
                 4.1*scale*0.6,scale*0.4,
                 p5.width-4.1*scale*0.6-scale*0.03);

@@ -71,9 +71,8 @@ setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)
     }).with(CardTriggerType.IS_SOMETIMES_FREE, ({self, game})=>{
         return game.state instanceof TurnState &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
-                .filter(card => card !== undefined && card !== self)
-                .length === 0 && (game.state.turn !== self.side ||
-                    game.state.drawnToStart === false);
+                .filter(card => card !== undefined).length === 0 &&
+            (game.state.turn !== self.side || !game.state.drawnToStart);
     }));
 setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE));
 setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN));
@@ -82,15 +81,12 @@ setCard(new CardData("og-018", [3,1,undefined], 1, Species.CANINE));
 setCard(new CardData("og-019", [undefined,3,5], 1, Species.CANINE));
 setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA));
 setCard(new CardData("og-021", [2,1,8], 1, Species.FELINE));
-setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN));//DONE
+setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN));
 setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID));
-setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE));//DONE
-setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE));//DONE
+setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE));
+setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE));
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE));
-setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE)
-    .with(CardTriggerType.PLACED, ({self, game})=>{
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
-    }));
+setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE));
 setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE));
 setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES));
@@ -141,6 +137,8 @@ setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)
         }
     });
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
+
+setCard(new CardData("ky-fex", [9,9,9], 1, Species.VULPES));
 
 export const specialCards = new Set<string>([]);
 function setSpecialCard(data:CardData){

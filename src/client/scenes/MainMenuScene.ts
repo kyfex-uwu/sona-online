@@ -9,7 +9,8 @@ import {FindGameScene} from "./FindGameScene.js";
 export class MainMenuScene extends Scene{
     private readonly buttonIds = {
         start:buttonId(),
-        buildDeck:buttonId()
+        buildDeck:buttonId(),
+        cpu:buttonId(),
     }
     private readonly releaseDrawCallback;
     constructor() {
@@ -17,10 +18,15 @@ export class MainMenuScene extends Scene{
 
         this.releaseDrawCallback=registerDrawCallback(0, (p5, scale)=>{
             button(p5,
-                p5.width/2-scale/2, p5.height/2-scale*0.15, scale, scale*0.3,
+                p5.width/2-scale*1.025, p5.height/2-scale*0.15, scale, scale*0.3,
                 "Find Game", ()=>{
-                    setScene(()=>new FindGameScene());
+                    setScene(()=>new FindGameScene(false));
                 }, scale*0.8, this.buttonIds.start);
+            button(p5,
+                p5.width/2+scale*0.025, p5.height/2-scale*0.15, scale, scale*0.3,
+                "Play CPU", ()=>{
+                    setScene(()=>new FindGameScene(true));
+                }, scale*0.8, this.buttonIds.cpu, true);
             button(p5,
                 p5.width/2-scale/2, p5.height/2+scale*0.2, scale, scale*0.3,
                 "Build Deck", ()=>{
