@@ -1,6 +1,6 @@
 import CardData, {CardTriggerType, type Level, Species} from "../CardData.js";
 import cards from "../Cards.js";
-import {VGuiState, VisualGameState, VPickCardsState} from "./VisualGameStates.js";
+import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {externalPromise, sideTernary, statTernary} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
@@ -26,7 +26,7 @@ import {
     yellowStatColor
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
-import {EndType, StateFeatures} from "./VisualGameStateTools.js";
+import {StateFeatures} from "./VisualGameStateTools.js";
 import {waitFor} from "../networking/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";

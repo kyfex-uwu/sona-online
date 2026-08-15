@@ -22,26 +22,21 @@ import VisualGame, {ViewType} from "../client/VisualGame.js";
 import {other, Side} from "../GameElement.js";
 import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
 import type FieldMagnet from "../client/magnets/FieldMagnet.js";
-import {
-    VChoosingStartState,
-    VGuiState,
-    VisualGameState,
-    VPickCardsState,
-    VTurnState
-} from "../client/VisualGameStates.js";
+import {VChoosingStartState, VGuiState, VTurnState} from "../client/VisualGameStates.js";
 import {
     animation,
     animationEnd,
     blueStatColor,
     button,
-    buttonId, particleArc,
+    buttonId,
+    particleArc,
     particleStreak,
     redStatColor,
     registerDrawCallback,
     whiteColor,
     yellowStatColor
 } from "../client/ui.js";
-import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {BeforeGameState, TurnState} from "../GameStates.js";
 import {
     type AMBER_PICK,
     AmberData,
@@ -51,17 +46,16 @@ import {
     CardActionOptions,
     type CLOUD_CAT_PICK,
     type COWGIRL_COYOTE_INCREASE_DATA,
-    type FURMAKER_PICK, type NOBLE_RETARGET,
+    type FURMAKER_PICK,
+    type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
 import {GameMiscDataStrings} from "../Game.js";
-import {EndType} from "../client/VisualGameStateTools.js";
 import {log, scene} from "../client/clientConsts.js";
 import {waitFor} from "./LocalServer.js";
 import {setScene} from "../index.js";
 import {GameScene} from "../client/scenes/GameScene.js";
-import type VisualCardClone from "../client/VisualCardClone.js";
 import SuperficialVisualCard from "../client/SuperficialVisualCard.js";
 import type {Level} from "../CardData.js";
 

@@ -16,8 +16,8 @@ import {shuffled} from "../consts.js";
 import cards from "../Cards.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {gameServerWSClose, parseEvent as gameParseEvent} from "./BackendGameServer.js";
-import * as ws from "ws";
 import type {Server} from "ws";
+import * as ws from "ws";
 
 export type Client ={
     send:(v:Event<any>)=>void,
