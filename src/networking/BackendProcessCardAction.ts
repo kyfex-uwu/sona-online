@@ -591,7 +591,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.NOBLE_RETARGET)
                 return rejectEvent(event, "failed noble check");
 
-            if((event as CardAction<NOBLE_RETARGET>).data.cardData){
+            if((event as CardAction<NOBLE_RETARGET>).data.cardData[0]){
                 const origScare = actor.getMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE);
                 if(origScare) origScare.data.scaredPos = [
                     (sideTernary(actor.side, game.fieldsA, game.fieldsB).findIndex(card=>card?.id === actor.id)+1) as 1|2|3,

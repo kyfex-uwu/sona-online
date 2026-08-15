@@ -244,40 +244,75 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
         dead:false,
     });
 }
+function arc(startPos:Vector3, endPos:Vector3, pos:number){
+    return startPos.clone().multiplyScalar(1-pos).add(
+        endPos.clone().add(
+            new Vector3(0,startPos.distanceTo(endPos)*1 * (1-pos),0)
+        ).multiplyScalar(pos));
+}
 export async function particleStreak(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor:Color|undefined=startColor){
-    let pos = startPos.clone();
-    const aboveEnd = endPos.clone().add({x:0,y:500,z:0});
-    let timeout=0;
-    while(pos.distanceTo(endPos)>18){//sqrt 3 * 10
-        const lerpDelta= 1/(1+pos.distanceTo(endPos)*0.01/timeout);
-        const target = aboveEnd.clone().sub(pos).lerp(endPos.clone().sub(pos),lerpDelta);
-        const thisPos = pos.clone().add(new Vector3(Math.random()*20-10,Math.random()*20-10,Math.random()*20-10));
+    let amt = 0;
+    const dist = startPos.distanceTo(endPos);
+    while(amt<dist){
+        const thisPos = arc(startPos,endPos,amt/dist+(Math.random()*20-10)/dist).add(
+            new Vector3(Math.random()-0.5,Math.random()-0.5,Math.random()-0.5).multiplyScalar(20));
 
-        await wait(10);
-        particle(thisPos, target.normalize().multiplyScalar(0.5), 0.99, [
+        await wait(15);
+        particle(thisPos, arc(startPos,endPos,amt/dist+0.05).sub(thisPos).normalize().multiplyScalar(1.5), 0.99, [
             {
                 time:0,
-                size:5+Math.random()*10,
+                size:5+Math.random()*20,
                 opacity:1,
-                color:startColor ?? whiteColor,
+                color:(startColor ?? whiteColor).clone().lerp(endColor ?? startColor ?? whiteColor, Math.min(1,Math.max(0,amt/dist*1.2-0.1))),
             },
             {
                 time:500,
                 size:0,
                 opacity:0.5,
-                color:endColor ?? whiteColor,
+                color:(startColor ?? whiteColor).clone().lerp(endColor ?? startColor ?? whiteColor, Math.min(1,Math.max(0,amt/dist*1.2-0.1))),
             },
         ]);
 
-        pos.add(target.normalize().multiplyScalar(5+Math.random()*5));
-        timeout++;
+        amt+=10;
+    }
+}
+export function particleArc(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor:Color|undefined=startColor){
+    let density = startPos.distanceTo(endPos)*0.002;
+    while(density>0){
+        if(density<1 && Math.random()>density) break;
+
+        const i = Math.random();
+        const thisPos = arc(startPos,endPos,i).add(
+            new Vector3(Math.random()-0.5,Math.random()-0.5,Math.random()-0.5).multiplyScalar(2));
+
+        const size = 3+Math.random()*10;
+        particle(thisPos, new Vector3(Math.random()-0.5,Math.random()-0.5,Math.random()-0.5).multiplyScalar(0.05), 0.99, [
+            {
+                time:0,
+                size:0,
+                opacity:0.5,
+                color:(startColor ?? whiteColor).clone().lerp(endColor ?? startColor ?? whiteColor, Math.min(1,Math.max(0,i*1.6-0.3))),
+            },
+            {
+                time:1000,
+                size:size,
+                opacity:1,
+                color:(startColor ?? whiteColor).clone().lerp(endColor ?? startColor ?? whiteColor, Math.min(1,Math.max(0,i*1.6-0.3))),
+            },
+            {
+                time:1000,
+                size:size*0.6,
+                opacity:0,
+                color:(startColor ?? whiteColor).clone().lerp(endColor ?? startColor ?? whiteColor, Math.min(1,Math.max(0,i*1.6-0.3))),
+            },
+        ]);
     }
 }
 
-export const whiteColor = new Color(255,255,255);
-export const redStatColor = new Color(237,33,36);
-export const blueStatColor = new Color(3,163,221);
-export const yellowStatColor = new Color(220,216,33);
+export const whiteColor = new Color(255,255,255).multiplyScalar(1/255);
+export const redStatColor = new Color(237,33,36).multiplyScalar(1/255);
+export const blueStatColor = new Color(3,163,221).multiplyScalar(1/255);
+export const yellowStatColor = new Color(220,216,33).multiplyScalar(1/255);
 
 let animChain = new Promise<void>(r=>r());
 export function animation(callback:()=>Promise<any>){

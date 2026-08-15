@@ -28,7 +28,7 @@ export type COWGIRL_COYOTE_INCREASE_DATA = { stat:Stat, pos:CardPos, otherPos?:C
 export type COWGIRL_COYOTE_INCREASE =  false| COWGIRL_COYOTE_INCREASE_DATA;
 export type BROY_WEASLA_INCREASE_DATA = { stat:Stat, pos:CardPos, otherPos?:CardPos }
 export type BROY_WEASLA_INCREASE = false | BROY_WEASLA_INCREASE_DATA;
-export type NOBLE_RETARGET = boolean;
+export type NOBLE_RETARGET = [boolean, {scarer:CardPos,scared:CardPos,stat:Stat}?];
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {

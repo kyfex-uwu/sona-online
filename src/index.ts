@@ -41,8 +41,8 @@ renderer.setAnimationLoop((time) => {
                 particle.data[particle.index-1]?.opacity ?? 0,
                 delta);
             particle.sprite.material.color =
-                particle.data[particle.index]!.color.lerp(
-                    particle.data[particle.index-1]?.color ?? particle.data[particle.index]!.color,
+                (particle.data[particle.index-1]?.color ?? particle.data[particle.index]!.color).clone().lerp(
+                    particle.data[particle.index]!.color,
                     delta);
             const scale = lerp(
                 particle.data[particle.index]!.size,

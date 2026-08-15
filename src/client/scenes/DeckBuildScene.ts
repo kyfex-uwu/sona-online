@@ -7,38 +7,21 @@ import p5 from "p5";
 import {setScene} from "../../index.js";
 import {MainMenuScene} from "./MainMenuScene.js";
 
-const deck:string[] = [
-    // "og-043",
-    "og-006",
-    "og-035",
-    "og-018",
-    "og-021",
-    "og-024",
-    "og-023",
-    "og-022",
-    "og-039",
-    "og-011",
-    "og-010",
-    "og-003",
-    "og-030",
-    "og-014",
-    "og-042",
-    "og-013",
-    "og-029",
-    "og-004",
-    "og-017",
-    "og-026",
-    "og-012",
-];
+const decks={
+    canine:[37,7,40,33,2,16,34,19,36,8,28,5,25,18,31,35,20,1,30,15].map(v=>"og-"+v.toString().padStart(3,"0")),
+    feline:[12,26,17,4,13,10,6,39,23,21,24,22,32,11,3,27,14,38,29,9].map(v=>"og-"+v.toString().padStart(3,"0")),
+}
+const deck:string[] = [...decks.canine];
 const disabledCards = [
-    "og-005",
-    "og-020",
-    "og-043",
     "ky-fex"
 ];
 export const getDeck = ()=>deck;
 const backButtonId = buttonId();
 const clearButtonId = buttonId();
+const deckButtonIds = {
+    canine:buttonId(),
+    feline:buttonId(),
+}
 export class DeckBuildScene extends Scene{
     private readonly cards = Object.values(cards).filter(card=>!specialCards.has(card.name)).map(v=>
         [v,buttonId()] satisfies [CardData,number]);
@@ -115,15 +98,22 @@ export class DeckBuildScene extends Scene{
             button(p5, p5.width-scale*1.46,scale*0.03,scale*0.7,scale*0.3,"Clear",()=>{
                 deck.length=0;
             },scale,clearButtonId,false);
+            button(p5, p5.width-scale*0.73,scale*0.36,scale*0.7,scale*0.3,"Canine",()=>{
+                deck.length=0;
+                deck.splice(0,0,...decks.canine);
+            },scale,deckButtonIds.canine,false);
+            button(p5, p5.width-scale*1.46,scale*0.36,scale*0.7,scale*0.3,"Feline",()=>{
+                deck.length=0;
+                deck.splice(0,0,...decks.feline);
+            },scale,deckButtonIds.feline,false);
 
             p5.push();
-            p5.textAlign(p5.LEFT,p5.TOP);
+            p5.textAlign(p5.RIGHT,p5.TOP);
             p5.textSize(scale*0.1)
             p5.fill(255);
             p5.text((deck.length === 20 ? "" : `Deck must be 20 cards, currently ${deck.length}\n`) +
                 (deck.some(name=>cards[name]?.level === 1) ? "" : "Deck must have at least 1 level 1 card"),
-                4.1*scale*0.6,scale*0.4,
-                p5.width-4.1*scale*0.6-scale*0.03);
+                p5.width-scale*0.03,scale*0.7);
             p5.pop();
 
         });

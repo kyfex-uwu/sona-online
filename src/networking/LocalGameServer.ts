@@ -34,7 +34,7 @@ import {
     animationEnd,
     blueStatColor,
     button,
-    buttonId,
+    buttonId, particleArc,
     particleStreak,
     redStatColor,
     registerDrawCallback,
@@ -51,7 +51,7 @@ import {
     CardActionOptions,
     type CLOUD_CAT_PICK,
     type COWGIRL_COYOTE_INCREASE_DATA,
-    type FURMAKER_PICK,
+    type FURMAKER_PICK, type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "./CardActionOption.js";
@@ -230,7 +230,9 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 animation(async ()=>{
                 await particleStreak(
                     sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
-                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position
+                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position,
+                    event.data.attackingWith === "card" ? whiteColor : statTernary(event.data.attackingWith, redStatColor,blueStatColor,yellowStatColor),
+                    event.data.attackingWith === "card" ? whiteColor : statTernary(getVictim(event.data.attackingWith), redStatColor,blueStatColor,yellowStatColor),
                 ).then(()=>{
                     sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
                 });
@@ -529,11 +531,10 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                let particler:NodeJS.Timeout;
                 const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
                 const particleData = [
-                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
-                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.position,
+                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
+                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
                 ] satisfies [Vector3, Vector3];
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self)=>{
@@ -542,8 +543,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
 
                         for(const field of [...game.fieldsA, ...game.fieldsB])
                             field.getCard()?.highlight(false, og029Highlight);
-
-                        clearInterval(particler);
                     },
                     init: (self: VGuiState) => {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
@@ -608,24 +607,21 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                             });
                             self.infoText(p5, scale, "Select the card whose stat you want to increase and the stat you " +
                                 "want to increase by 2");
-                        });
 
-                        particler = setInterval(()=>{
-                            // particleStreak(particleData[0], particleData[1],
-                            //     statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
-                            //     statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
-                        },500);
+                            particleArc(particleData[0], particleData[1],
+                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor),
+                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor));
+                        });
                     },
                 }), game.getGame().state);
             }break;
             case CardActionOptions.BROY_WEASLA_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                let particler:NodeJS.Timeout;
                 const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
                 const particleData = [
-                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(data.stat)!.position,
-                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.position,
+                    sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
+                    sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
                 ] satisfies [Vector3, Vector3];
 
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
@@ -636,8 +632,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
 
                         for(const field of [...game.fieldsA, ...game.fieldsB])
                             field.getCard()?.highlight(false, og029Highlight);
-
-                        clearInterval(particler);
                     },
                     init: (self: VGuiState) => {
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
@@ -702,35 +696,53 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                             });
                             self.infoText(p5, scale, "Select the card whose stat you want to increase and the stat you " +
                                     "want to increase by 2");
-                        });
 
-                        particler = setInterval(()=>{
-                            // particleStreak(particleData[0], particleData[1],
-                            //     statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
-                            //     statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
-                        },500);
+                            particleArc(particleData[0], particleData[1],
+                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor),
+                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor));
+                        });
                     },
                 }), game.getGame().state);
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
-                const state = new VPickCardsState(game, [game.state, game.getGame().state],
-                    [new VisualCard(game, new Card(cards["og-020"]!, Side.A, game.getGame(), -1), new Vector3())],
-                    (picked) => {
+                let release:()=>void;
+                const data = (event.data.cardData as NOBLE_RETARGET)[1]!;
+                const particleData = [
+                    sideTernary(data.scared[1], game.fieldsA, game.fieldsB)[data.scared[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
+                    sideTernary(data.scarer![1], game.fieldsA, game.fieldsB)[data.scarer![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
+                    sideTernary(game.getMySide(), game.fieldsA, game.fieldsB).find(f=>f.getCard()?.logicalCard.cardData.name === "og-020")
+                        ?.getCard()?.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3())!
+                ] satisfies [Vector3, Vector3, Vector3];
+
+                game.setState(new VGuiState(game, [game.state,game.getGame().state], {
+                    onEnd:(self,type)=>{
+                        release();
                         network.sendToServer(new CardAction({
                             cardId: -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
-                            cardData: true
+                            cardData: [type === "finished"]
                         }));
-                        state.end();
-                    }, EndType.FINISH, () => {
-                        network.sendToServer(new CardAction({
-                            cardId: -1,
-                            actionName: CardActionOptions.NOBLE_RETARGET,
-                            cardData: false
-                        }));
-                        state.end();
-                    });
-                game.setState(state, game.getGame().state);
+                    },
+                    init:(self)=>{
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        release=registerDrawCallback(0,(p5,scale)=>{
+                            self.twoButtons(p5,scale,{
+                                text:"Retarget",
+                                onClick:()=>self.end("finished")
+                            },{
+                                text:"Pass",
+                                onClick:()=>self.end("canceled")
+                            });
+
+                            particleArc(particleData[0], particleData[1],
+                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                            particleArc(particleData[2], particleData[1],
+                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                        });
+                    }
+                }), game.getGame().state);
             }break;
         }
     }else if(event instanceof DiscardAction){
