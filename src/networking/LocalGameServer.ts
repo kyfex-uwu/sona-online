@@ -495,7 +495,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                 let release:()=>void;
-                const state = new VGuiState(game, [game.state, game.getGame().state],{
+                game.setState(new VGuiState(game, [game.state, game.getGame().state],{
                     onEnd:(self, type)=>{
                         release();
                     },
@@ -517,10 +517,10 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 onClick:()=>end(false),
                                 text:"Scare"
                             },true);
+                            self.infoText(p5,scale,"Chose whether to keep Little Boss on the field or let them be scared");
                         })
                     }
-                });
-                game.setState(state, game.getGame().state);
+                }), game.getGame().state);
             }break;
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
                 let drawCallback:()=>void;
@@ -727,6 +727,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 text:"Pass",
                                 onClick:()=>self.end("canceled")
                             });
+                            self.infoText(p5,scale,"Chose whether to redirect the scare to Noble Rat or leave it as-is");
 
                             particleArc(particleData[0], particleData[1],
                                 statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),

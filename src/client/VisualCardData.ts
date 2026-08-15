@@ -170,6 +170,8 @@ visualCardClientActions["og-018"] = async (card) =>{
                     p5.text("Discard",p5.width/2+scale/2,p5.height/2-scale/2);
 
                     self.finishButton(p5, scale, false);
+
+                    self.infoText(p5,scale,"Click to swap cards; pick which one to add to hand and which one to discard");
                 });
             }
         }),getLocalGame().getGame().state);
@@ -242,7 +244,7 @@ visualCardClientActions["og-028"] = (card)=>{
 
             release = registerDrawCallback(0,(p5,scale)=>{
                 self.finishAndCancel(p5, scale, !replaceMap.some(v=>v!==undefined), false);
-                self.infoText(p5, scale, "Scare your field cards by placing hand cards on top of them")
+                self.infoText(p5, scale, "Scare your field cards by placing Lv 3 hand cards on top of them")
             });
         },
         canSelectHandCard:(self, card)=>{
@@ -335,6 +337,7 @@ visualCardClientActions["og-041"] = (card)=>{
 
                 release=registerDrawCallback(0,(p5,scale)=>{
                     self.finishButton(p5, scale, selectedCard===undefined);
+                    self.infoText(p5,scale,"Select the card to add to your hand");
                 })
             }
         }),getLocalGame().getGame().state);
@@ -450,7 +453,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
 
                 releases.push(registerDrawCallback(0, (p5, scale)=>{
                     self.buttonAndFinish(p5, scale, ()=>self.end("canceled"), "Pass", false, selectedCard === undefined, false);
-                    self.infoText(p5, scale, "Click which of your opponents cards to scare, or Pass without scaring")
+                    self.infoText(p5, scale, "Select which of your opponents cards to scare, or Pass without scaring")
                 }));
             }
         }), getLocalGame().getGame().state);
@@ -589,30 +592,31 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                 self.blackBg(true);
 
                 release = registerDrawCallback(0, (p5, scale)=>{
-                    if(uiState === "pick")
-                        self.button(p5, scale, ()=>{
-                            for(const other of self.cards)
-                                if(other !== selectedCard) other.removeFromScene();
-                                else{
-                                    other.position = new Vector3(0,0,-20);
+                    if(uiState === "pick") {
+                        self.button(p5, scale, () => {
+                            for (const other of self.cards)
+                                if (other !== selectedCard) other.removeFromScene();
+                                else {
+                                    other.position = new Vector3(0, 0, -20);
                                     other.highlight(false, og031Highlight);
                                 }
 
                             network.sendToServer(new CardAction({
-                                cardId:card.id,
-                                actionName:CardActionOptions.FOXY_MAGICIAN_PICK,
-                                cardData:selectedCard!.logicalCard.id
+                                cardId: card.id,
+                                actionName: CardActionOptions.FOXY_MAGICIAN_PICK,
+                                cardData: selectedCard!.logicalCard.id
                             }));
 
                             uiState = "wait";
-                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
-                                (guessEvent)=>{
-                                    guess=((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS);
+                            waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                                (guessEvent) => {
+                                    guess = ((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS);
                                     uiState = "end";
                                     return false;
                                 });
                         }, "Select", selectedCard === undefined);
-                    else if(uiState === "wait"){
+                        self.infoText(p5,scale,"Pick the card to add to your hand, if your opponent guesses the level wrong");
+                    } else if(uiState === "wait"){
                         p5.push();
                         p5.textSize(scale*50/128/2.5);
                         p5.textAlign(p5.CENTER,p5.CENTER);
@@ -695,7 +699,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             release=registerDrawCallback(0,(p5,scale)=>{
                                 self.finishButton(p5, scale, scareSelected === undefined);
 
-                                self.infoText(p5, scale, "You opponent didn't guess the card's level. Select a card to scare off");
+                                self.infoText(p5, scale, "Your opponent didn't guess the card's level. Select a card to scare off");
                             });
                         }
                     }), oldState[1]);
@@ -706,33 +710,33 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                 self.blackBg(true);
 
                 release = registerDrawCallback(0, (p5, scale)=>{
-                    if(uiState === "pick")
-                        self.button(p5, scale, ()=>{
-                            for(const other of self.cards)
-                                if(other !== selectedCard) other.removeFromScene();
-                                else{
-                                    other.position = new Vector3(0,0,-20);
+                    if(uiState === "pick") {
+                        self.button(p5, scale, () => {
+                            for (const other of self.cards)
+                                if (other !== selectedCard) other.removeFromScene();
+                                else {
+                                    other.position = new Vector3(0, 0, -20);
                                     other.highlight(false, og031Highlight);
                                 }
 
                             network.sendToServer(new CardAction({
-                                cardId:card.id,
-                                actionName:CardActionOptions.DCW_PICK,
-                                cardData:selectedCard!.logicalCard.id
+                                cardId: card.id,
+                                actionName: CardActionOptions.DCW_PICK,
+                                cardData: selectedCard!.logicalCard.id
                             }));
 
                             uiState = "wait";
-                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
-                                (guessEvent)=>{
-                                    guess=((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
-                                    if(guess!==undefined && guess === selectedCard?.logicalCard.cardData.level)
+                            waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                (guessEvent) => {
+                                    guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
+                                    if (guess !== undefined && guess === selectedCard?.logicalCard.cardData.level)
                                         uiState = "end";
                                     else {
                                         uiState = "wait";
 
-                                        waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
-                                            (guessEvent)=>{
-                                                guess=((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
+                                        waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                            (guessEvent) => {
+                                                guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
                                                 uiState = "end";
                                                 return false;
                                             });
@@ -740,7 +744,8 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                     return false;
                                 });
                         }, "Select", selectedCard === undefined);
-                    else if(uiState === "wait"){
+                        self.infoText(p5,scale,"Pick the card with a level you want your opponent to try to guess");
+                    }else if(uiState === "wait"){
                         p5.push();
                         p5.textSize(scale*50/128/2.5);
                         p5.textAlign(p5.CENTER,p5.CENTER);
@@ -843,6 +848,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
 
             release=registerDrawCallback(0,(p5,scale)=>{
                 self.finishButton(p5,scale,selected === undefined);
+                self.infoText(p5,scale,"Select the card to disable")
             });
         }
     }), game.state);
