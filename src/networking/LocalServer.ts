@@ -1,16 +1,18 @@
 import {
     AcceptEvent,
     Event,
-    GameEvent,
+    GameEvent, GameWinDefaultEvent,
     InvalidEvent,
     PerchanceEvent,
     RejectEvent,
     SerializableClasses,
     type SerializableType
 } from "./Events.js";
-import {gameReceiveFromServer} from "./LocalGameServer.js";
+import {gameReceiveFromServer, getLocalGame} from "./LocalGameServer.js";
 import {log, websocket, websocketReady} from "../client/clientConsts.js";
 import {eventReplyIds} from "./Server.js";
+import {EndGameState} from "../GameStates.js";
+import {VEndState} from "../client/VisualGameStates.js";
 
 export function loadLocalNetwork(){
     //this is here to load the file
@@ -57,4 +59,8 @@ export async function receiveFromServer(packed:{
         }
     }
     if(event instanceof GameEvent) gameReceiveFromServer(event);
+    else if(event instanceof GameWinDefaultEvent){
+        getLocalGame().setState(new VEndState(getLocalGame(), getLocalGame().getMySide(), "disconnect"),
+            new EndGameState(getLocalGame().getGame(), getLocalGame().getMySide()));
+    }
 }

@@ -20,6 +20,7 @@ import {specialCards} from "../Cards.js";
 import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
 import type VisualCardClone from "./VisualCardClone.js";
 import ElementScene from "./ElementScene.js";
+import {ActionCounter} from "./ActionCounter.js";
 
 const pointer = new Vector2();
 
@@ -121,6 +122,10 @@ export default class VisualGame extends ElementScene{
         //crisis markers
         this.addElement(new CrisisCounter(this, Side.A, new Vector3(-200, 0, 70)));
         this.addElement(new CrisisCounter(this, Side.B, new Vector3(200, 0, -70),
+            new Quaternion().setFromEuler(new Euler(0,Math.PI, 0))));
+
+        this.addElement(new ActionCounter(this, Side.A, new Vector3(200,0,70)));
+        this.addElement(new ActionCounter(this, Side.B, new Vector3(-200,0,-70),
             new Quaternion().setFromEuler(new Euler(0,Math.PI, 0))));
 
         this.state.init();//one-time fix for starting state

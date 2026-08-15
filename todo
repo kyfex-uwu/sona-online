@@ -19,7 +19,6 @@ figure out why cards shrink sometimes when going in discard (fixed?)
 
 ###
 in crisis mode indicator
-actions left counter
 coin flip animation
 view your deck + discard pile
 when hovering field card, show cards you will win/lose against and cards you cant target
@@ -34,3 +33,11 @@ additional free to play indicator
 add game culler to the backend
 - when games are done
 - when player has lost connection
+
+###
+cosmetics
+- holo+other cards
+- place mats
+- crisis counters
+- card backs
+- scare effects

@@ -6,7 +6,7 @@ import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
-import {camera, clickListener, removeClickListener} from "./clientConsts.js";
+import {camera, clickListener, removeClickListener, scene} from "./clientConsts.js";
 import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -14,6 +14,9 @@ import {CardTriggerType} from "../CardData.js";
 import {type Cancellable, canSelectHandCardHighlight, EndType, StateFeatures} from "./VisualGameStateTools.js";
 import {attackLock} from "./magnets/FieldMagnet.js";
 import SuperficialVisualCard from "./SuperficialVisualCard.js";
+import {setScene} from "../index.js";
+import {MainMenuScene} from "./scenes/MainMenuScene.js";
+import {getLocalGame} from "../networking/LocalGameServer.js";
 
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{
@@ -646,12 +649,15 @@ registerDrawCallback(0, (p5, scale) => {
     currentInfoText="";
 })
 
+const mainMenuButton = buttonId();
 export class VEndState extends VisualGameState<EndGameState>{
     public readonly sideWon: Side;
     private release: (() => void)|undefined;
-    constructor(game:VisualGame, sideWon:Side) {
+    private reasoning: "default" | "disconnect";
+    constructor(game:VisualGame, sideWon:Side, reasoning:"default"|"disconnect"="default") {
         super(game);
         this.sideWon=sideWon;
+        this.reasoning=reasoning;
     }
     init() {
         super.init();
@@ -662,8 +668,21 @@ export class VEndState extends VisualGameState<EndGameState>{
             p5.textAlign(p5.CENTER,p5.CENTER);
             p5.fill(255);
             p5.textSize(scale*0.3);
-            p5.text(this.game.getMySide() === this.sideWon ? "You Win" : "You Lose",p5.width/2,p5.height/2)
+            p5.text(this.game.getMySide() === this.sideWon ? "You Win" : "You Lose",p5.width/2,p5.height/2);
+            p5.textSize(scale*0.1);
+            p5.text(({
+                default:"",
+                disconnect:"Opponent disconnected"
+            })[this.reasoning],p5.width/2,p5.height/2+scale*0.2);
             p5.pop();
+
+            button(p5,p5.width/2-scale*1.2/2,p5.height/2+scale*0.6,scale*1.2,scale*0.4,"Main Menu",()=>{
+                for(const element of getLocalGame().elements)
+                    element.removeFromScene();
+                setScene(()=>new MainMenuScene());
+                this.release!();
+
+            },scale,mainMenuButton)
         });
     }
 }

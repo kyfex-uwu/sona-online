@@ -60,4 +60,8 @@ export class CrisisCounter extends SidedPositionedVisualGameElement implements S
                 0);
         }
     }
+    removeFromScene() {
+        super.removeFromScene();
+        this.group.removeFromParent();
+    }
 }
