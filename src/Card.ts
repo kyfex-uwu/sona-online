@@ -85,13 +85,8 @@ export default class Card implements GameElement{
     getGame() { return this.game; }
 
     private disabled(){
-        const disabledLoc = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
-        if(disabledLoc !== false) {
-            const fieldLoc = sideTernary(this.side, this.game.fieldsA, this.game.fieldsB)
-                .indexOf(this);
-            if (fieldLoc !== -1 && (disabledLoc === "first" || disabledLoc - 1 === fieldLoc)) return true;
-        }
-        return false;
+        const disabledId = this.game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![this.side];
+        return disabledId === "first" || disabledId === this.id;
     }
     getAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>):((params:P)=>R)|undefined{
         return this.disabled() ? undefined : this.cardData.getAction(type);

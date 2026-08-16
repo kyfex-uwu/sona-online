@@ -306,7 +306,8 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             }break;
             case CardActionOptions.CLOUD_CAT_PICK:{
                 game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =
-                    game.getGame().state instanceof BeforeGameState ? "first" : (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
+                    game.getGame().state instanceof BeforeGameState ? "first" :
+                        sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)[(event as CardAction<CLOUD_CAT_PICK>).data.cardData-1]!.getCard()!.logicalCard.id;
             }break;
             case CardActionOptions.DCW_GUESS:{
                 let guess:Level;

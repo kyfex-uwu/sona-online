@@ -23,8 +23,8 @@ export const GameMiscDataStrings = {
     FROZEN: "frozen" as GameMiscDataString<{isFrozen:boolean, queue:(()=>void)[], allowThrough:(event:Event<any>)=>boolean}>,
 
     CLOUD_CAT_DISABLED:"cloudCatDisabled" as GameMiscDataString<{
-        [Side.A]: 1|2|3|"first"|false,
-        [Side.B]: 1|2|3|"first"|false
+        [Side.A]: number|"first"|false,
+        [Side.B]: number|"first"|false
     }>,
     DCW_PICKED:"dcwPicked" as GameMiscDataString<{ cardId: number, guesses:number }>,
     FOXY_MAGICIAN_PICKED:"foxyPicked" as GameMiscDataString<number>,

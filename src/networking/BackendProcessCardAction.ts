@@ -472,19 +472,19 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const actor = verifyFieldCard(event, game);
             const pos = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
 
+            const targeted = actor !== undefined ? sideTernary(actor.side, game.fieldsB, game.fieldsA)[pos-1] : undefined;
             if(!(actor !== undefined && actor.cardData.name === "og-043" &&//card exists and is cloud cat
                 ((game.state instanceof TurnState && game.state.turn === actor.side) ||//it is the actor's turn
                 game.state instanceof BeforeGameState) &&//it is the first place
                 game.player(actor.side) === event.sender &&//actor belongs to sender
 
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.CLOUD_CAT_PICK &&//next action
-                (sideTernary(actor.side, game.fieldsB, game.fieldsA)[pos-1] !== undefined ||//targeted card exists OR
+                (targeted !== undefined ||//targeted card exists OR
                     game.state instanceof BeforeGameState)//its before the first turn
             ))
                 return rejectEvent(event, "failed cloud cat check");
 
-            game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(actor.side)] =
-                game.state instanceof BeforeGameState ? "first" : pos;
+            game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(actor.side)] = targeted?.id ?? "first";
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             sendToGame(event, game, event.sender);
             return acceptEvent(event);

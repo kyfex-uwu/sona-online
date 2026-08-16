@@ -63,7 +63,7 @@ setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH).setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE).setFree());
 setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE)
     .with(CardTriggerType.SPECIAL_PLACEABLE_CHECK, ({self, game, normallyValid})=>{
-        if(game.state instanceof TurnState &&
+        if(game.state instanceof TurnState && game.state.turn !== self.side &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
             .filter(card=>card!==undefined)
             .length === 0) return true;
@@ -123,17 +123,17 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE)
     }));
 setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)
     .with(CardTriggerType.PRE_PLACED, ({self, game})=>{
-        if(game.state instanceof BeforeGameState){
+        if(game.state instanceof BeforeGameState)
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";
-        }
-        game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.CLOUD_CAT_PICK);
+        else
+            game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.CLOUD_CAT_PICK);
     }).with(CardTriggerType.AFTER_SCARED, ({self, scarer, scared, stat, game})=>{
         if(scared===self) game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = false;
     })).with(CardTriggerType.PLACED, ({self, game})=>{
         if(game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] === "first"){
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] =
-                (sideTernary(self.side, game.fieldsB, game.fieldsA)
-                    .findIndex(card=>card!==undefined)+1) as 1|2|3
+                sideTernary(self.side, game.fieldsB, game.fieldsA)
+                    .find(card=>card!==undefined)?.id!
         }
     });
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());

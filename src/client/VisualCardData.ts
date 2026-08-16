@@ -805,14 +805,8 @@ wrap(cards["og-041"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
 wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
 
-    if(game.state instanceof BeforeGameState){
-        network.sendToServer(new CardAction({
-            cardId:self.id,
-            actionName:CardActionOptions.CLOUD_CAT_PICK,
-            cardData:1
-        }));
+    if(game.state instanceof BeforeGameState)
         self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
-    }
 });
 const og043Highlight = newHighlightLock();
 wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
@@ -821,7 +815,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
 
     let releases:(()=>void)[]=[];
     let release:()=>void;
-    let selected:FieldMagnet|undefined;
+    let selected:VisualCard|undefined;
     getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, game.state],{
         onEnd:(self,type)=>{
             for(const release of releases) release();
@@ -832,7 +826,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
             network.sendToServer(new CardAction({
                 cardId:card.id,
                 actionName:CardActionOptions.CLOUD_CAT_PICK,
-                cardData:selected!.which
+                cardData:selected!.logicalCard.id,
             }));
         },
         init:(self)=>{
@@ -841,9 +835,9 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                 releases.push(field.addClickListener(()=>{
                     const card = field.getCard();
                     if(!card) return;
-                    selected?.getCard()?.highlight(false, og043Highlight);
-                    selected=field;
-                    selected.getCard()?.highlight(true, og043Highlight);
+                    selected?.highlight(false, og043Highlight);
+                    selected=field.getCard();
+                    selected?.highlight(true, og043Highlight);
                 }));
 
             release=registerDrawCallback(0,(p5,scale)=>{
