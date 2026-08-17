@@ -126,10 +126,13 @@ export function parseEvent(event:Event<any>):processedEvent{
                 gameParseEvent(new InternalStartGameEvent(game, event.sender!, other.sender!));
             });
             if(!event.data.requestCPU) unfilledGames.push(resolve!);
-            else resolve!(new FindGameEvent({
-                deck:[],
-                requestCPU:false,
-            }, new CPU()));
+            else {
+                const opponent = new CPU();
+                resolve!(new FindGameEvent({
+                    deck: opponent.generatedDeck,
+                    requestCPU: false,
+                },opponent));
+            }
             return acceptEvent(event);
         }
     }else if(event instanceof GameEvent){

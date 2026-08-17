@@ -138,8 +138,6 @@ setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE)
     });
 setCard(new CardData("og-044", [2,2,2], 2, Species.AMPHIBIAN).setFree());
 
-setCard(new CardData("ky-fex", [9,9,9], 1, Species.VULPES));
-
 export const specialCards = new Set<string>([]);
 function setSpecialCard(data:CardData){
     setCard(data);

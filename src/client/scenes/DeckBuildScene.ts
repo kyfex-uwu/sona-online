@@ -12,9 +12,7 @@ const decks={
     feline:[12,26,17,4,13,10,6,39,23,21,24,22,32,11,3,27,14,38,29,9].map(v=>"og-"+v.toString().padStart(3,"0")),
 }
 const deck:string[] = [...decks.canine];
-const disabledCards = [
-    "ky-fex"
-];
+const disabledCards:string[] = [];
 export const getDeck = ()=>deck;
 const backButtonId = buttonId();
 const clearButtonId = buttonId();

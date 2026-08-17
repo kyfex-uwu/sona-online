@@ -26,7 +26,7 @@ export class MainMenuScene extends Scene{
                 p5.width/2+scale*0.025, p5.height/2-scale*0.15, scale, scale*0.3,
                 "Play CPU", ()=>{
                     setScene(()=>new FindGameScene(true));
-                }, scale*0.8, this.buttonIds.cpu, true);
+                }, scale*0.8, this.buttonIds.cpu, false);
             button(p5,
                 p5.width/2-scale/2, p5.height/2+scale*0.2, scale, scale*0.3,
                 "Build Deck", ()=>{

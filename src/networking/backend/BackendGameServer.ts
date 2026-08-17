@@ -210,8 +210,10 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return rejectEvent(event, "game is currently frozen, this event is not allowed through");
 
     if(event instanceof StartRequestEvent){
-        if(!(game.state instanceof BeforeGameState))
-            return rejectEvent(event, "not beforeGameState (startrequest)");
+        if(!(game.state instanceof BeforeGameState) || //is before game state
+            game.getMiscData((event.sender === game.player(Side.A))?
+                GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ) !== undefined)//has already sent this packet
+            return rejectEvent(event, "cannot send this now (startrequest)");
 
         game.setMiscData((event.sender === game.player(Side.A))?
             GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ, event.data.which);
