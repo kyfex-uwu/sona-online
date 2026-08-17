@@ -1,4 +1,4 @@
-import {network} from "./Server.js";
+import {network} from "../Server.js";
 import {
     ActionEvent,
     CardAction,
@@ -20,17 +20,17 @@ import {
     ScareAction,
     ServerDumpEvent,
     StartRequestEvent
-} from "./Events.js";
-import Game, {GameMiscDataStrings} from "../Game.js";
-import {other, Side} from "../GameElement.js";
-import {shuffled, sideTernary} from "../consts.js";
-import Card, {getVictim, Stat} from "../Card.js";
-import {BeforeGameState, EndGameState, TurnState} from "../GameStates.js";
-import {CardTriggerType, InterruptScareResult} from "../CardData.js";
-import {CardActionOptions} from "./CardActionOption.js";
+} from "../Events.js";
+import Game, {GameMiscDataStrings} from "../../Game.js";
+import {other, Side} from "../../GameElement.js";
+import {shuffled, sideTernary} from "../../consts.js";
+import Card, {getVictim, Stat} from "../../Card.js";
+import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
+import {CardTriggerType, InterruptScareResult} from "../../CardData.js";
+import {CardActionOptions} from "../CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
-import dev from "../dev.js";
+import dev from "../../dev.js";
 
 export const usersFromGameIDs:{[k:string]:Array<Client>}={};
 const gamesFromUser:Map<Client, Game> = new Map();
@@ -470,7 +470,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         if (side === undefined) return rejectEvent(event, "discard couldnt validate sender");
 
         const hand = sideTernary(side, game.handA, game.handB);
-        const toDiscard = hand.find(card => card.id === event.data.which);
+        const toDiscard = hand.find(card => card.id === event.data.id);
         if (!(game.state instanceof TurnState &&
             event.sender === game.player(game.state.turn) &&//if its the player's turn
             toDiscard !== undefined&&//the card exists AND is in the player's hand
@@ -479,7 +479,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return rejectEvent(event, "failed discard check");
         }
         game.player(other(side))?.send(new DiscardAction({
-            which:event.data.which,
+            id:event.data.id,
             side
         }));
 

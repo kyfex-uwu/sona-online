@@ -1,13 +1,13 @@
-import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner} from "../CardData.js";
-import cards from "../Cards.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "./Events.js";
-import {type CardActionOption, CardActionOptions} from "./CardActionOption.js";
+import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner} from "../../CardData.js";
+import cards from "../../Cards.js";
+import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "../Events.js";
+import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
-import {sideTernary} from "../consts.js";
-import {GameMiscDataStrings} from "../Game.js";
-import {other, Side} from "../GameElement.js";
-import {CardMiscDataStrings, Stat} from "../Card.js";
-import {TurnState} from "../GameStates.js";
+import {sideTernary} from "../../consts.js";
+import {GameMiscDataStrings} from "../../Game.js";
+import {other, Side} from "../../GameElement.js";
+import {CardMiscDataStrings, Stat} from "../../Card.js";
+import {TurnState} from "../../GameStates.js";
 
 export function loadBackendWrappers(){}
 

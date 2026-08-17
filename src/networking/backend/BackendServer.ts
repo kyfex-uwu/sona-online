@@ -1,4 +1,4 @@
-import {eventReplyIds, network, Replyable} from "./Server.js";
+import {eventReplyIds, network, Replyable} from "../Server.js";
 import {
     AcceptEvent,
     Event,
@@ -9,15 +9,16 @@ import {
     RejectEvent,
     SerializableClasses,
     type SerializableType,
-} from "./Events.js";
-import Game from "../Game.js";
+} from "../Events.js";
+import Game from "../../Game.js";
 import {v4 as uuid} from "uuid"
-import {shuffled} from "../consts.js";
-import cards from "../Cards.js";
+import {shuffled} from "../../consts.js";
+import cards from "../../Cards.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {gameServerWSClose, parseEvent as gameParseEvent} from "./BackendGameServer.js";
 import type {Server} from "ws";
 import * as ws from "ws";
+import CPU from "./CPU.js";
 
 export type Client ={
     send:(v:Event<any>)=>void,
@@ -85,15 +86,9 @@ export function parseEvent(event:Event<any>):processedEvent{
             cardDuplChecker[card] = true;
         }
 
-        if(unfilledGames.length>0){
+        if(unfilledGames.length>0 && !event.data.requestCPU){
             const gamePromise = unfilledGames.shift()!;
             gamePromise(event);
-
-            if(event.data.requestCPU){
-                setTimeout(()=>{
-
-                });
-            }
 
             return acceptEvent(event);
         }else{
@@ -102,12 +97,8 @@ export function parseEvent(event:Event<any>):processedEvent{
             waiter.then((other) => {
                 let id=0;
 
-                // let firstA = event.data.deck[0];
-                // let firstB = other.data.deck[0];
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
-                // deckA.push(...deckA.splice(deckA.findIndex(v=>v.type === firstA),1));
-                // deckB.push(...deckB.splice(deckB.findIndex(v=>v.type === firstB),1));
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;
@@ -130,9 +121,15 @@ export function parseEvent(event:Event<any>):processedEvent{
                     deckB.splice(deckB.length-Math.floor(Math.random()*3), 0, toFront);
                 }
 
-                gameParseEvent(new InternalStartGameEvent(new Game(deckA, deckB, uuid()), event.sender!, other.sender!));
-            })
-            unfilledGames.push(resolve!);
+                const game = new Game(deckA, deckB, uuid());
+                if(event.data.requestCPU) (other.sender as CPU).setGame(game);
+                gameParseEvent(new InternalStartGameEvent(game, event.sender!, other.sender!));
+            });
+            if(!event.data.requestCPU) unfilledGames.push(resolve!);
+            else resolve!(new FindGameEvent({
+                deck:[],
+                requestCPU:false,
+            }, new CPU()));
             return acceptEvent(event);
         }
     }else if(event instanceof GameEvent){

@@ -5,7 +5,7 @@ import {
     PlaceAction,
     ScareAction,
     type SerializableType
-} from "./Events.js";
+} from "../Events.js";
 import {
     type AMBER_PICK,
     AmberData,
@@ -27,13 +27,13 @@ import {
     type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
-} from "./CardActionOption.js";
-import {other, Side} from "../GameElement.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
-import {CardTriggerType, Species} from "../CardData.js";
-import Card, {CardMiscDataStrings} from "../Card.js";
-import Game, {GameMiscDataStrings} from "../Game.js";
-import {sideTernary} from "../consts.js";
+} from "../CardActionOption.js";
+import {other, Side} from "../../GameElement.js";
+import {BeforeGameState, TurnState} from "../../GameStates.js";
+import {CardTriggerType, Species} from "../../CardData.js";
+import Card, {CardMiscDataStrings} from "../../Card.js";
+import Game, {GameMiscDataStrings} from "../../Game.js";
+import {sideTernary} from "../../consts.js";
 import {parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {acceptEvent, type processedEvent, rejectEvent} from "./BackendServer.js";
 

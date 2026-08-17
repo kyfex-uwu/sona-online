@@ -7,12 +7,12 @@ import {
     RejectEvent,
     SerializableClasses,
     type SerializableType
-} from "./Events.js";
+} from "../Events.js";
 import {gameReceiveFromServer, getLocalGame} from "./LocalGameServer.js";
-import {log, websocket, websocketReady} from "../client/clientConsts.js";
-import {eventReplyIds} from "./Server.js";
-import {EndGameState} from "../GameStates.js";
-import {VEndState} from "../client/VisualGameStates.js";
+import {log, websocket, websocketReady} from "../../client/clientConsts.js";
+import {eventReplyIds} from "../Server.js";
+import {EndGameState} from "../../GameStates.js";
+import {VEndState} from "../../client/VisualGameStates.js";
 
 export function loadLocalNetwork(){
     //this is here to load the file

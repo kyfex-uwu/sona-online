@@ -16,7 +16,7 @@ import {attackLock} from "./magnets/FieldMagnet.js";
 import SuperficialVisualCard from "./SuperficialVisualCard.js";
 import {setScene} from "../index.js";
 import {MainMenuScene} from "./scenes/MainMenuScene.js";
-import {getLocalGame} from "../networking/LocalGameServer.js";
+import {getLocalGame} from "../networking/frontend/LocalGameServer.js";
 
 //A game state for a {@link VisualGame}
 export abstract class VisualGameState<T extends GameState>{

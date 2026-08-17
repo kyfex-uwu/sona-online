@@ -3,7 +3,7 @@ import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
 import {button, buttonId, lerp, particles, registerDrawCallback} from "./client/ui.js";
 import {LoadScene} from "./client/scenes/LoadScene.js";
-import {loadLocalNetwork} from "./networking/LocalServer.js";
+import {loadLocalNetwork} from "./networking/frontend/LocalServer.js";
 
 /////
 // version 0.1.0

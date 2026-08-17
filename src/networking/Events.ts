@@ -1,7 +1,7 @@
 import IngameCard, {type CardPos, Stat} from "../Card.js";
 import {Side} from "../GameElement.js";
 import type Game from "../Game.js";
-import type {Client} from "./BackendServer.js";
+import type {Client} from "./backend/BackendServer.js";
 import {type CardActionOption} from "./CardActionOption.js";
 import type CardData from "../CardData.js";
 
@@ -209,7 +209,7 @@ export class CardAction<T extends SerializableType> extends ActionEvent<{
 addToSerializableClasses(CardAction);
 
 //Discards a card
-export class DiscardAction extends ActionEvent<{which:number, side?:Side}>{}
+export class DiscardAction extends ActionEvent<{id:number, side?:Side}>{}
 addToSerializableClasses(DiscardAction);
 
 //Passes without doing anything

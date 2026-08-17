@@ -15,7 +15,7 @@ import {
 import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
-import {getLocalGame, waitForClarify} from "../networking/LocalGameServer.js";
+import {getLocalGame, waitForClarify} from "../networking/frontend/LocalGameServer.js";
 import {
     animation,
     blueStatColor,
@@ -27,7 +27,7 @@ import {
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 import {StateFeatures} from "./VisualGameStateTools.js";
-import {waitFor} from "../networking/LocalServer.js";
+import {waitFor} from "../networking/frontend/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";
 import type FieldMagnet from "./magnets/FieldMagnet.js";

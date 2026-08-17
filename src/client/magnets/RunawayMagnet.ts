@@ -28,7 +28,7 @@ export default class RunawayMagnet extends CardMagnet{
                     this.game.frozen=true;
                     const card = this.game.selectedCard;
                     this.game.selectedCard = undefined;
-                    this.game.sendEvent(new DiscardAction({which:card.logicalCard.id})).onReply(cancelCallback(()=>{
+                    this.game.sendEvent(new DiscardAction({id:card.logicalCard.id})).onReply(cancelCallback(()=>{
                         this.removeCard();
                         this.game.selectedCard = card;
                     },()=>{

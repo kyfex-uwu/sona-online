@@ -1,6 +1,6 @@
 import {Scene} from "./Scene.js";
 import {RequestServerDumpAction} from "../../networking/Events.js";
-import {getLocalGame} from "../../networking/LocalGameServer.js";
+import {getLocalGame} from "../../networking/frontend/LocalGameServer.js";
 import {network} from "../../networking/Server.js";
 
 

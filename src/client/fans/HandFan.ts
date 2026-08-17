@@ -4,7 +4,7 @@ import {Euler, Quaternion, Vector3} from "three";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {sideTernary} from "../../consts.js";
-import {getLocalGame} from "../../networking/LocalGameServer.js";
+import {getLocalGame} from "../../networking/frontend/LocalGameServer.js";
 
 export default class HandFan extends VisualCardFan{
     private defaultRotation:Quaternion=undefined!;

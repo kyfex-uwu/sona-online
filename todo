@@ -6,7 +6,6 @@ scared still fires when cloud catted
 starting game with brownie is wrong
 investigate 029, 035 not firing all the time
 verify and fix any cards that need a scare instead of a scare attempt
-add infoText to all cards
 
 card "accessory" system (allow for custom models to be attached to the card) (3d and 2d)
 "concede" button

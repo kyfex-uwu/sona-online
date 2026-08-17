@@ -1,4 +1,4 @@
-import {network, successOrFail} from "./Server.js";
+import {network, successOrFail} from "../Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -13,16 +13,16 @@ import {
     PlaceAction,
     ScareAction,
     ServerDumpEvent,
-} from "./Events.js";
-import Card, {getVictim} from "../Card.js";
-import VisualCard, {newHighlightLock} from "../client/VisualCard.js";
-import cards from "../Cards.js";
+} from "../Events.js";
+import Card, {getVictim} from "../../Card.js";
+import VisualCard, {newHighlightLock} from "../../client/VisualCard.js";
+import cards from "../../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
-import VisualGame, {ViewType} from "../client/VisualGame.js";
-import {other, Side} from "../GameElement.js";
-import {externalPromise, sideTernary, statTernary, wait} from "../consts.js";
-import type FieldMagnet from "../client/magnets/FieldMagnet.js";
-import {VChoosingStartState, VGuiState, VTurnState} from "../client/VisualGameStates.js";
+import VisualGame, {ViewType} from "../../client/VisualGame.js";
+import {other, Side} from "../../GameElement.js";
+import {externalPromise, sideTernary, statTernary, wait} from "../../consts.js";
+import type FieldMagnet from "../../client/magnets/FieldMagnet.js";
+import {VChoosingStartState, VGuiState, VTurnState} from "../../client/VisualGameStates.js";
 import {
     animation,
     animationEnd,
@@ -35,8 +35,8 @@ import {
     registerDrawCallback,
     whiteColor,
     yellowStatColor
-} from "../client/ui.js";
-import {BeforeGameState, TurnState} from "../GameStates.js";
+} from "../../client/ui.js";
+import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {
     type AMBER_PICK,
     AmberData,
@@ -50,14 +50,14 @@ import {
     type NOBLE_RETARGET,
     type WORICK_RESCUE,
     type YASHI_REORDER
-} from "./CardActionOption.js";
-import {GameMiscDataStrings} from "../Game.js";
-import {log, scene} from "../client/clientConsts.js";
+} from "../CardActionOption.js";
+import {GameMiscDataStrings} from "../../Game.js";
+import {log, scene} from "../../client/clientConsts.js";
 import {waitFor} from "./LocalServer.js";
-import {setScene} from "../index.js";
-import {GameScene} from "../client/scenes/GameScene.js";
-import SuperficialVisualCard from "../client/SuperficialVisualCard.js";
-import type {Level} from "../CardData.js";
+import {setScene} from "../../index.js";
+import {GameScene} from "../../client/scenes/GameScene.js";
+import SuperficialVisualCard from "../../client/SuperficialVisualCard.js";
+import type {Level} from "../../CardData.js";
 
 function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
     const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
@@ -743,7 +743,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         }
     }else if(event instanceof DiscardAction){
         sideTernary(event.data.side!, game.runawayA, game.runawayB).addCard(game.elements.find(card=>
-            VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.which) as VisualCard);
+            VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.id) as VisualCard);
     }
 
     else if(event instanceof ServerDumpEvent){

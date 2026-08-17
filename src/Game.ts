@@ -4,7 +4,7 @@ import {Event} from "./networking/Events.js";
 import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, type GameState} from "./GameStates.js";
-import type {Client} from "./networking/BackendServer.js";
+import type {Client} from "./networking/backend/BackendServer.js";
 import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import type {CardActionOption} from "./networking/CardActionOption.js";
 
