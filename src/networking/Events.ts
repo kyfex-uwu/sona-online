@@ -120,6 +120,7 @@ export class GameStartEvent extends GameEvent<{
     deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
+    cpuGame:boolean
 }>{}
 addToSerializableClasses(GameStartEvent);
 

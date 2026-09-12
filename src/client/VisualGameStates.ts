@@ -6,7 +6,7 @@ import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
-import {camera, clickListener, removeClickListener, scene} from "./clientConsts.js";
+import {camera, clickListener, removeClickListener, threeScene} from "./clientConsts.js";
 import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";

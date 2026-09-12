@@ -53,6 +53,8 @@ export default class Game{
 
     public readonly cards:Set<Card> = new Set<Card>();
 
+    public isCpu=false;
+
     public _state:GameState = new BeforeGameState(this);
     public get state(){ return this._state; }
     public set state(newState:GameState){

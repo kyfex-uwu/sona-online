@@ -1,18 +1,40 @@
-import type Game from "../../Game.js";
-import {DrawAction, type Event, PlaceAction, StartRequestEvent} from "../Events.js"
+import Game, {GameMiscDataStrings} from "../../Game.js";
+import {CardAction, DrawAction, type Event, PassAction, PlaceAction, ScareAction, StartRequestEvent} from "../Events.js"
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {Side} from "../../GameElement.js";
 import cards from "../../Cards.js";
-import Card, {Stat} from "../../Card.js";
+import Card, {getVictim, Stat} from "../../Card.js";
 import {parseEvent} from "./BackendServer.js";
+import {
+    type BROY_WEASLA_INCREASE_DATA,
+    CardActionOptions,
+    type COWGIRL_COYOTE_INCREASE_DATA,
+} from "../CardActionOption.js";
+
+export function randFrom<T>(a:T[]):T|undefined{
+    return a[Math.floor(Math.random()*a.length)];
+}
+
+export function canBeat(attacker:Card, attacked:Card){
+    if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? 999) ) return Stat.RED;
+    if( (attacker.stat(Stat.BLUE) ?? -1) >= (attacked.stat(getVictim(Stat.BLUE)) ?? 999) ) return Stat.BLUE;
+    if( (attacker.stat(Stat.YELLOW) ?? -1) >= (attacked.stat(getVictim(Stat.YELLOW)) ?? 999) ) return Stat.YELLOW;
+
+    return false;
+}
+export function calcStrength(attacker:Card, victims:Card[]){
+    return victims.map(v=>canBeat(attacker, v)!==false).reduce((a,c)=>c?a+1:a,0);
+}
+export function calcWeakness(attacked:Card, attackers:Card[]){
+    return attackers.map(v=>canBeat(v, attacked)!==false).reduce((a,c)=>c?a+1:a,0);
+}
 
 export default class CPU{
     private game:Game=undefined!;
     public readonly generatedDeck:string[];
     constructor() {
-        const lv1Arr = Object.values(cards).filter(card=>card.level === 1);
         this.generatedDeck = new Array(19).fill(0).map(_=>"og-"+Math.floor(Math.random()*44+1).toString().padStart(3,"0"))
-            .concat(lv1Arr[Math.floor(Math.random()*lv1Arr.length)]!.name);
+            .concat(randFrom(Object.values(cards).filter(card=>card.level === 1))!.name);
     }
     setGame(game:Game){this.game=game;}
 
@@ -36,21 +58,131 @@ export default class CPU{
                 }, this));
                 this.sentStartRequest=true;
             }
+        }else if(event instanceof CardAction){
+            switch(event.data.actionName){
+                case CardActionOptions.DCW_GUESS:{
+                    let not = randFrom([1,2,3])
+                    for(const i of [1,2,3])
+                        if(i!==not)
+                            parseEvent(new CardAction({
+                                cardId:-1,
+                                actionName:CardActionOptions.DCW_GUESS,
+                                cardData:randFrom([1,2,3])
+                            },this));
+                }break;
+                case CardActionOptions.FOXY_MAGICIAN_GUESS:{
+                    parseEvent(new CardAction({
+                        cardId:-1,
+                        actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
+                        cardData:randFrom([1,2,3])
+                    },this));
+                }break;
+                case CardActionOptions.LITTLEBOSS_IMMUNITY:{
+                    parseEvent(new CardAction({
+                        cardId:-1,
+                        actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
+                        cardData:true
+                    }, this));
+                }break;
+                case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
+                    const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
+                    parseEvent(new CardAction({
+                        cardId:-1,
+                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                        cardData:{
+                            stat:data.stat,
+                            pos:data.pos
+                        }
+                    }, this));
+                }break;
+                case CardActionOptions.BROY_WEASLA_INCREASE:{
+                    const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
+                    parseEvent(new CardAction({
+                        cardId:-1,
+                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                        cardData:{
+                            stat:data.stat,
+                            pos:data.pos
+                        }
+                    }, this));
+                }break;
+                case CardActionOptions.NOBLE_RETARGET:{
+                    parseEvent(new CardAction({
+                        cardId: -1,
+                        actionName: CardActionOptions.NOBLE_RETARGET,
+                        cardData: [true]
+                    }, this));
+                }break;
+            }
         }
-
-        //--
-
-        setTimeout(()=>{
-            if(this.game.state instanceof TurnState && this.game.state.turn === Side.B && !this.game.state.drawnToStart)
-                parseEvent(new DrawAction({},this));
-        })
     }
 
     takeAction(){
-        if(!this.game) return;
+        if(!this.game) return false;
 
-        if(this.game.state instanceof TurnState && this.game.state.turn === this.mySide){
-
+        if(!(
+            this.game.state instanceof TurnState &&
+            this.game.state.turn === Side.B))
+            return false;
+        if(!this.game.state.drawnToStart){
+            console.log("draw to start")
+            parseEvent(new DrawAction({}, this));
+            return true;
         }
+
+        const fieldCards = this.game.fieldsB.filter(card=>card !== undefined);
+        if(fieldCards.length<2){
+            if(this.game.handB.length === 0){
+                console.log("draw")
+                parseEvent(new DrawAction({},this));
+                return true;
+            }else {
+                const topLevel = Math.max(0, ...fieldCards.map(card => card!.cardData.level)) + 1;
+                let picked = this.game.handB.filter(card => card.cardData.level <= topLevel)
+                    .sort((c1, c2) => c2.cardData.level - c1.cardData.level)
+                    .filter((card, _, valid) => card.cardData.level === valid[0]!.cardData.level);
+                if(this.game.state.actionsLeft===0)
+                    picked=picked.filter(card=>card.isAlwaysFree());
+                if(picked.length>0) {
+                    console.log("place")
+                    parseEvent(new PlaceAction({
+                        cardId: randFrom(picked)!.id,
+                        side: Side.B,
+                        position: randFrom(this.game.fieldsB.map((card, i) => [card, i] satisfies [Card | undefined, number])
+                            .filter(data => data[0] === undefined)
+                            .map(data => data[1] + 1) as (1 | 2 | 3)[])!
+                    }, this));
+                    return true;
+                }
+            }
+        }
+
+        if(!this.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
+            const danger = this.game.fieldsA.map((attacker, i) =>
+                [attacker, i, attacker === undefined ? 0 : calcStrength(attacker, this.game.fieldsB
+                    .filter(v => v !== undefined))] satisfies [Card | undefined, number, number])
+                .sort((a, b) => b[2] - a[2])
+                .filter((attacked) => attacked[0] === undefined ? false :
+                    calcWeakness(attacked[0], this.game.fieldsB.filter(v=>v!==undefined).filter(v=>!v?.hasAttacked))>0);
+            if (danger[0]?.[0] !== undefined) {
+                for(let i=0;i<3;i++){
+                    const maybeAttacker = this.game.fieldsB[i];
+                    if(maybeAttacker!==undefined && !maybeAttacker.hasAttacked){
+                        const beatsStat=canBeat(maybeAttacker, danger[0][0]);
+                        if(beatsStat!==false) {
+                            parseEvent(new ScareAction({
+                                scarerPos: [i + 1 as 1 | 2 | 3, Side.B],
+                                scaredPos: [danger[0][1] + 1 as 1 | 2 | 3, Side.A],
+                                attackingWith: beatsStat,
+                            }, this));
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        parseEvent(new PassAction({},this));
+        return false;
     }
 }

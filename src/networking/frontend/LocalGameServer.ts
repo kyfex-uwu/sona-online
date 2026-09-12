@@ -24,15 +24,14 @@ import {externalPromise, sideTernary, statTernary, wait} from "../../consts.js";
 import type FieldMagnet from "../../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VGuiState, VTurnState} from "../../client/VisualGameStates.js";
 import {
-    animation,
-    animationEnd,
+    Animations,
     blueStatColor,
     button,
     buttonId,
     particleArc,
     particleStreak,
     redStatColor,
-    registerDrawCallback,
+    registerDrawCallback, WaitChain,
     whiteColor,
     yellowStatColor
 } from "../../client/ui.js";
@@ -52,7 +51,7 @@ import {
     type YASHI_REORDER
 } from "../CardActionOption.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {log, scene} from "../../client/clientConsts.js";
+import {log, threeScene} from "../../client/clientConsts.js";
 import {waitFor} from "./LocalServer.js";
 import {setScene} from "../../index.js";
 import {GameScene} from "../../client/scenes/GameScene.js";
@@ -102,15 +101,16 @@ const foxyMagicianLevelButtons = [buttonId(), buttonId(), buttonId()];
 
 let game:VisualGame;
 export function getLocalGame(){ return game; }
+const debouncer = new WaitChain();
 export async function gameReceiveFromServer(event:GameEvent<any>) {
     log("%c -> "+event.constructor.name+"\n"+event.serialize(),
         `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
 
     if(event instanceof GameStartEvent){
-        game = new VisualGame(scene);
+        game = new VisualGame(threeScene, event.data.cpuGame);
         network.clientGame = game.getGame();
 
-        setScene(()=>new GameScene());
+        setScene(()=>new GameScene(event.data.cpuGame));
 
         game.getGame().setMySide(event.data.which);
         game.changeView(sideTernary(event.data.which, ViewType.BOARD_A, ViewType.BOARD_B));
@@ -191,8 +191,18 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         }
     }
 
-    await animationEnd();
+    await Animations.end();
+    debouncer.run(() => new Promise(r => {
+        gameReceiveFromServerVisible(event);
+        setTimeout(r, 100);
+    }));
 
+    if(event instanceof ServerDumpEvent){
+        console.log("Server game:",event.data);
+    }
+}
+
+function gameReceiveFromServerVisible(event:GameEvent<any>){
     if(event instanceof PlaceAction){
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
@@ -214,23 +224,23 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
-        animation(async ()=>{
+        Animations.run(async ()=>{
             game.state.decrementTurn(true);
         });
     }else if(event instanceof ScareAction){
         const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
         if (scared !== undefined) {
             if(event.data.failed !== true)
-                animation(async ()=>{
-                await particleStreak(
-                    sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
-                    sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position,
-                    event.data.attackingWith === "card" ? whiteColor : statTernary(event.data.attackingWith, redStatColor,blueStatColor,yellowStatColor),
-                    event.data.attackingWith === "card" ? whiteColor : statTernary(getVictim(event.data.attackingWith), redStatColor,blueStatColor,yellowStatColor),
-                ).then(()=>{
-                    sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                Animations.run(async ()=>{
+                    await particleStreak(
+                        sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1]!.position,
+                        sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.position,
+                        event.data.attackingWith === "card" ? whiteColor : statTernary(event.data.attackingWith, redStatColor,blueStatColor,yellowStatColor),
+                        event.data.attackingWith === "card" ? whiteColor : statTernary(getVictim(event.data.attackingWith), redStatColor,blueStatColor,yellowStatColor),
+                    ).then(()=>{
+                        sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                    });
                 });
-            });
             else{
                 sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
                 //todo: animation
@@ -326,7 +336,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 (guessEvent)=>{
                                     state = (guessed === undefined) ? "guess" : "end";
                                     guessed=i+1;
-                                    animation(()=>endWaiter);
+                                    Animations.run(()=>endWaiter);
                                     return false;
                                 });
 
@@ -375,14 +385,14 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 buttons(p5, scale, false);
 
                             }else if(state === "wait"){
-                                    p5.push();
-                                    p5.textSize(scale*50/128/2.5);
-                                    p5.textAlign(p5.CENTER,p5.CENTER);
-                                    p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
-                                    frame=(frame+1)%200;
-                                    p5.pop();
+                                p5.push();
+                                p5.textSize(scale*50/128/2.5);
+                                p5.textAlign(p5.CENTER,p5.CENTER);
+                                p5.text("Waiting"+".".repeat(Math.floor(frame/50)%4),p5.width/2,p5.height/2-scale*0.7);
+                                frame=(frame+1)%200;
+                                p5.pop();
 
-                                    buttons(p5, scale, true);
+                                buttons(p5, scale, true);
                             }else{
                                 p5.push();
                                 p5.textSize(scale*50/128/2.5);
@@ -414,7 +424,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                             waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 (guessEvent)=>{
                                     state = "end";
-                                    animation(()=>endWaiter);
+                                    Animations.run(()=>endWaiter);
                                     return false;
                                 });
 
@@ -466,7 +476,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                     repopulating=true;
                                     self.cards[0]!.repopulate(new Card(targetCard.logicalCard.cardData,
                                         Side.A, null!,-1).flipFacedown()).then(()=>{
-                                            self.cards[0]!.flipFaceup();
+                                        self.cards[0]!.flipFaceup();
                                     });
 
                                     if(targetCard.logicalCard.cardData.level !== guess) {
@@ -690,7 +700,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                                 disabled:false
                             });
                             self.infoText(p5, scale, "Select the card whose stat you want to increase and the stat you " +
-                                    "want to increase by 2");
+                                "want to increase by 2");
 
                             particleArc(particleData[0], particleData[1],
                                 statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor),
@@ -744,10 +754,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     }else if(event instanceof DiscardAction){
         sideTernary(event.data.side!, game.runawayA, game.runawayB).addCard(game.elements.find(card=>
             VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.id) as VisualCard);
-    }
-
-    else if(event instanceof ServerDumpEvent){
-        console.log("Server game:",event.data);
     }
 }
 

@@ -1,5 +1,5 @@
 import p5 from "p5";
-import {clickListener, scene, textureLoader} from "./clientConsts.js";
+import {clickListener, threeScene, textureLoader} from "./clientConsts.js";
 import {Color, Sprite, SpriteMaterial, Vector3} from "three";
 import {wait} from "../consts.js";
 
@@ -230,7 +230,7 @@ export function particle(pos:Vector3, velocity:Vector3, drag:number,data:{
 }[]){
     const sprite = new Sprite(spriteMaterial.clone());
     sprite.position.copy(pos);
-    scene.add(sprite);
+    threeScene.add(sprite);
     particles.push({
         sprite,
         data:data.map((state,i)=>{return{
@@ -314,14 +314,18 @@ export const redStatColor = new Color(237,33,36).multiplyScalar(1/255);
 export const blueStatColor = new Color(3,163,221).multiplyScalar(1/255);
 export const yellowStatColor = new Color(220,216,33).multiplyScalar(1/255);
 
-let animChain = new Promise<void>(r=>r());
-export function animation(callback:()=>Promise<any>){
-    animChain=animChain.then(async ()=>await callback());
+export class WaitChain{
+    private chain:Promise<void> = new Promise<void>(r=>r());
+    run(callback:()=>Promise<any>){
+        this.chain=this.chain.then(async ()=>await callback());
+    }
+    async end(){
+        let currentChain;
+        do{
+            currentChain=this.chain;
+            await currentChain;
+        }while(currentChain!==this.chain);
+    }
 }
-export async function animationEnd(){
-    let currentAnimChain;
-    do{
-        currentAnimChain=animChain;
-        await currentAnimChain;
-    }while(currentAnimChain!==animChain);
-}
+
+export const Animations = new WaitChain();

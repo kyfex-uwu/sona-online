@@ -46,6 +46,7 @@ export default class CardFan extends SidedPositionedVisualGameElement implements
                 .map(card => card.model).filter(model => model !== undefined)
                 .concat(...(this.cards.length !== 0 ? [] : [this.fakeCard as Group])));
             if (intersects[0] !== undefined) {
+                //card is undefined!
                 this.onSelect(((intersects[0].object.parent!.parent!.parent! as Group).userData.card as VisualCard), this.game);
             }
             return false;

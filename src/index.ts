@@ -1,4 +1,4 @@
-import {camera, renderer, scene} from "./client/clientConsts.js";
+import {camera, renderer, threeScene} from "./client/clientConsts.js";
 import type {Scene} from "./client/scenes/Scene.js";
 import Stats from "stats.js";
 import {button, buttonId, lerp, particles, registerDrawCallback} from "./client/ui.js";
@@ -68,7 +68,7 @@ renderer.setAnimationLoop((time) => {
         }
     }
 
-    renderer.render(scene, camera);
+    renderer.render(threeScene, camera);
     stats.end();
     lastTime=time;
 });

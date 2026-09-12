@@ -19,6 +19,7 @@ import {gameServerWSClose, parseEvent as gameParseEvent} from "./BackendGameServ
 import type {Server} from "ws";
 import * as ws from "ws";
 import CPU from "./CPU.js";
+import {loadCPUWrappers} from "./CPUCardData.js";
 
 export type Client ={
     send:(v:Event<any>)=>void,
@@ -52,6 +53,7 @@ export function backendInit(server:Server){
 
 
     loadBackendWrappers();
+    loadCPUWrappers();
     console.log("Backend initialized");
 }
 
@@ -122,7 +124,10 @@ export function parseEvent(event:Event<any>):processedEvent{
                 }
 
                 const game = new Game(deckA, deckB, uuid());
-                if(event.data.requestCPU) (other.sender as CPU).setGame(game);
+                if(event.data.requestCPU) {
+                    (other.sender as CPU).setGame(game);
+                    game.isCpu=true;
+                }
                 gameParseEvent(new InternalStartGameEvent(game, event.sender!, other.sender!));
             });
             if(!event.data.requestCPU) unfilledGames.push(resolve!);

@@ -3,7 +3,7 @@ import cards from "../../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "../Events.js";
 import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
-import {sideTernary} from "../../consts.js";
+import {sideTernary, wrap} from "../../consts.js";
 import {GameMiscDataStrings} from "../../Game.js";
 import {other, Side} from "../../GameElement.js";
 import {CardMiscDataStrings, Stat} from "../../Card.js";
@@ -11,12 +11,6 @@ import {TurnState} from "../../GameStates.js";
 
 export function loadBackendWrappers(){}
 
-function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardTriggerType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
-    const oldAction = data.getAction(action);
-    data.with(action, (args: P) => {
-        return wrapper(oldAction, args);
-    });
-}
 enum State{
     REQUIRED_VALID,
     EITHER,

@@ -88,10 +88,11 @@ export default class VisualGame extends ElementScene{
      * Creates a new visual game
      * @param scene The ThreeJS scene for this game
      */
-    public constructor(scene: Scene) {
+    public constructor(scene: Scene, isCpu:boolean) {
         super(scene);
 
         this.game = new Game([],[],Game.localID+Math.random());
+        this.game.isCpu=isCpu;
 
         this.fieldsA[0] = this.addElement(new FieldMagnet(this, new Vector3(100, 0, 70), Side.A, 1));
         this.fieldsA[1] = this.addElement(new FieldMagnet(this, new Vector3(0, 0, 70), Side.A, 2));

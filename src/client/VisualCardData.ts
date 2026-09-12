@@ -2,7 +2,7 @@ import CardData, {CardTriggerType, type Level, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {externalPromise, sideTernary, statTernary} from "../consts.js";
+import {externalPromise, sideTernary, statTernary, wrap} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings, Stat} from "../Card.js";
@@ -17,7 +17,7 @@ import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {getLocalGame, waitForClarify} from "../networking/frontend/LocalGameServer.js";
 import {
-    animation,
+    Animations,
     blueStatColor,
     particleStreak,
     redStatColor,
@@ -30,7 +30,6 @@ import {StateFeatures} from "./VisualGameStateTools.js";
 import {waitFor} from "../networking/frontend/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";
-import type FieldMagnet from "./magnets/FieldMagnet.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -94,7 +93,7 @@ visualCardClientActions["og-001"] = (card)=>{
                             attackWith:attackStat
                         }
                     })).onReply(successOrFail(()=>{
-                        animation(async ()=>{
+                        Animations.run(async ()=>{
                             let particles = [];
                             for(const field of sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
                                 .filter(field => attackWith.has(field.getCard()!))){
@@ -353,12 +352,6 @@ visualCardClientActions["og-041"] = (card)=>{
 
 //--
 
-function wrap<P extends { [k: string]: any; }, R>(data:CardData, action:CardTriggerType<P, R>, wrapper:(orig:((params:P)=>R)|undefined, args:P)=>R){
-    const oldAction = data.getAction(action);
-    data.with(action, (args: P) => {
-        return wrapper(oldAction, args);
-    });
-}
 function waitToDraw(data:CardData){
     wrap(data, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
         if(orig) orig({self, game});
@@ -377,35 +370,38 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     })).onReply(successOrFail(()=>{
         let selected:SuperficialVisualCard|undefined;
         let release:()=>void;
-        getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, (game.state as TurnState)], {
-            onEnd:(self)=>{
-                release();
 
-                network.sendToServer(new CardAction({
-                    cardId:card.id,
-                    actionName: CardActionOptions.BROWNIE_DRAW,
-                    cardData: {
-                        id:selected!.logicalCard.id
-                    },
-                })).onReply(successOrFail(()=>{
-                    game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                }));
-            },
-            init:(self)=>{
-                self.blackBg(true);
-                self.addCardsGrid(sideTernary(card.side, getLocalGame().deckA, getLocalGame().deckB).getCards()
-                    .filter(card=>card.logicalCard.isAlwaysFree() && card.logicalCard.cardData.level === 1), (picked)=>{
-                    selected?.highlight(false, og005Highlight);
-                    selected = picked;
-                    selected.highlight(true, og005Highlight);
-                });
+        const pickFrom=sideTernary(card.side, getLocalGame().deckA, getLocalGame().deckB).getCards()
+            .filter(card=>card.logicalCard.isAlwaysFree() && card.logicalCard.cardData.level === 1);
+        if(pickFrom.length>0)
+            getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, (game.state as TurnState)], {
+                onEnd:(self)=>{
+                    release();
 
-                release=registerDrawCallback(0,(p5,scale)=>{
-                    self.finishButton(p5,scale,selected===undefined);
-                    self.infoText(p5, scale, "Select the card to add to your hand");
-                })
-            }
-        }),game.state);
+                    network.sendToServer(new CardAction({
+                        cardId:card.id,
+                        actionName: CardActionOptions.BROWNIE_DRAW,
+                        cardData: {
+                            id:selected!.logicalCard.id
+                        },
+                    })).onReply(successOrFail(()=>{
+                        game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
+                    }));
+                },
+                init:(self)=>{
+                    self.blackBg(true);
+                    self.addCardsGrid(pickFrom, (picked)=>{
+                        selected?.highlight(false, og005Highlight);
+                        selected = picked;
+                        selected.highlight(true, og005Highlight);
+                    });
+
+                    release=registerDrawCallback(0,(p5,scale)=>{
+                        self.finishButton(p5,scale,selected===undefined);
+                        self.infoText(p5, scale, "Select the card to add to your hand");
+                    })
+                }
+            }),game.state);
     }));
 });
 waitToDraw(cards["og-009"]!);

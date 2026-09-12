@@ -5,8 +5,10 @@ import {network} from "../../networking/Server.js";
 
 
 export class GameScene extends Scene{
-    constructor() {
+    public readonly isCpuGame: boolean;
+    constructor(isCpuGame:boolean) {
         super();
+        this.isCpuGame=isCpuGame;
 
 // @ts-ignore
         window.logGame =

@@ -34,12 +34,17 @@ import {CardTriggerType, Species} from "../../CardData.js";
 import Card, {CardMiscDataStrings} from "../../Card.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {sideTernary} from "../../consts.js";
-import {parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
+import {actIfCpu, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {acceptEvent, type processedEvent, rejectEvent} from "./BackendServer.js";
 
 function lastAction(game:Game){
     const state = game.state;
     if(state instanceof TurnState) state.actionsLeft=-1;
+}
+
+function acceptAndAct(event:CardAction<any>){
+    actIfCpu(event.getGame()!);
+    return acceptEvent(event);
 }
 
 function defaultIsValid<T extends SerializableType>(event:CardAction<T>, game:Game, cardName:string, optData:{
@@ -94,6 +99,7 @@ function verifyFieldCard(event:CardAction<any>, game:Game){
 
 export default function(event:CardAction<any>, game:Game|undefined):processedEvent{
     if(game === undefined) return rejectEvent(event, "no game");
+    event.withGame(game);
 
     if(!event.isForced()) {
         const card = verifyFieldCard(event, game);
@@ -142,7 +148,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             }, event.sender, event.id));
             lastAction(game);
             sender.setMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE, undefined);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.BROWNIE_DRAW: {//og-005
             const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
@@ -164,7 +170,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
             game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
             shuffleBackend(sideTernary(card.side, game.deckA, game.deckB));
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.GREMLIN_SCARE:{//og-009
             const actor = verifyFieldCard(event, game);
@@ -178,7 +184,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(data.position === undefined){
                 game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
-                return acceptEvent(event);
+                return acceptAndAct(event);
             }else{
                 const scared = (event.sender === game.player(Side.A)?game.fieldsB:game.fieldsA)[data.position-1];
                 if(scared === undefined) return rejectEvent(event, "gremlin scare card doesnt exist");
@@ -190,7 +196,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     attackingWith:"card",
                     failed:false,
                 }).force().forceFree().withGame(game));
-                return acceptEvent(event);
+                return acceptAndAct(event);
             }
         }
         case CardActionOptions.AMBER_PICK:{//og-018
@@ -228,7 +234,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     side:actor!.side
                 },
             }), game);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.YASHI_REORDER:{//og-027
             const actor = verifyFieldCard(event, game);
@@ -260,7 +266,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             }), game);
 
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.KIBBY_SCARE:{//og-028
             const succeeded = defaultIsValid<KIBBY_SCARE>(event, game, "og-028", {});
@@ -292,7 +298,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 }).force().forceFree().withGame(game));
             }
             lastAction(game);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.FOXY_MAGICIAN_PICK:{//og-031
             const succeeded = defaultIsValid<FOXY_MAGICIAN_PICK>(event, game, "og-031",{
@@ -312,7 +318,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
                 cardData:1
             }));
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.FOXY_MAGICIAN_GUESS:{
             const guesserSide = event.sender === game.player(Side.A) ? Side.A : Side.B;
@@ -343,7 +349,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
             game.unfreeze();
             shuffleBackend(sideTernary(guesserSide, game.deckB, game.deckA));
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.DCW_PICK:{//og-032
             const succeeded = defaultIsValid<DCW_PICK>(event, game, "og-032",{
@@ -363,7 +369,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 actionName:CardActionOptions.DCW_GUESS,
                 cardData:1
             }));
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.DCW_GUESS:{
             const guesserSide = event.sender === game.player(Side.A) ? Side.A : Side.B;
@@ -402,7 +408,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 actionName:CardActionOptions.DCW_GUESS,
                 cardData:guess
             }), game);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.DCW_SCARE:{
             const actor = verifyFieldCard(event, game);
@@ -420,7 +426,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             }).force().forceFree().withGame(game));
             game.unfreeze();
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.WORICK_RESCUE:{//og-038
             const succeeded = defaultIsValid<WORICK_RESCUE>(event, game, "og-038", {});
@@ -443,7 +449,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 }
             }), game);
             lastAction(game);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.FURMAKER_PICK:{//og-041
             const succeeded = defaultIsValid<FURMAKER_PICK>(event, game, "og-041", {});
@@ -466,7 +472,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 }
             }), game);
             shuffleBackend(sideTernary(actor.side, game.deckA, game.deckB));
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.CLOUD_CAT_PICK: {//og-043
             const actor = verifyFieldCard(event, game);
@@ -487,7 +493,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(actor.side)] = targeted?.id ?? "first";
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             sendToGame(event, game, event.sender);
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.LITTLEBOSS_IMMUNITY:{//og-015
             const actor = (game.player(Side.A) === event.sender ?
@@ -509,7 +515,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             if(scareNext) scareNext(true);
 
             game.unfreeze();
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.COWGIRL_COYOTE_INCREASE:{//og-035
             const actor = (game.player(Side.A) === event.sender ?
@@ -546,7 +552,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             if(scareNext) scareNext(true);
 
             game.unfreeze();
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.BROY_WEASLA_INCREASE:{//og-029
             const actor = (game.player(Side.A) === event.sender ?
@@ -581,7 +587,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             if(scareNext) scareNext(true);
 
             game.unfreeze();
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
         case CardActionOptions.NOBLE_RETARGET:{
             const actor = (game.player(Side.A) === event.sender ?
@@ -606,7 +612,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             game.unfreeze();
 
-            return acceptEvent(event);
+            return acceptAndAct(event);
         }
     }
 

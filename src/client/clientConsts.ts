@@ -11,7 +11,7 @@ export const textureLoader = new TextureLoader();
 let aspect = window.innerWidth / window.innerHeight;
 export const camera = new PerspectiveCamera(50, aspect, 1, 10000);
 
-export const scene = new Scene();
+export const threeScene = new Scene();
 
 // Init renderer
 export const renderer = new WebGLRenderer({

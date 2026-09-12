@@ -1,5 +1,6 @@
 import {Side} from "./GameElement.js";
 import {Stat} from "./Card.js";
+import CardData, {CardTriggerType} from "./CardData.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{
@@ -54,4 +55,13 @@ export function externalPromise<T=void>(){
     toReturn.resolve=resolve;
 
     return toReturn;
+}
+
+export function wrap<P extends {
+    [k: string]: any;
+}, R>(data: CardData, action: CardTriggerType<P, R>, wrapper: (orig: ((params: P) => R) | undefined, args: P) => R) {
+    const oldAction = data.getAction(action);
+    data.with(action, (args: P) => {
+        return wrapper(oldAction, args);
+    });
 }

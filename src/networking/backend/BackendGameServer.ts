@@ -31,6 +31,7 @@ import {CardActionOptions} from "../CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
 import dev from "../../dev.js";
+import CPU from "./CPU.js";
 
 export const usersFromGameIDs:{[k:string]:Array<Client>}={};
 const gamesFromUser:Map<Client, Game> = new Map();
@@ -139,6 +140,12 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     next(true);
 }
 
+export function actIfCpu(game:Game){
+    const maybeCPU=game.player(Side.B)
+    if(maybeCPU instanceof CPU && game.state instanceof TurnState && game.state.turn === Side.B)
+        maybeCPU.takeAction();
+}
+
 /**
  * Calls any/all interrupt scares. This should be called whenever you're trying to scare a card AND the attempt would
  * succeed (the stats work, or it's a special attack)
@@ -172,11 +179,13 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 deck:event.game.deckA.map(card=>card.id),
                 otherDeck: event.game.deckB.map(card => card.id),
                 which:Side.A,
+                cpuGame:event.p2 instanceof CPU
             }));
             event.p2.send(new GameStartEvent({
                 deck:event.game.deckB.map(card=>card.id),
                 otherDeck:event.game.deckA.map(card => card.id),
                 which:Side.B,
+                cpuGame:false,
             }));
             sendToGame(new GameStartEventWatcher({
                 deck:event.game.deckA.map(card => card.id),
@@ -253,8 +262,9 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                             id: card.id,
                             cardDataName:card.cardData.name,
                         }));
-                game.state = new TurnState(game, startingSide);
             }
+            game.state = new TurnState(game, startingSide);
+            actIfCpu(game);
         }
         return acceptEvent(event);
     }else if(event instanceof PlaceAction){
@@ -333,6 +343,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         if(!placedForFree)
             endTurn(game);
+        actIfCpu(game);
         return acceptEvent(event);
     }else if(event instanceof DrawAction){
         let side:Side|undefined=undefined;//the side of the player drawing
@@ -354,6 +365,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 !canPredraw && game.state.drawnToStart, event.sender)){
             game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
             game.state.setDrawnToStart();
+            actIfCpu(game);
             return acceptEvent(event);
         }
         return rejectEvent(event, "couldnt draw (empty deck)");
@@ -373,6 +385,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         endTurn(game, true);
+        actIfCpu(game);
         return acceptEvent(event);//todo:validation (what does this mean?)
     }else if (event instanceof ScareAction){
         if(!event.isForced()) {
@@ -451,6 +464,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
             if (!event.isForcedFree()) endTurn(game);
         });
+        actIfCpu(game);
         if(ranRightAway)
             return acceptEvent(event);
         else{
@@ -487,6 +501,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         sideTernary(side, game.runawayA, game.runawayB).push(
             hand.splice(hand.indexOf(toDiscard),1)[0]!);
+        actIfCpu(game);
         return acceptEvent(event);
     }else if(event instanceof ClarifyCardEvent){
 

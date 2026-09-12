@@ -1,5 +1,5 @@
 import {Scene} from "./Scene.js";
-import {camera, modelLoader, scene} from "../clientConsts.js";
+import {camera, modelLoader, threeScene} from "../clientConsts.js";
 import {AmbientLight, Color, CubeTextureLoader} from "three";
 import {registerDrawCallback} from "../ui.js";
 import {setScene} from "../../index.js";
@@ -29,18 +29,18 @@ export class LoadScene extends Scene{
         const backgroundPromise = externalPromise();
         const loader = new CubeTextureLoader();
         loader.setPath('/assets/skybox/cloudy/');
-        scene.background = loader.load(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png'],()=>{
+        threeScene.background = loader.load(['px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png'],()=>{
             backgroundPromise.resolve();
         });
 
-        scene.add(new AmbientLight(new Color(0xffffff), 3));
-        scene.add(camera);
+        threeScene.add(new AmbientLight(new Color(0xffffff), 3));
+        threeScene.add(camera);
 
         const boardPromise = externalPromise();
         modelLoader.load("/assets/board.glb", model => {
             model.scene.scale.set(10,10,10);
             model.scene.position.set(0,-10,0);
-            scene.add(model.scene);
+            threeScene.add(model.scene);
             boardPromise.resolve();
         });
 
