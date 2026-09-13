@@ -8,8 +8,9 @@ import {parseEvent} from "./BackendServer.js";
 import {
     type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
-    type COWGIRL_COYOTE_INCREASE_DATA,
+    type COWGIRL_COYOTE_INCREASE_DATA, type DCW_GUESS,
 } from "../CardActionOption.js";
+import type {Level} from "../../CardData.js";
 
 export function randFrom<T>(a:T[]):T|undefined{
     return a[Math.floor(Math.random()*a.length)];
@@ -30,13 +31,15 @@ export function calcWeakness(attacked:Card, attackers:Card[]){
 }
 
 export default class CPU{
-    private game:Game=undefined!;
+    public game:Game=undefined!;
     public readonly generatedDeck:string[];
+    public readonly miscData:{
+        dcwData?:{ targetLevel:Level, lastGuess:boolean }
+    } = {};
     constructor() {
         this.generatedDeck = new Array(19).fill(0).map(_=>"og-"+Math.floor(Math.random()*44+1).toString().padStart(3,"0"))
             .concat(randFrom(Object.values(cards).filter(card=>card.level === 1))!.name);
     }
-    setGame(game:Game){this.game=game;}
 
     private sentStartRequest=false;
     send(event:Event<any>){
@@ -61,14 +64,35 @@ export default class CPU{
         }else if(event instanceof CardAction){
             switch(event.data.actionName){
                 case CardActionOptions.DCW_GUESS:{
-                    let not = randFrom([1,2,3])
-                    for(const i of [1,2,3])
-                        if(i!==not)
+                    const data = event.data.cardData as DCW_GUESS;
+                    console.log(data)
+                    if(data===undefined) {
+                        let not = randFrom([1, 2, 3])
+                        for (const i of [1, 2, 3])
+                            if (i !== not)
+                                parseEvent(new CardAction({
+                                    cardId: -1,
+                                    actionName: CardActionOptions.DCW_GUESS,
+                                    cardData: randFrom([1, 2, 3])
+                                }, this));
+                    }else{
+                        if(this.miscData.dcwData?.targetLevel === data) {
+                            delete this.miscData.dcwData;
+                            break;
+                        }else if(this.miscData.dcwData?.lastGuess){
                             parseEvent(new CardAction({
-                                cardId:-1,
-                                actionName:CardActionOptions.DCW_GUESS,
-                                cardData:randFrom([1,2,3])
-                            },this));
+                                cardId: this.game.fieldsB.find(card=>card?.cardData.name === "og-032")!.id,
+                                actionName: CardActionOptions.DCW_SCARE,
+                                cardData: {
+                                    side: Side.A,
+                                    pos: randFrom(this.game.fieldsA
+                                        .map((card, i) => card === undefined ? undefined : i)
+                                        .filter(v => v !== undefined))
+                                }
+                            }, this));
+                        }
+                        this.miscData.dcwData!.lastGuess=true;
+                    }
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
                     parseEvent(new CardAction({

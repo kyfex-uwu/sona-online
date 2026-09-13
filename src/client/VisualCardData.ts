@@ -364,6 +364,8 @@ waitToDraw(cards["og-005"]!);
 wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     if(orig) orig({self:card, game});
 
+    const endSignal = externalPromise();
+    Animations.run(()=>endSignal);
     network.sendToServer(new ClarifyCardEvent({
         id:card.id,
         justification:ClarificationJustification.BROWNIE,
@@ -387,6 +389,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                     })).onReply(successOrFail(()=>{
                         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
+                    endSignal.resolve();
                 },
                 init:(self)=>{
                     self.blackBg(true);
@@ -402,6 +405,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                     })
                 }
             }),game.state);
+        else endSignal.resolve();
     }));
 });
 waitToDraw(cards["og-009"]!);

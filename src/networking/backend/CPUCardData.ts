@@ -3,7 +3,7 @@ import {CardTriggerType} from "../../CardData.js";
 import {parseEvent} from "./BackendServer.js";
 import {CardAction} from "../Events.js";
 import {CardActionOptions} from "../CardActionOption.js";
-import {calcStrength, randFrom} from "./CPU.js";
+import CPU, {calcStrength, randFrom} from "./CPU.js";
 import type Game from "../../Game.js";
 import Card, {Stat} from "../../Card.js";
 import {Side} from "../../GameElement.js";
@@ -11,24 +11,24 @@ import {wrap} from "../../consts.js";
 
 export function loadCPUWrappers(){}
 
-function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game}>(wrapper:(orig:T, data:U)=>any){
+function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game}>(wrapper:(orig:T, data:U, cpu:CPU)=>any){
     return (orig:T,data:U)=>{
         if(orig) orig(data);
-        if(data.game.isCpu) wrapper(orig, data);
+        if(data.game.isCpu) wrapper(orig, data, data.game.player(Side.B) as CPU);
     }
 }
 
-wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game})=>{
+wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game}, cpu)=>{
     parseEvent(new CardAction({
         cardId:card.id,
         actionName: CardActionOptions.BROWNIE_DRAW,
         cardData: {
             id:randFrom(game.deckB.filter(card=>card.cardData.level===1 && card.isAlwaysFree()))!.id
         },
-    }, this))
+    }, cpu))
 }));
 
-wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=>{
+wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     const target=game.fieldsA
         .map((card,i)=>[card,i] satisfies [Card|undefined, number])
         .filter(data=>data[0]!==undefined &&
@@ -40,10 +40,10 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=
             cardId:card.id,
             actionName:CardActionOptions.GREMLIN_SCARE,
             cardData:{ position:(randFrom(target)!+1) as 1|2|3 }
-        },this))
+        },cpu))
 }));
 
-wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=>{
+wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     parseEvent(new CardAction({
         cardId:card.id,
         actionName:CardActionOptions.YASHI_REORDER,
@@ -53,43 +53,35 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=
                 .map(v=>v[0].id)
                 .slice(0,3) as [number?, number?, number?]
         },
-    }));
+    }, cpu));
 }));
 
-wrap(cards["og-031"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=>{
+wrap(cards["og-031"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     parseEvent(new CardAction({
         cardId: card.id,
         actionName: CardActionOptions.FOXY_MAGICIAN_PICK,
         cardData: randFrom(game.deckB)!.id
-    },this));
+    },cpu));
 }));
 
-wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=>{
+wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     const picked = randFrom(game.deckB)!;
     parseEvent(new CardAction({
         cardId: card.id,
         actionName: CardActionOptions.DCW_PICK,
         cardData: picked.id
-    },this));
+    },cpu));
 
-    //todo: wait for stuffs
-
-    parseEvent(new CardAction({
-        cardId:card.id,
-        actionName:CardActionOptions.DCW_SCARE,
-        cardData:{
-            side:Side.A,
-            pos:randFrom(game.fieldsA
-                .map((card,i)=>card===undefined ? undefined : i)
-                .filter(v=>v!==undefined))
-        }
-    },this))
+    cpu.miscData.dcwData = {
+        targetLevel:picked.cardData.level,
+        lastGuess:false
+    }
 }));
 
-wrap(cards["og-043"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game})=>{
+wrap(cards["og-043"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     parseEvent(new CardAction({
         cardId:card.id,
         actionName:CardActionOptions.CLOUD_CAT_PICK,
         cardData:randFrom(game.fieldsA.filter(card=>card!==undefined))!.id,
-    },this));
+    },cpu));
 }));

@@ -367,7 +367,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.player(other(actor.side))?.send(new CardAction({
                 cardId:data,
                 actionName:CardActionOptions.DCW_GUESS,
-                cardData:1
+                cardData:undefined
             }));
             return acceptAndAct(event);
         }

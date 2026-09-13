@@ -63,7 +63,7 @@ export const processedEventMarker = {dontUseThisRawCallRejectOrAccept:3 as 3};
 export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
 export function rejectEvent(event:Event<any>, reason:string){
     network.replyToClient(event, new RejectEvent({}, undefined, event.id));
-    console.log(`# rejected ${event.id}(${typeof event}): ${reason}`);
+    console.trace(`# rejected ${event.id}(${typeof event}): ${reason}`);
     return processedEventMarker;
 }
 export function acceptEvent(event:Event<any>){
@@ -125,7 +125,7 @@ export function parseEvent(event:Event<any>):processedEvent{
 
                 const game = new Game(deckA, deckB, uuid());
                 if(event.data.requestCPU) {
-                    (other.sender as CPU).setGame(game);
+                    (other.sender as CPU).game=game;
                     game.isCpu=true;
                 }
                 gameParseEvent(new InternalStartGameEvent(game, event.sender!, other.sender!));
