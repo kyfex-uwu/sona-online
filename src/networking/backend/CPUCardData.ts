@@ -11,10 +11,10 @@ import {wrap} from "../../consts.js";
 
 export function loadCPUWrappers(){}
 
-function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game}>(wrapper:(orig:T, data:U, cpu:CPU)=>any){
+function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self:Card}>(wrapper:(orig:T, data:U, cpu:CPU)=>any){
     return (orig:T,data:U)=>{
         if(orig) orig(data);
-        if(data.game.isCpu) wrapper(orig, data, data.game.player(Side.B) as CPU);
+        if(data.game.isCpu && data.self.side === Side.B) wrapper(orig, data, data.game.player(Side.B) as CPU);
     }
 }
 

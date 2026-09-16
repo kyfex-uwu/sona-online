@@ -1,5 +1,5 @@
 import { networkInterfaces } from "os";
-import qrcode from "qrcode";
+import {enableDev} from "./dist/dev.js";
 
 export function init(website){
     const linkUrl = "http://"+Object.values(networkInterfaces())
@@ -10,9 +10,10 @@ export function init(website){
             []).filter(ip => ip.startsWith("192."))[0]+":4000";
     if(linkUrl) console.log(`Scan the above link or visit ${linkUrl} if you are on a different device (must be on the same wifi network`)
     console.log("App hosted at http://localhost:4000");
-
     website.get("/src/dev.js", (req, res) => {
         res.setHeader('content-type', 'text/javascript');
-        res.send("export default true;");
+        res.send("export default {on:true};");
     });
+
+    enableDev();
 }

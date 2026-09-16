@@ -1,7 +1,7 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
 import {network, Replyable} from "../networking/Server.js";
-import isDev from "../dev.js";
+import dev from "../dev.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -103,10 +103,11 @@ network.sendToServer = (event) => {
     return new Replyable(event);
 }
 
-//@ts-ignore
-window.showNetworkLogs=isDev;
+//@ts-expect-error
+window.showNetworkLogs=
+    dev.on;
 export function log(...data: any){
-    //@ts-ignore
+    //@ts-expect-error
     if(window.showNetworkLogs)
         if(typeof data === "string") console.log(data);
         else console.log(...data);

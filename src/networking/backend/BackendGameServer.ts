@@ -571,7 +571,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return rejectEvent(event, "no suitable cards found");
     }
 
-    else if(event instanceof RequestServerDumpAction && dev){
+    else if(event instanceof RequestServerDumpAction && dev.on){
         network.replyToClient(event, new ServerDumpEvent({
             fieldsA:game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             fieldsB:game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
