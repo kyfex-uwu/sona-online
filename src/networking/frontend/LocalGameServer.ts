@@ -740,10 +740,10 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             });
                             self.infoText(p5,scale,"Chose whether to redirect the scare to Noble Rat or leave it as-is");
 
-                            particleArc(particleData[0], particleData[1],
+                            particleArc(particleData[1], particleData[0],
                                 statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
                                 statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
-                            particleArc(particleData[2], particleData[1],
+                            particleArc(particleData[1], particleData[2],
                                 statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
                                 statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
                         });

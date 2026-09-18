@@ -95,6 +95,7 @@ export default class CPU{
                     }
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
+                    console.trace("hello")
                     parseEvent(new CardAction({
                         cardId:-1,
                         actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
@@ -156,7 +157,7 @@ export default class CPU{
 
         const fieldCards = this.game.fieldsB.filter(card=>card !== undefined);
         if(fieldCards.length<2){
-            if(this.game.handB.length === 0){
+            if(this.game.handB.length === 0 && this.game.state.actionsLeft>0){
                 console.log("draw")
                 parseEvent(new DrawAction({},this));
                 return true;
@@ -181,7 +182,7 @@ export default class CPU{
             }
         }
 
-        if(!this.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
+        if(this.game.state.actionsLeft>0 && !this.game.getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
             const danger = this.game.fieldsA.map((attacker, i) =>
                 [attacker, i, attacker === undefined ? 0 : calcStrength(attacker, this.game.fieldsB
                     .filter(v => v !== undefined))] satisfies [Card | undefined, number, number])
@@ -194,6 +195,7 @@ export default class CPU{
                     if(maybeAttacker!==undefined && !maybeAttacker.hasAttacked){
                         const beatsStat=canBeat(maybeAttacker, danger[0][0]);
                         if(beatsStat!==false) {
+                            console.log("scare")
                             parseEvent(new ScareAction({
                                 scarerPos: [i + 1 as 1 | 2 | 3, Side.B],
                                 scaredPos: [danger[0][1] + 1 as 1 | 2 | 3, Side.A],
@@ -206,6 +208,7 @@ export default class CPU{
             }
         }
 
+        console.log("end turn")
         parseEvent(new PassAction({},this));
         return false;
     }
