@@ -167,10 +167,10 @@ export class VTurnState extends VisualGameState<TurnState>{
 
     }
     private initedAlready=false;
+    private triggerDrawn = false;
     init() {
         super.init();
-        this.addFeatures(StateFeatures.FIELDS_PLACEABLE,
-            StateFeatures.DECK_DRAWABLE);
+        this.addFeatures(StateFeatures.DECK_DRAWABLE);
 
         if(!this.initedAlready && this.canInit) {
             this.initedAlready=true;
@@ -179,6 +179,11 @@ export class VTurnState extends VisualGameState<TurnState>{
     }
 
     visualTick(): void {
+        if(!this.triggerDrawn && this.game.state instanceof VTurnState && this.game.state.getNonVisState().drawnToStart) {
+            this.addFeatures(StateFeatures.FIELDS_PLACEABLE);
+            this.triggerDrawn=true;
+        }
+
         const toHighlight = new Set<VisualCard>();
 
         if(this.game.getMySide() === this.currTurn && this.getNonVisState().actionsLeft>0){

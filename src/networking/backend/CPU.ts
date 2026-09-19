@@ -143,7 +143,7 @@ export default class CPU{
     }
 
     takeAction(){
-        if(!this.game) return false;
+        if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen) return false;
 
         if(!(
             this.game.state instanceof TurnState &&
