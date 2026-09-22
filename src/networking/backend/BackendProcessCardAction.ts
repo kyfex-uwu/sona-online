@@ -340,15 +340,15 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 sideTernary(guesserSide, game.handB, game.handA).push(answer);
             }
 
+            game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.A], undefined);
+            game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
+            game.unfreeze();
+            shuffleBackend(sideTernary(guesserSide, game.deckB, game.deckA));
             sendToGame(new CardAction({
                 cardId:-1,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
                 cardData:guess
             }), game);
-            game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.A], undefined);
-            game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[Side.B], undefined);
-            game.unfreeze();
-            shuffleBackend(sideTernary(guesserSide, game.deckB, game.deckA));
             return acceptAndAct(event);
         }
         case CardActionOptions.DCW_PICK:{//og-032
