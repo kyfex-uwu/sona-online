@@ -1,5 +1,5 @@
 import {Side} from "../../GameElement.js";
-import {clickListener, removeClickListener, updateOrder} from "../clientConsts.js";
+import {clickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, Vector3} from "three";
 import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualGame from "../VisualGame.js";
@@ -84,10 +84,10 @@ export default abstract class CardMagnet extends SidedPositionedVisualGameElemen
         return true;
     }
     abstract removeCard(card:VisualCard):boolean;
-    private listener:number=-1;
+    private listener:() => void;
     removeFromScene() {
         super.removeFromScene();
-        removeClickListener(this.listener);
+        this.listener();
     }
 
     visualTick() {

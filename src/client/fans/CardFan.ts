@@ -3,7 +3,7 @@ import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector
 import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
-import {clickListener, removeClickListener} from "../clientConsts.js";
+import {clickListener} from "../clientConsts.js";
 import type {CardHoldable} from "../CardHoldable.js";
 
 export default class CardFan extends SidedPositionedVisualGameElement implements CardHoldable{
@@ -53,10 +53,10 @@ export default class CardFan extends SidedPositionedVisualGameElement implements
         });
     }
 
-    private listener:number=-1;
+    private listener:() => void;
     removeFromScene() {
         super.removeFromScene();
-        removeClickListener(this.listener);
+        this.listener();
         this.group.removeFromParent();
     }
 

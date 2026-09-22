@@ -11,7 +11,7 @@ import {camera} from "./clientConsts.js";
 import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import p5 from "p5";
-import {VBeforeGameState, type VisualGameState, VPickCardsState, VTurnState} from "./VisualGameStates.js";
+import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
 import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
@@ -177,28 +177,10 @@ export default class VisualGame extends ElementScene{
             const width = scale * 1.3;
             const x = p5.width/2-width/2;
             const height = scale * 0.4;
-            if(isCancellable(this.state) && (!(this.state instanceof VPickCardsState)||
-                    (this.state.endType === EndType.CANCEL||this.state.endType === EndType.BOTH))){
-                let splitMaybeWidth = width;
-                let splitMaybeX = x;
-                if(this.state instanceof VPickCardsState && this.state.endType === EndType.BOTH) {
-                    splitMaybeWidth = scale * 0.8;
-                    splitMaybeX = p5.width/2-scale*0.9;
-
-                    button(p5, p5.width/2+scale*0.1, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Finish", () => {
-                        const toCall = (this.state as unknown as VPickCardsState).onFinish;
-                        if(toCall) toCall();
-                    }, scale, this.finishButtonId, this.frozen);
-                }
-                button(p5, splitMaybeX, p5.height - height - scale * 0.1, splitMaybeWidth, height, "Cancel", () => {
+            if(isCancellable(this.state)){
+                button(p5, x, p5.height - height - scale * 0.1, width, height, "Cancel", () => {
                     (this.state as unknown as Cancellable).end();//trust
                 }, scale, this.passButtonId, this.frozen);
-            }
-            if(this.state instanceof VPickCardsState && this.state.endType === EndType.FINISH){
-                button(p5, x, p5.height - height - scale * 0.1, width, height, "Finish", () => {
-                    const toCall = (this.state as unknown as VPickCardsState).onFinish;
-                    if(toCall) toCall();
-                }, scale, this.passButtonId);
             }
         });
         this.releaseDebugDraw = registerDrawCallback(1000, (p5, scale) =>{

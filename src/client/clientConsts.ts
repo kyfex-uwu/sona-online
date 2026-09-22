@@ -47,7 +47,7 @@ window.addEventListener("resize", windowResize);
 
 //--
 
-let clickedListeners:Array<()=>boolean>=[];
+let clickedListeners:{[priority:number]:Array<()=>boolean>}={};
 let dragListeners:((v:{type:"start"|"move"|"end",x:number,y:number})=>void)[]=[];
 let wheelListeners:((dy:number,dx:number)=>void)[]=[];
 let dragging=false;
@@ -56,7 +56,8 @@ window.addEventListener("mousedown", (e:MouseEvent)=>{
     dragging=true;
 });
 window.addEventListener("mouseup", (e:MouseEvent)=>{
-    for(const listener of clickedListeners) if(listener()) break;
+    for(const listener of Object.entries(clickedListeners).sort((a,b)=>
+        parseInt(a[0])-parseInt(b[0])).map(v=>v[1]).flat()) if(listener()) break;
     for(const listener of dragListeners) listener({type:"end",x:e.x,y:e.y});
     dragging=false;
 });
@@ -69,12 +70,12 @@ window.addEventListener("wheel", (e:WheelEvent)=>{
 
 //@param listener The function that will run every time the mouse is clicked
 //@return The id of this listener
-export function clickListener(listener:()=>boolean){
-    return clickedListeners.push(listener)-1;
-}
-//@param index The id of the listener to remove. Should be whatever {@link clickListener} returned
-export function removeClickListener(index:number){
-    clickedListeners.splice(index,1);
+export function clickListener(listener:()=>boolean, priority=0){
+    clickedListeners[priority] = clickedListeners[priority] ?? [];
+    clickedListeners[priority].push(listener);
+    return ()=>{
+        clickedListeners[priority]!.splice(clickedListeners[priority]!.indexOf(listener),1);
+    };
 }
 
 export function dragListener(listener:(v:{type:"start"|"move"|"end",x:number,y:number})=>void){

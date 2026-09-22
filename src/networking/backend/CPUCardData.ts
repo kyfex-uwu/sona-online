@@ -5,7 +5,7 @@ import {CardAction} from "../Events.js";
 import {CardActionOptions} from "../CardActionOption.js";
 import CPU, {calcStrength, randFrom} from "./CPU.js";
 import type Game from "../../Game.js";
-import Card, {Stat} from "../../Card.js";
+import Card, {CardMiscDataStrings, Stat} from "../../Card.js";
 import {Side} from "../../GameElement.js";
 import {wrap} from "../../consts.js";
 
@@ -14,7 +14,8 @@ export function loadCPUWrappers(){}
 function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self:Card}>(wrapper:(orig:T, data:U, cpu:CPU)=>any){
     return (orig:T,data:U)=>{
         if(orig) orig(data);
-        if(data.game.isCpu && data.self.side === Side.B) wrapper(orig, data, data.game.player(Side.B) as CPU);
+        if(data.game.isCpu && data.self.side === Side.B)
+            setTimeout(()=>wrapper(orig, data, data.game.player(Side.B) as CPU));
     }
 }
 
@@ -79,6 +80,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
 }));
 
 wrap(cards["og-043"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
+    if(card.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
     parseEvent(new CardAction({
         cardId:card.id,
         actionName:CardActionOptions.CLOUD_CAT_PICK,

@@ -6,7 +6,7 @@ import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
 import {sideTernary, wait} from "../consts.js";
-import {camera, clickListener, removeClickListener, threeScene} from "./clientConsts.js";
+import {camera, clickListener, threeScene} from "./clientConsts.js";
 import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -197,7 +197,7 @@ export class VTurnState extends VisualGameState<TurnState>{
                     this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
 
                     const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
-                    if (this.getActionsLeft() > 0) {
+                    if (this.getActionsLeft() > 0 && sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(field=>field.getCard()!==undefined)) {
                         this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
                             StateFeatures.FIELDS_PLACEABLE);
                         let maxLevel = fieldCards.map(field => field.getCard())
@@ -293,121 +293,6 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     }
 }
 
-export class VPickCardsState extends VisualGameState<TurnState> implements Cancellable {
-    public readonly cards;
-    private readonly parentState;
-    private listener?:number;
-    private readonly onPick;
-    public endType;
-    public readonly onFinish;
-    constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState], cards: VisualCard[], onPick:(card:VisualCard)=>void,
-                endType:EndType, onFinish?:()=>void) {
-        super(game);
-        this.cards=cards;
-        this.parentState=parentState;
-        this.onPick=onPick;
-        this.endType=endType;
-        this.onFinish=onFinish;
-    }
-    private initedAlready=false;
-    init() {
-        super.init();
-
-        this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
-
-        if(!this.initedAlready) {
-            this.listener = clickListener(() => {
-                const intersects = this.game.raycaster.intersectObjects(this.cards
-                    .map(card => card.model).filter(model => model !== undefined));
-                if (intersects[0] !== undefined) {
-                    // console.log(intersects[0], intersects[0].object?.parent?.parent?.parent)
-                    this.onPick((intersects[0].object.parent!.parent!.parent! as Group).userData.card);
-                }
-
-                return false;
-            });
-
-            for (let i = 0; i < this.cards.length; i++) {
-                this.cards[i] = new VisualCardClone(this.cards[i]!);
-                this.game.addElement(this.cards[i]!);
-                this.cards[i]!.populate(this.cards[i]!.logicalCard);
-                this.cards[i]!.createModel().then(()=>{
-                    camera.add(this.cards[i]!.model);
-                });
-            }
-
-            let height=3;
-            let scale=1;
-
-            const cardsLength = this.cards.length;
-            if(cardsLength<=18){
-                if(cardsLength%3===0 && cardsLength>6){
-                    height=3;
-                }else if(cardsLength%2===0 && cardsLength>4 && cardsLength/2<=6){
-                    height=2;
-                }else{
-                    height=Math.ceil(cardsLength/6);
-                }
-            }else{//fun fact! i think its impossible for this to be run
-                //scale=1: 3x6
-                //card dims are 5/7, 6/8 with padding
-                //screen height = 3/8 = 9/24
-                //screen width = 4/6 = 2/3 = 16/24
-                //ratio: 9/16 effectively, if the cards are square
-                console.log("gorp")
-                scale = Math.sqrt(cardsLength/(16*9))*8;
-                height = Math.ceil(cardsLength/16*scale);
-            }
-
-            let width = Math.ceil(cardsLength/height);
-            height = Math.ceil(cardsLength/width);
-            let currCard=0;
-            for(let y=0;y<height;y++){
-                if(y===height-1) width=cardsLength-(height-1)*width;
-                for(let x=0;x<width;x++){
-                    const fakeCard = this.cards[currCard];
-                    currCard++;
-                    if(fakeCard === undefined) break;
-
-                    fakeCard.flipFaceup();
-                    let pos = new Vector3((x-(width-1)/2)*85*scale, -(y-(height-1)/2)*119*scale, -400);
-                    fakeCard.position.copy(pos);
-                    fakeCard.rotation = new Quaternion().setFromEuler(new Euler(Math.PI / 2, 0, 0));
-                    fakeCard.scale = new Vector3(scale, scale, scale);
-                }
-            }
-        }
-
-        this.initedAlready=true;
-    }
-    swapAway() {
-        super.swapAway();
-        removeClickListener(this.listener!);
-        this.removeCards();
-    }
-
-    canSelectHandCard(card: VisualCard): boolean {
-        return false;
-    }
-
-    isCancellable(){ return this.endType === EndType.CANCEL || this.endType === EndType.BOTH; }
-    end(){
-        this.game.setState(this.parentState[0], this.parentState[1]);
-        this.removeCards();
-    }
-
-    removeCards(){
-        for(const card of this.cards){
-            card.position = new Vector3(0,0,-1500);
-        }
-        wait(1000).then(()=>{
-            for(const card of this.cards){
-                card.removeFromScene();
-            }
-        });
-    }
-}
-
 const bgPlane = new Mesh(new PlaneGeometry(100,100), new MeshBasicMaterial({color:new Color(0,0,0), opacity:0.5, transparent:true}));
 bgPlane.position.set(0,0,-30);
 const vGuiButton1 = buttonId();
@@ -470,7 +355,7 @@ export class VGuiState extends VisualGameState<TurnState>{
             newModels.push(newCard);
         }
 
-        return ()=>removeClickListener(listener);
+        return listener;
     }
     addCardsGrid(cards:SuperficialVisualCard[], onPick:(card:SuperficialVisualCard)=>void){
         let height=1;
