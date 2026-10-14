@@ -20,7 +20,7 @@ import cards from "../../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
 import VisualGame, {ViewType} from "../../client/VisualGame.js";
 import {other, Side} from "../../GameElement.js";
-import {externalPromise, sideTernary, statTernary, wait} from "../../consts.js";
+import {externalPromise, sideTernary, statTernary, wait, WaitChain} from "../../consts.js";
 import type FieldMagnet from "../../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VGuiState, VTurnState} from "../../client/VisualGameStates.js";
 import {
@@ -31,8 +31,7 @@ import {
     particleArc,
     particleStreak,
     redStatColor,
-    registerDrawCallback, WaitChain,
-    whiteColor,
+    registerDrawCallback, whiteColor,
     yellowStatColor
 } from "../../client/ui.js";
 import {BeforeGameState, TurnState} from "../../GameStates.js";
@@ -224,7 +223,9 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             game.state.decrementTurn();
         }
     }else if(event instanceof PassAction){
+        console.log("passing?")
         Animations.run(async ()=>{
+            console.log("fish")
             game.state.decrementTurn(true);
         });
     }else if(event instanceof ScareAction){
@@ -238,11 +239,13 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                         event.data.attackingWith === "card" ? whiteColor : statTernary(event.data.attackingWith, redStatColor,blueStatColor,yellowStatColor),
                         event.data.attackingWith === "card" ? whiteColor : statTernary(getVictim(event.data.attackingWith), redStatColor,blueStatColor,yellowStatColor),
                     ).then(()=>{
-                        sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                        if(event.data.extra?.shouldRunaway)
+                            sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
                     });
                 });
             else{
-                sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
+                if(event.data.extra?.shouldRunaway)
+                    sideTernary(scared.getSide(), game.runawayA, game.runawayB).addCard(scared);
                 //todo: animation
             }
         }
@@ -328,7 +331,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             network.sendToServer(new CardAction({
                                 cardId: -1,
                                 actionName: CardActionOptions.DCW_GUESS,
-                                cardData: i + 1
+                                cardData: (i + 1 as Level)
                             }));
                             guess=i+1;
 
@@ -417,7 +420,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             network.sendToServer(new CardAction({
                                 cardId: -1,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
-                                cardData: i + 1
+                                cardData: {level:(i +1) as Level}
                             }));
                             guess=i+1;
 

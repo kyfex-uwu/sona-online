@@ -416,7 +416,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
     const target=sideTernary(card.side, game.fieldsB, game.fieldsA).filter(card => card !== undefined);
     if(target.length>=2 &&//if there are at least 2 cards on opponent field
         target.some(card => //and at least one card has at least 1 stat less than 2
-            ((card.stat(Stat.RED)??99)<2 || (card.stat(Stat.BLUE)??99)<2 || (card.stat(Stat.YELLOW)??99)<2))) {
+            ((card.stat(Stat.RED)??Infinity)<2 || (card.stat(Stat.BLUE)??Infinity)<2 || (card.stat(Stat.YELLOW)??Infinity)<2))) {
 
         let selectedCard:1|2|3|undefined;
         let releases:(()=>void)[] = [];
@@ -443,7 +443,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
                 for(const field of fields){
                     releases.push(field.addClickListener(()=>{
                         for(const stat of [Stat.RED, Stat.BLUE, Stat.YELLOW])
-                            if((field.getCard()?.logicalCard.stat(stat) ?? 99)<2){
+                            if((field.getCard()?.logicalCard.stat(stat) ?? Infinity)<2){
                                 fields[(selectedCard ?? 0) - 1]?.getCard()?.highlight(false, og009Highlight);
                                 selectedCard = field.which;
                                 fields[(selectedCard ?? 0) - 1]?.getCard()?.highlight(true, og009Highlight);
@@ -610,7 +610,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             uiState = "wait";
                             waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 (guessEvent) => {
-                                    guess = ((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS);
+                                    guess = ((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS).level;
                                     uiState = "end";
                                     return false;
                                 });

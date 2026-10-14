@@ -198,6 +198,10 @@ export class ScareAction extends ActionEvent<{
     attackingWith:Stat|"card",
     failed?:boolean,
     free?:boolean,
+
+    extra?:{
+        shouldRunaway?:boolean
+    }
 }>{}
 addToSerializableClasses(ScareAction);
 

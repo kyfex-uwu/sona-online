@@ -17,7 +17,7 @@ import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
 import Card, {Stat} from "../Card.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import {externalPromise, statTernary} from "../consts.js";
-import CardData, {CardTriggerType, Species} from "../CardData.js";
+import CardData, {CardTriggerType, Species, Temperament} from "../CardData.js";
 import type ElementScene from "./ElementScene.js";
 import {Side} from "../GameElement.js";
 
@@ -125,7 +125,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         return this._logicalCard;
     }
     public readonly model: Group = new Group();
-    private readonly flipGroup: Group = new Group();
+    public readonly flipGroup: Group = new Group();
     private _material:ShaderMaterial|undefined;
     private materialListeners:((material:ShaderMaterial|undefined)=>void)[] = [];
     public addMaterialListener(listener:(material:ShaderMaterial|undefined)=>void){
@@ -148,7 +148,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         super(game, position, rotation);
 
         if(typeof card === "string"){
-            card=new Card(new CardData("",[0,0,0],1,Species.UNKNOWN,card),Side.A, null!, -1);
+            card=new Card(new CardData("",[0,0,0],"?",Species.UNKNOWN,Temperament.UNKNOWN, card),Side.A, null!, -1);
         }
 
         this._logicalCard=card;

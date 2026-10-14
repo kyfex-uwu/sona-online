@@ -8,18 +8,19 @@ import {parseEvent} from "./BackendServer.js";
 import {
     type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
-    type COWGIRL_COYOTE_INCREASE_DATA, type DCW_GUESS,
+    type COWGIRL_COYOTE_INCREASE_DATA, type DCW_GUESS, type FOXY_MAGICIAN_GUESS,
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
+import {levelOr} from "../../consts.js";
 
 export function randFrom<T>(a:T[]):T|undefined{
     return a[Math.floor(Math.random()*a.length)];
 }
 
 export function canBeat(attacker:Card, attacked:Card){
-    if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? 999) ) return Stat.RED;
-    if( (attacker.stat(Stat.BLUE) ?? -1) >= (attacked.stat(getVictim(Stat.BLUE)) ?? 999) ) return Stat.BLUE;
-    if( (attacker.stat(Stat.YELLOW) ?? -1) >= (attacked.stat(getVictim(Stat.YELLOW)) ?? 999) ) return Stat.YELLOW;
+    if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? Infinity) ) return Stat.RED;
+    if( (attacker.stat(Stat.BLUE) ?? -1) >= (attacked.stat(getVictim(Stat.BLUE)) ?? Infinity) ) return Stat.BLUE;
+    if( (attacker.stat(Stat.YELLOW) ?? -1) >= (attacked.stat(getVictim(Stat.YELLOW)) ?? Infinity) ) return Stat.YELLOW;
 
     return false;
 }
@@ -49,7 +50,7 @@ export default class CPU{
                 this.game.handB.length===3) {
 
                 const toStart = this.game.handB.filter(card => card.cardData.level === 1)
-                    .map(card => [card, Math.min(card.stat(Stat.RED) ?? 99, card.stat(Stat.BLUE) ?? 99, card.stat(Stat.YELLOW) ?? 99)] satisfies [Card, number])
+                    .map(card => [card, Math.min(card.stat(Stat.RED) ?? Infinity, card.stat(Stat.BLUE) ?? Infinity, card.stat(Stat.YELLOW) ?? Infinity)] satisfies [Card, number])
                     .sort((c1, c2) => c2[1] - c1[1])[0]![0];
                 parseEvent(new PlaceAction({
                     cardId: toStart.id,
@@ -73,7 +74,7 @@ export default class CPU{
                                 parseEvent(new CardAction({
                                     cardId: -1,
                                     actionName: CardActionOptions.DCW_GUESS,
-                                    cardData: randFrom([1, 2, 3])
+                                    cardData: randFrom([1, 2, 3] satisfies Level[])
                                 }, this));
                     }else{
                         if(this.miscData.dcwData?.targetLevel === data) {
@@ -95,12 +96,12 @@ export default class CPU{
                     }
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
-                    console.trace("hello")
-                    parseEvent(new CardAction({
-                        cardId:-1,
-                        actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                        cardData:randFrom([1,2,3])
-                    },this));
+                    if((event.data.cardData as FOXY_MAGICIAN_GUESS).shouldGuess)
+                        parseEvent(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
+                            cardData: {level:randFrom([1, 2, 3] as Level[])!}
+                        },this));
                 }break;
                 case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                     parseEvent(new CardAction({
@@ -162,9 +163,9 @@ export default class CPU{
                 parseEvent(new DrawAction({},this));
                 return true;
             }else {
-                const topLevel = Math.max(0, ...fieldCards.map(card => card!.cardData.level)) + 1;
-                let picked = this.game.handB.filter(card => card.cardData.level <= topLevel)
-                    .sort((c1, c2) => c2.cardData.level - c1.cardData.level)
+                const topLevel = Math.max(0, ...fieldCards.map(card => levelOr(card!.cardData.level,0))) + 1;
+                let picked = this.game.handB.filter(card => levelOr(card.cardData.level,0) <= topLevel)
+                    .sort((c1, c2) => levelOr(c2.cardData.level,0) - levelOr(c1.cardData.level,0))
                     .filter((card, _, valid) => card.cardData.level === valid[0]!.cardData.level);
                 if(this.game.state.actionsLeft===0)
                     picked=picked.filter(card=>card.isAlwaysFree());

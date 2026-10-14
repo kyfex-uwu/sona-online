@@ -23,10 +23,10 @@ import {
 } from "../Events.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other, Side} from "../../GameElement.js";
-import {shuffled, sideTernary} from "../../consts.js";
+import {externalPromise, levelOr, shuffled, sideTernary, WaitChain} from "../../consts.js";
 import Card, {getVictim, Stat} from "../../Card.js";
 import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
-import {CardTriggerType, InterruptScareResult} from "../../CardData.js";
+import {CardTriggerType, type ScareResultStruct} from "../../CardData.js";
 import {CardActionOptions} from "../CardActionOption.js";
 import processCardAction from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
@@ -111,7 +111,8 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     stat: Stat | "card"
     game: Game
     origEvent: ScareAction
-}, next:(succeeded: boolean) => void){
+    result:ScareResultStruct
+}, next:(data:ScareResultStruct) => void){
     const mappedCards=cards.map(c=>[c, c?.callAction(CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, {
         self: c,
         scared: data.scarer,
@@ -120,30 +121,32 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
         game: data.game,
         event: data.origEvent,
     })?.valueOf() ?? -1] satisfies [Card|undefined, number]).sort((c1, c2)=> c2[1]-c1[1]);
+    
     for(let i=0;i<mappedCards.length;i++) {
         const card = mappedCards[i]![0];
         if(card===undefined) continue;
 
-        const result = card.callAction(CardTriggerType.INTERRUPT_SCARE, {
+        if(card.callAction(CardTriggerType.INTERRUPT_SCARE, {
             ...data,
             self: card,
-            next: (succeeded)=> {
-                if(!succeeded) next(false);
-                else internalScareInterrupt(mappedCards.slice(i + 1).map(v=>v[0]), data, next);
+            next: (nextData)=> {//this should only be called if a scare is being resumed
+                data.result=nextData;
+                internalScareInterrupt(mappedCards.slice(i + 1).map(v=>v[0]), data, next);
             }
-        });
-        switch(result){
-            case InterruptScareResult.FAIL_SCARE: next(false); return;
-            case InterruptScareResult.PREVENT_SCARE: return;
-        }
+        })) return;
     }
-    next(true);
+    next(data.result);
 }
 
+export const cpuPauser = new WaitChain();
+let cpuPauserResumer:ReturnType<typeof externalPromise<void>>;
+cpuPauser.run(()=>cpuPauserResumer=externalPromise());
 export function actIfCpu(game:Game){
+    cpuPauserResumer.resolve();
     const maybeCPU=game.player(Side.B)
     if(maybeCPU instanceof CPU && game.state instanceof TurnState && game.state.turn === Side.B)
         maybeCPU.takeAction();
+    cpuPauser.run(()=>cpuPauserResumer=externalPromise());
 }
 
 /**
@@ -156,9 +159,12 @@ export function actIfCpu(game:Game){
  * @param scareType The scare type
  * @param onPass The function to run if/when the scare passes
  */
-export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:boolean)=>void){
+export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:ScareResultStruct)=>void){
     const cards = [...game.fieldsA, ...game.fieldsB];
-    internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event }, onPass);
+    internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event, result:{
+        determineScare: "stats",
+        runaway: true,
+    }}, onPass);
 }
 
 export function parseEvent(event:GameEvent<any>):processedEvent{
@@ -291,7 +297,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                     event.sender === game.player(game.state.turn) &&//it is the sender's turn
                     game.player(card.side) === event.sender &&//card is the player's
                     sideTernary(card.side, game.fieldsA, game.fieldsB)
-                        .some(other => (other?.cardData.level ?? 0) >= card.cardData.level - 1) &&//placed card's level is at most 1 above all other cards
+                        .some(other => levelOr(other?.cardData.level,0) >= (levelOr(card.cardData.level,0) - 1)) &&//placed card's level is at most 1 above all other cards
                     game.state.drawnToStart &&//player has already started turn
                     game.state.actionsLeft+(placedForFree ? 1 : 0)>0))) {// player has actions left
                 if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
@@ -420,7 +426,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         let ranRightAway=false;
-        scareInterrupt(event, game, scarer, scared, event.data.attackingWith, (succeeded) => {
+        scareInterrupt(event, game, scarer, scared, event.data.attackingWith, (scareResult) => {
             ranRightAway = true;
 
             let scarer = sideTernary(event.data.scarerPos[1], game!.fieldsA, game!.fieldsB)[event.data.scarerPos[0] - 1];
@@ -430,36 +436,56 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 return;
             }
 
-            const autofail = (event.data.attackingWith !== "card" &&
-                (scarer.stat(event.data.attackingWith) === undefined ||
-                    scared.stat(getVictim(event.data.attackingWith)) === undefined));
-
-            const failed = forceFailed ?? (!succeeded || (autofail || (event.data.attackingWith === "card" ||
-                !((scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)))));
-            if(failed) scared = scarer;
-            const toSend = new ScareAction({
-                scaredPos: scared.getCardPos()!,
-                scarerPos: scarer.getCardPos()!,
-                attackingWith: event.data.attackingWith,
-                failed,
-                free: event.isForcedFree(),
-            });
-            scarer.hasAttacked = true;
-            for (const user of (usersFromGameIDs[game.gameID] || [])) {
-                user.send(toSend);
+            //if either stat is undefined, scare does not happen
+            if(event.data.attackingWith !== "card"){
+                if(scarer.stat(event.data.attackingWith) === undefined ||
+                    scared.stat(getVictim(event.data.attackingWith)) === undefined) return;
             }
 
-            sideTernary(scared.side, game.runawayA, game.runawayB).push(
-                sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
-            sideTernary(scared.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
+            const failed = forceFailed ?? (scareResult.determineScare === "force_fail" ||
+                (event.data.attackingWith === "card" ||
+                !(scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)));
+            const toRunaway = failed ? scarer : scared;
 
-            scared.callAction(CardTriggerType.AFTER_SCARED,
-                {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
-            for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
-                if (card === undefined) continue;
+            scarer.hasAttacked = true;
+            if(!failed) {
+                const toSend = new ScareAction({
+                    scaredPos: toRunaway.getCardPos()!,
+                    scarerPos: scarer.getCardPos()!,
+                    attackingWith: event.data.attackingWith,
+                    failed,
+                    free: event.isForcedFree(),
 
-                card.callAction(CardTriggerType.AFTER_SCARED,
-                    {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
+                    extra:{
+                        shouldRunaway:scareResult.runaway,
+                    }
+                });
+                for (const user of (usersFromGameIDs[game.gameID] || [])) {
+                    user.send(toSend);
+                }
+
+                if(scareResult.runaway) {
+                    sideTernary(toRunaway.side, game.runawayA, game.runawayB).push(
+                        sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
+                    sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
+
+                    toRunaway.callAction(CardTriggerType.ON_RUNAWAY,
+                        {self: toRunaway, toRunaway, scarer, game: game, stat: event.data.attackingWith});
+                    for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
+                        if (card === undefined) continue;
+
+                        card.callAction(CardTriggerType.ON_RUNAWAY,
+                            {self: card, toRunaway, scarer, game: game, stat: event.data.attackingWith});
+                    }
+                }
+                scared.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
+                    {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
+                for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
+                    if (card === undefined) continue;
+
+                    card.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
+                        {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
+                }
             }
 
 

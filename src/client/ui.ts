@@ -1,7 +1,7 @@
 import p5 from "p5";
-import {clickListener, threeScene, textureLoader} from "./clientConsts.js";
+import {clickListener, textureLoader, threeScene} from "./clientConsts.js";
 import {Color, Sprite, SpriteMaterial, Vector3} from "three";
-import {wait} from "../consts.js";
+import {wait, WaitChain} from "../consts.js";
 
 const drawCallbacks:{[k:number]:Array<(p5:any, scale:number)=>void>} = {};
 
@@ -313,19 +313,5 @@ export const whiteColor = new Color(255,255,255).multiplyScalar(1/255);
 export const redStatColor = new Color(237,33,36).multiplyScalar(1/255);
 export const blueStatColor = new Color(3,163,221).multiplyScalar(1/255);
 export const yellowStatColor = new Color(220,216,33).multiplyScalar(1/255);
-
-export class WaitChain{
-    private chain:Promise<void> = new Promise<void>(r=>r());
-    run(callback:()=>Promise<any>){
-        this.chain=this.chain.then(async ()=>await callback());
-    }
-    async end(){
-        let currentChain;
-        do{
-            currentChain=this.chain;
-            await currentChain;
-        }while(currentChain!==this.chain);
-    }
-}
 
 export const Animations = new WaitChain();

@@ -1,6 +1,6 @@
 import {Side} from "./GameElement.js";
 import {Stat} from "./Card.js";
-import CardData, {CardTriggerType} from "./CardData.js";
+import CardData, {CardTriggerType, type Level} from "./CardData.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{
@@ -33,14 +33,14 @@ export function statTernary<T>(stat:Stat, red:T, blue: T, yellow:T){
 
 //@param ms The amount of milliseconds to wait
 export async function wait(ms:number){
-    let resolve:(v:any)=>void=()=>{};
-    const p = new Promise(r=>resolve=r);
+    let resolve:()=>void=()=>{};
+    const p = new Promise<void>(r=>resolve=r);
     setTimeout(resolve, ms);
     await p;
 }
 
-export function verifyNoDuplicateStrVals(miscDataStrings: { [k: string]: any }, toThrow:string){
-    const checker = new Set();
+export function verifyNoDuplicateStrVals<T>(miscDataStrings: { [k: string]: T }, toThrow:string){
+    const checker = new Set<T|undefined>();
     for(const key in miscDataStrings){
         if(checker.has(miscDataStrings[key])) throw toThrow;
         checker.add(miscDataStrings[key]!);
@@ -64,4 +64,25 @@ export function wrap<P extends {
     data.with(action, (args: P) => {
         return wrapper(oldAction, args);
     });
+}
+
+export function levelOr(level:Level|undefined, or:number){
+
+    return typeof level !== "number" ? or : level;
+}
+
+export class WaitChain {
+    private chain: Promise<void> = new Promise<void>(r => r());
+
+    run(callback: () => Promise<any>) {
+        this.chain = this.chain.then(async () => await callback());
+    }
+
+    async end() {
+        let currentChain;
+        do {
+            currentChain = this.chain;
+            await currentChain;
+        } while (currentChain !== this.chain);
+    }
 }

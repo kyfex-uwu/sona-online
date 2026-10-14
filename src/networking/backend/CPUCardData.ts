@@ -8,6 +8,7 @@ import type Game from "../../Game.js";
 import Card, {CardMiscDataStrings, Stat} from "../../Card.js";
 import {Side} from "../../GameElement.js";
 import {wrap} from "../../consts.js";
+import {cpuPauser} from "./BackendGameServer.js";
 
 export function loadCPUWrappers(){}
 
@@ -15,11 +16,13 @@ function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self
     return (orig:T,data:U)=>{
         if(orig) orig(data);
         if(data.game.isCpu && data.self.side === Side.B)
-            setTimeout(()=>wrapper(orig, data, data.game.player(Side.B) as CPU));
+            cpuPauser.run(()=>
+                wrapper(orig, data, data.game.player(Side.B) as CPU))
     }
 }
 
 wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game}, cpu)=>{
+    console.log("ae")
     parseEvent(new CardAction({
         cardId:card.id,
         actionName: CardActionOptions.BROWNIE_DRAW,
@@ -33,7 +36,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
     const target=game.fieldsA
         .map((card,i)=>[card,i] satisfies [Card|undefined, number])
         .filter(data=>data[0]!==undefined &&
-            ((data[0].stat(Stat.RED)??99)<2 || (data[0].stat(Stat.BLUE)??99)<2 || (data[0].stat(Stat.YELLOW)??99)<2))
+            ((data[0].stat(Stat.RED)??Infinity)<2 || (data[0].stat(Stat.BLUE)??Infinity)<2 || (data[0].stat(Stat.YELLOW)??Infinity)<2))
         .map(v=>v[1]);
     if(game.fieldsA.filter(card=>card!==undefined).length>=2 &&//if there are at least 2 cards on opponent field
             target.length>0)

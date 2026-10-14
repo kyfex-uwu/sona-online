@@ -15,6 +15,7 @@ import {
     CardActionOptions,
     type CLOUD_CAT_PICK,
     type COWGIRL_COYOTE_INCREASE,
+    type DCW_GUESS,
     type DCW_PICK,
     type DCW_SCARE,
     type FOXY_MAGICIAN_GUESS,
@@ -316,7 +317,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.player(other(actor.side))?.send(new CardAction({
                 cardId:data,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                cardData:1
+                cardData:{level:1,shouldGuess:true}
             }));
             return acceptAndAct(event);
         }
@@ -330,7 +331,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 .find(card=>card.id === game!.getMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED))!;
             const guess = (event as CardAction<FOXY_MAGICIAN_GUESS>).data.cardData;
 
-            if(answer.cardData.level !== guess) {
+            if(answer.cardData.level !== guess.level) {
                 event.sender?.send(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
@@ -347,7 +348,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             sendToGame(new CardAction({
                 cardId:-1,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                cardData:guess
+                cardData: {level:guess.level, shouldGuess:false}
             }), game);
             return acceptAndAct(event);
         }
@@ -384,7 +385,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 .find(card=>card.id === pickedData.cardId)!;
 
             let failed=false;
-            const guess = (event as CardAction<DCW_PICK>).data.cardData;
+            const guess = (event as CardAction<DCW_GUESS>).data.cardData;
             if(answer.cardData.level === guess){
                 pickedData.guesses=1;//skip straight to the end
             }else if(pickedData.guesses === 1){
@@ -512,7 +513,10 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext(true);
+            if(scareNext) {
+                scareNext[0].runaway=false;
+                scareNext[1](scareNext[0]);
+            }
 
             game.unfreeze();
             return acceptAndAct(event);
@@ -549,7 +553,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext(true);
+            if(scareNext) scareNext[1](scareNext[0]);
 
             game.unfreeze();
             return acceptAndAct(event);
@@ -584,7 +588,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const scareNext = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
-            if(scareNext) scareNext(true);
+            if(scareNext) scareNext[1](scareNext[0]);
 
             game.unfreeze();
             return acceptAndAct(event);
@@ -606,7 +610,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             }
 
             const next = actor.getMiscData(CardMiscDataStrings.PAUSED_SCARE);
-            if(next) next(true);
+            if(next) next[1](next[0]);
             actor.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, undefined);
             actor.setMiscData(CardMiscDataStrings.PAUSED_SCARE, undefined);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);

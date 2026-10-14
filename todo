@@ -1,5 +1,7 @@
+split after_scared events appropriately
 starting your turn with 5 cards doesnt set drawn to start?
-
+cowgirl + little boss softlocks
+on little boss save, dont scare scarer
 sonic stallion should only be emergency placeable on opponents turn
 cards not being allowed to scare despite seemingly having all the requirements
 ensure noble rat graphics are correct
@@ -22,6 +24,7 @@ https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing 
 figure out why cards shrink sometimes when going in discard (fixed?)
 
 type safe card models
+clean up dependencies, a lot can be moved to dev dependencies
 
 ###
 in crisis mode indicator

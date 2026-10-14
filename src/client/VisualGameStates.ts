@@ -5,7 +5,7 @@ import {other, type Side} from "../GameElement.js";
 import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {Stat} from "../Card.js";
-import {sideTernary, wait} from "../consts.js";
+import {levelOr, sideTernary, wait} from "../consts.js";
 import {camera, clickListener, threeScene} from "./clientConsts.js";
 import {Color, Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
@@ -202,9 +202,9 @@ export class VTurnState extends VisualGameState<TurnState>{
                             StateFeatures.FIELDS_PLACEABLE);
                         let maxLevel = fieldCards.map(field => field.getCard())
                             .filter(card => card !== undefined)
-                            .reduce((a, c) => Math.max(a, c.logicalCard.cardData.level), 0) + 1;
+                            .reduce((a, c) => Math.max(a, levelOr(c.logicalCard.cardData.level,0)), 0) + 1;
                         for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                            if (card.logicalCard.cardData.level <= maxLevel) {
+                            if (levelOr(card.logicalCard.cardData.level,Infinity) <= maxLevel) {
                                 toHighlight.add(card);
                             }
                         }
@@ -245,7 +245,7 @@ export class VTurnState extends VisualGameState<TurnState>{
         if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
         const toReturn = card.logicalCard.cardData.level === 1 ||
             sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
-                (field.getCard()?.logicalCard.cardData.level ?? 0)+1 >= card.logicalCard.cardData.level);
+                (levelOr(field.getCard()?.logicalCard.cardData.level,0))+1 >= levelOr(card.logicalCard.cardData.level,0));
         if(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
             {self:card.logicalCard, game:card.game.getGame(), normallyValid:toReturn})??false) return true;
         return toReturn;
@@ -321,20 +321,16 @@ export class VGuiState extends VisualGameState<TurnState>{
     }
     public readonly cards:SuperficialVisualCard[]=[];
     addCards(cards:{card:SuperficialVisualCard|string, position:Vector2, scale?:number}[], onPick:(card:SuperficialVisualCard)=>void){
-        const newModels:SuperficialVisualCard[] = [];
+        const newCards:SuperficialVisualCard[] = [];
         const listener = clickListener(() => {
-            const intersects = this.game.raycaster.intersectObjects(newModels
-                .map(card=>card.model));
-            if (intersects[0] !== undefined) {
-                onPick(newModels.find(card=>{
-                    return card.logicalCard.id === (intersects[0]!.object.parent!.parent!.parent! as Group)
-                        .userData.card.logicalCard.id;
-                })!);
+            const intersects = this.game.raycastCards(newCards);
+            if (intersects) {
+                onPick(newCards.find(card=>card.logicalCard.id === intersects.logicalCard.id)!);
                 return true;
             }
 
             return false;
-        });
+        }, -1);
 
         for (let i = 0; i < cards.length; i++) {
             let data = cards[i]!.card;
@@ -352,7 +348,7 @@ export class VGuiState extends VisualGameState<TurnState>{
             newCard.scale = new Vector3(cards[i]!.scale??1,cards[i]!.scale??1,cards[i]!.scale??1).multiplyScalar(0.05);
 
             this.cards.push(newCard);
-            newModels.push(newCard);
+            newCards.push(newCard);
         }
 
         return listener;

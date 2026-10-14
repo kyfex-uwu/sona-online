@@ -118,10 +118,7 @@ export default class FieldMagnet extends CardMagnet{
                             }
                         }else{
                             if(state.attackData.type !== undefined && this.card.logicalCard.stat(getVictim(state.attackData.type)) !== undefined) {
-                                const intersects = this.game.raycaster.intersectObjects([
-                                    this.card.model
-                                ]);
-                                if (intersects[0] !== undefined) {
+                                if (this.game.raycastCards([this.card])) {
                                     if (!this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
                                         this.game.sendEvent(new ScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],

@@ -28,7 +28,7 @@ website.get("/api/flags", (req, res)=>{
     res.send(JSON.stringify(toSend));
 });
 website.use(express.text());
-website.post("/api/flags/:flag", (req, res)=>{
+website.post("/api/flags/:flag", (req)=>{
     flags[req.params.flag].val=JSON.parse(req.body);
 });
 

@@ -10,15 +10,15 @@ function update(key:string, val:any){
     console.log(val)
     fetch(`/api/flags/${key}`, {method:"POST", body:JSON.stringify(val)});
 }
-fetch("/api/flags").then((res)=>res.json()).then(obj=>{
+fetch("/api/flags").then((res)=>res.json()).then((obj:{[k:string]:any})=>{
     for(const key in obj)
         flags[key] = obj[key];
 console.log(flags)
     html`${()=>Object.keys(flags).map(key=>{
         return html`${descriptions[key]||key} ${({
-            //@ts-ignore
+            //@ts-expect-error
             number:html`<input type="number" value="${flags[key]}" @input="${(e)=> update(key, parseFloat(e.target.value))}"`,
-            //@ts-ignore
+            //@ts-expect-error
             boolean:html`<input type="checkbox" checked="${()=>flags[key]}" @click="${(e)=> update(key, e.target.checked)}">`,
         })[typeof(flags[key]) as "number"|"boolean"]}`;
     })}`(document.getElementById("root")!);

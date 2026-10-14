@@ -4,10 +4,9 @@ import {CardAction, ScareAction} from "./networking/Events.js";
 
 let globalID=0;
 
-export enum InterruptScareResult{
-    PASSTHROUGH,//nothing happens (the scare continues as normal)
-    PREVENT_SCARE,//a turn is not consumed and the scare does not happen
-    FAIL_SCARE,//a turn is consumed, but the scare does not happen
+export type ScareResultStruct = {
+    determineScare:"stats"|"force_fail",
+    runaway:boolean
 }
 export enum ScareEffectOwner{
     SCARER_ONLY=4,//first
@@ -28,7 +27,9 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
         {self:Card, game:Game}, void>();
     public static readonly PLACED = new CardTriggerType<
         {self:Card,game:Game}, void>();
-    public static readonly AFTER_SCARED = new CardTriggerType<
+    public static readonly ON_RUNAWAY = new CardTriggerType<
+        {self:Card, toRunaway:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
+    public static readonly AFTER_SCARE_ATTEMPT = new CardTriggerType<
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game}, void>();
     public static readonly AFTER_ACTION = new CardTriggerType<
         {self:Card, game:Game}, void>();
@@ -38,7 +39,8 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
         {self:Card,game:Game}, void>();
     public static readonly INTERRUPT_SCARE = new CardTriggerType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(succeeded:boolean)=>void}, InterruptScareResult>();
+        //return true if it should freeze
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(data:ScareResultStruct)=>void, result:ScareResultStruct}, true|void>();
     public static readonly SCARE_INTERRUPT_EFFECT_TYPE = new CardTriggerType<
         //Should be defined along with INTERRUPT_SCARE
         {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, event:ScareAction}, ScareEffectOwner>();
@@ -48,6 +50,7 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
     public static readonly TURN_START = new CardTriggerType<
         {self:Card,game:Game}, void>();
     public static readonly IS_FREE = new CardTriggerType<{}, void>();
+    public static readonly IS_OVERWEIGHT = new CardTriggerType<{}, void>();
     public static readonly IS_SOMETIMES_FREE = new CardTriggerType<
         {self:Card,game:Game}, boolean>();
     public static readonly SHOULD_SHOW_HAND = new CardTriggerType<
@@ -62,7 +65,7 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
 export enum Species{
     CANINE,
     FELINE,
-    BAT,
+    CHIROPTERA,
     MUSTELOID,
     LAGOMORPH,
     EQUINE,
@@ -71,10 +74,30 @@ export enum Species{
     RODENTIA,
     VULPES,
     AMPHIBIAN,
+    DRACO,
+    LIZARD,
+    UROCYON,
+
+    UNKNOWN,
+    BOVIDAE,
+    XENARTHRA,
+    URSIDAE,
+    AVES,
+    FISH,
+    SUIDAE,
+    CERVIDAE,
+    SERPENT,
+    PRIMATE,
+}
+export enum Temperament{
+    DOMESTIC,
+    WILD,
+    TAME,
+    FERAL,
 
     UNKNOWN,
 }
-export type Level=1|2|3;
+export type Level=1|2|3|"?";
 
 //The data of a card
 export default class CardData{
@@ -84,6 +107,7 @@ export default class CardData{
     public readonly level:Level;
     public readonly name:string;
     public readonly species;
+    public readonly temperament;
 
     private cardActions:{ [k:number]:any}={};
 
@@ -99,13 +123,15 @@ export default class CardData{
                 stats:[number|undefined,number|undefined,number|undefined],
                 level:Level,
                 species:Species,
-                imagePath:string=name+".jpg") {
+                temperament:Temperament,
+                imagePath:string) {
         this.imagePath=imagePath;
         this.stats=stats;
         this.level=level;
         this.id=globalID++;
         this.name=name;
         this.species=species;
+        this.temperament=temperament;
     }
 
     with<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>, value:(params:P)=>R){
@@ -115,9 +141,10 @@ export default class CardData{
     setFree(){
         return this.with(CardTriggerType.IS_FREE, ()=>{});
     }
-    isFree(){
-        return !!this.getAction(CardTriggerType.IS_FREE);
+    setOverweight(){
+        return this.with(CardTriggerType.IS_OVERWEIGHT, ()=>{});
     }
+
     //{@link Card.getAction} should be preferred
     getAction<P extends { [k: string]: any; }, R>(type:CardTriggerType<P, R>):((params:P)=>R)|undefined{
         return this.cardActions[type.id];

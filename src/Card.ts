@@ -1,6 +1,6 @@
 import {type GameElement, Side} from "./GameElement.js";
-import CardData, {CardTriggerType} from "./CardData.js";
-import {sideTernary, statTernary, verifyNoDuplicateStrVals} from "./consts.js";
+import CardData, {CardTriggerType, type ScareResultStruct} from "./CardData.js";
+import {statTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {addTempStats} from "./Cards.js";
 import type {ScareAction} from "./networking/Events.js";
@@ -30,7 +30,7 @@ export const CardMiscDataStrings = {
     FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as CardMiscDataString<Set<number>>,
     NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<ScareAction>,
 
-    PAUSED_SCARE:"pausedScare" as CardMiscDataString<(succeeded:boolean) => void>,
+    PAUSED_SCARE:"pausedScare" as CardMiscDataString<[ScareResultStruct, (data:ScareResultStruct) => void]>,
     ALREADY_ACTIONED:"alreadyAttacked" as CardMiscDataString<boolean>,
     TEMP_STAT_UPGRADES: "tempStatUpgrades" as CardMiscDataString<{ [source: string]: [number, number, number] }>
 };

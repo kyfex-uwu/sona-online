@@ -1,4 +1,4 @@
-import CardData, {CardTriggerType, InterruptScareResult, ScareEffectOwner} from "../../CardData.js";
+import CardData, {CardTriggerType, ScareEffectOwner} from "../../CardData.js";
 import cards from "../../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "../Events.js";
 import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
@@ -48,9 +48,9 @@ customAllowWhen(cards["og-005"]!, CardActionOptions.BROWNIE_DRAW, {
 wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(sideTernary(self.side, game.fieldsB, game.fieldsB)
         .filter(card=>card !== undefined)
-        .filter(card=>(card?.stat(Stat.RED)??99)<2 ||
-            (card?.stat(Stat.BLUE)??99)<2 ||
-            (card?.stat(Stat.YELLOW)??99)<2).length<2)
+        .filter(card=>(card?.stat(Stat.RED)??Infinity)<2 ||
+            (card?.stat(Stat.BLUE)??Infinity)<2 ||
+            (card?.stat(Stat.YELLOW)??Infinity)<2).length<2)
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
@@ -58,16 +58,18 @@ wrap(cards["og-015"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self
     return ScareEffectOwner.INTRINSIC;
 });
 wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
-                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
+                                                         {self, scared, scarer, stat, game, origEvent, next, result})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next, result});
 
-    if(self!==scared) return InterruptScareResult.PASSTHROUGH;
+    if(self!==scared) return;
 
     if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === undefined) {
         game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.LITTLEBOSS_IMMUNITY);
-        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, (succeeded:boolean)=>{
-            next(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE) === true ? false : succeeded);
-        });
+        self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, (data)=>{
+            if(self.getMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE))
+                data.runaway=false;
+            next(data);
+        }]);
 
         game.player(self.side)?.send(new CardAction({
             cardId:-1,
@@ -78,26 +80,27 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         game.freeze((event)=>
             event.sender === game.player(self.side) &&
             event instanceof CardAction);
-        return InterruptScareResult.PREVENT_SCARE;
-    }else return InterruptScareResult.PASSTHROUGH;
+        return true;
+    }
 });
-wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scared, scarer, stat, game})=>{
+wrap(cards["og-015"]!, CardTriggerType.AFTER_SCARE_ATTEMPT, (orig, {self, scared, scarer, stat, game})=>{
     if(orig) orig({self, scared, scarer, stat, game});
-    self.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, undefined)
+    if(scared === self)//todo: just recheck this whole thing ngl
+        self.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, false);
 });
 wrap(cards["og-020"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
     return ScareEffectOwner.SCARED_TO_SCARER;
 });
 wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
-                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent, next});
+                                                         {self, scared, scarer, stat, game, origEvent, next, result})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next, result});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined ||
         self.side === scarer.side)
-        return InterruptScareResult.PASSTHROUGH;
+        return;
 
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
-    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_RETARGET);
     if(stat !== "card")
         game.player(self.side)?.send(new CardAction({
@@ -113,12 +116,12 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event instanceof CardAction &&
         event.sender === game.player(self.side) &&
         event.data.actionName === CardActionOptions.NOBLE_RETARGET);
-    return InterruptScareResult.PREVENT_SCARE;
+    return true;
 })
-wrap(cards["og-022"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
-    if(orig) orig({self, scarer, scared, stat, game});
+wrap(cards["og-022"]!, CardTriggerType.ON_RUNAWAY, (orig, {self, scarer, toRunaway, stat, game})=>{
+    if(orig) orig({self, scarer, toRunaway: toRunaway, stat, game});
 
-    if(scared === self) draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
+    if(toRunaway === self) draw(game, undefined, self.side, false, game.player(self.side));//todo: this should be a card action i think. just for organization
 });
 wrap(cards["og-024"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
@@ -152,20 +155,20 @@ wrap(cards["og-029"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self
     return ScareEffectOwner.SCARER_ONLY;
 });
 wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
-                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+                                                         {self, scared, scarer, stat, game, origEvent, next, result})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent, next, result});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined)
-        return InterruptScareResult.PASSTHROUGH;
+        return;
 
     if(!(game.state instanceof TurnState && //is a turn
         game.state.turn === self.side && // is your turn
         !sideTernary(self.side, game.fieldsA, game.fieldsB).some(card=>card?.hasAttacked) && //first scare attempt
         stat !== "card"//we can actually defend against this
     ))
-        return InterruptScareResult.PASSTHROUGH;
+        return;
 
-    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.BROY_WEASLA_INCREASE);
     game.freeze(event=>
         event instanceof CardAction &&
@@ -181,10 +184,10 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         }
     }));
 
-    return InterruptScareResult.PREVENT_SCARE;
+    return true;
 });
-wrap(cards["og-029"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
-    if(orig) orig({self, scared, scarer, stat, game});
+wrap(cards["og-029"]!, CardTriggerType.ON_RUNAWAY, (orig, {self, scarer, toRunaway, stat, game})=>{
+    if(orig) orig({self, toRunaway: toRunaway, scarer, stat, game});
 
     const target = self.getMiscData(CardMiscDataStrings.BROY_WEASLA_TARGET);
     if(target === undefined) return;
@@ -247,20 +250,20 @@ wrap(cards["og-035"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self
     return ScareEffectOwner.SCARED_ONLY;
 });
 wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
-                                                         {self, scared, scarer, stat, game, origEvent, next})=>{
-    if(orig) orig({self, scared, scarer, stat, game, origEvent,next});
+                                                         {self, scared, scarer, stat, game, origEvent, next, result})=>{
+    if(orig) orig({self, scared, scarer, stat, game, origEvent,next, result});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined)
-        return InterruptScareResult.PASSTHROUGH;
+        return;
 
     if(!(game.state instanceof TurnState && //is a turn
         game.state.turn !== self.side && // is opponents turn
         self.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) !== true &&//havent done this already
         stat !== "card"//we can actually defend against this
     ))
-        return InterruptScareResult.PASSTHROUGH;
+        return;
 
-    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, next);
+    self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
     self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,
         sideTernary(origEvent.data.scaredPos[1], game.fieldsA, game.fieldsB)[origEvent.data.scaredPos[0]-1]);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.COWGIRL_COYOTE_INCREASE);
@@ -278,10 +281,10 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         }
     }));
 
-    return InterruptScareResult.PREVENT_SCARE;
+    return true;
 });
-wrap(cards["og-035"]!, CardTriggerType.AFTER_SCARED, (orig, {self, scarer, scared, stat, game})=>{
-    if(orig) orig({self, scared, scarer, stat, game});
+wrap(cards["og-035"]!, CardTriggerType.ON_RUNAWAY, (orig, {self, scarer, toRunaway, stat, game})=>{
+    if(orig) orig({self, toRunaway: toRunaway, scarer, stat, game});
 
     const target = self.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET);
     self.setMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET,undefined);
