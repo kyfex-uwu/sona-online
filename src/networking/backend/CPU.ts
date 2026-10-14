@@ -8,7 +8,9 @@ import {parseEvent} from "./BackendServer.js";
 import {
     type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
-    type COWGIRL_COYOTE_INCREASE_DATA, type DCW_GUESS, type FOXY_MAGICIAN_GUESS,
+    type COWGIRL_COYOTE_INCREASE_DATA,
+    type DCW_GUESS,
+    type FOXY_MAGICIAN_GUESS,
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
 import {levelOr} from "../../consts.js";

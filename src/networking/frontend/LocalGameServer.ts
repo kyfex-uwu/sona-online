@@ -31,7 +31,8 @@ import {
     particleArc,
     particleStreak,
     redStatColor,
-    registerDrawCallback, whiteColor,
+    registerDrawCallback,
+    whiteColor,
     yellowStatColor
 } from "../../client/ui.js";
 import {BeforeGameState, TurnState} from "../../GameStates.js";

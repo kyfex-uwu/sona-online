@@ -17,11 +17,9 @@ import {successOrFail} from "../networking/Server.js";
 import {sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
-import {type Cancellable, EndType, isCancellable} from "./VisualGameStateTools.js";
-import type VisualCardClone from "./VisualCardClone.js";
+import {type Cancellable, isCancellable} from "./VisualGameStateTools.js";
 import ElementScene from "./ElementScene.js";
 import {ActionCounter} from "./ActionCounter.js";
-import SuperficialVisualCard from "./SuperficialVisualCard.js";
 
 const pointer = new Vector2();
 

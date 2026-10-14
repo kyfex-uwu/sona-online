@@ -1,7 +1,8 @@
 import {
     AcceptEvent,
     Event,
-    GameEvent, GameWinDefaultEvent,
+    GameEvent,
+    GameWinDefaultEvent,
     InvalidEvent,
     PerchanceEvent,
     RejectEvent,
