@@ -16,10 +16,8 @@ fetch("/api/flags").then((res)=>res.json()).then((obj:{[k:string]:any})=>{
 console.log(flags)
     html`${()=>Object.keys(flags).map(key=>{
         return html`${descriptions[key]||key} ${({
-            //@ts-expect-error
-            number:html`<input type="number" value="${flags[key]}" @input="${(e)=> update(key, parseFloat(e.target.value))}"`,
-            //@ts-expect-error
-            boolean:html`<input type="checkbox" checked="${()=>flags[key]}" @click="${(e)=> update(key, e.target.checked)}">`,
+            number:html`<input type="number" value="${flags[key]}" @input="${(e:InputEvent)=> update(key, parseFloat((e.target! as HTMLInputElement).value))}"`,
+            boolean:html`<input type="checkbox" checked="${()=>flags[key]}" @click="${(e:InputEvent)=> update(key, (e.target! as HTMLInputElement).checked)}">`,
         })[typeof(flags[key]) as "number"|"boolean"]}`;
     })}`(document.getElementById("root")!);
 })

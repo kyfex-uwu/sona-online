@@ -52,7 +52,7 @@ import {
 } from "../CardActionOption.js";
 import {GameMiscDataStrings} from "../../Game.js";
 import {log, threeScene} from "../../client/clientConsts.js";
-import {waitFor} from "./LocalServer.js";
+import {localWaiter} from "./LocalServer.js";
 import {setScene} from "../../index.js";
 import {GameScene} from "../../client/scenes/GameScene.js";
 import SuperficialVisualCard from "../../client/SuperficialVisualCard.js";
@@ -192,9 +192,11 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     }
 
     await Animations.end();
-    debouncer.run(() => new Promise(r => {
+    debouncer.run(() => new Promise<void>(async r => {
+        await wait(0);
         gameReceiveFromServerVisible(event);
-        setTimeout(r, 100);
+        await wait(100);
+        r();
     }));
 
     if(event instanceof ServerDumpEvent){
@@ -228,6 +230,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
         Animations.run(async ()=>{
             console.log("fish")
             game.state.decrementTurn(true);
+            if(game.state instanceof VTurnState) console.log(game.state.currTurn, game.state.getNonVisState().turn)
         });
     }else if(event instanceof ScareAction){
         const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
@@ -270,6 +273,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     sideTernary(card.logicalCard.side, game.deckA, game.deckB).removeCard(card);
                     sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
                     card.flipFaceup();
+                    sideTernary(card.logicalCard.side, game.deckA, game.deckB).shuffle();
                 }
             }break;
             case CardActionOptions.AMBER_PICK:{
@@ -304,6 +308,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 removeFrom.removeCard(cardToRemove);
                 cardToRemove.flipFaceup();
                 sideTernary(data.side!, game.handA, game.handB).addCard(cardToRemove);
+                sideTernary(data.side!, game.deckA, game.deckB).shuffle();
             }break;
             case CardActionOptions.YASHI_REORDER:{
                 const data = (event as CardAction<YASHI_REORDER>).data.cardData;
@@ -336,7 +341,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             }));
                             guess=i+1;
 
-                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                            localWaiter.waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                                 (guessEvent)=>{
                                     state = (guessed === undefined) ? "guess" : "end";
                                     guessed=i+1;
@@ -359,6 +364,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     onEnd:(self,type)=>{
                         release();
                         endWaiter.resolve();
+                        sideTernary(game.getMySide(), game.deckB, game.deckA).shuffle();
                     },
                     init:(self)=>{
                         self.blackBg(true);
@@ -421,11 +427,11 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             network.sendToServer(new CardAction({
                                 cardId: -1,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
-                                cardData: {level:(i +1) as Level}
+                                cardData: (i +1) as Level
                             }));
                             guess=i+1;
 
-                            waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                            localWaiter.waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 (guessEvent)=>{
                                     state = "end";
                                     Animations.run(()=>endWaiter);
@@ -446,6 +452,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     onEnd:(self,type)=>{
                         release();
                         endWaiter.resolve();
+                        sideTernary(game.getMySide(), game.deckB, game.deckA).shuffle();
                     },
                     init:(self)=>{
                         self.blackBg(true);

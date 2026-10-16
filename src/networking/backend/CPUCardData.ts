@@ -2,12 +2,12 @@ import cards from "../../Cards.js";
 import {CardTriggerType} from "../../CardData.js";
 import {parseEvent} from "./BackendServer.js";
 import {CardAction} from "../Events.js";
-import {CardActionOptions} from "../CardActionOption.js";
-import CPU, {calcStrength, randFrom} from "./CPU.js";
+import {CardActionOptions, type DCW_GUESS} from "../CardActionOption.js";
+import CPU, {calcStrength} from "./CPU.js";
 import type Game from "../../Game.js";
 import Card, {CardMiscDataStrings, Stat} from "../../Card.js";
 import {Side} from "../../GameElement.js";
-import {wrap} from "../../consts.js";
+import {randFrom, wrap} from "../../consts.js";
 import {cpuPauser} from "./BackendGameServer.js";
 
 export function loadCPUWrappers(){}
@@ -22,7 +22,6 @@ function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self
 }
 
 wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game}, cpu)=>{
-    console.log("ae")
     parseEvent(new CardAction({
         cardId:card.id,
         actionName: CardActionOptions.BROWNIE_DRAW,
@@ -76,10 +75,14 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
         cardData: picked.id
     },cpu));
 
-    cpu.miscData.dcwData = {
-        targetLevel:picked.cardData.level,
-        lastGuess:false
-    }
+    cpu.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+        (guessEvent) => {
+            const guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
+            if (guess === undefined || guess !== picked.cardData.level)
+                cpu.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                    () => false);
+            return false;
+        });
 }));
 
 wrap(cards["og-043"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{

@@ -317,7 +317,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.player(other(actor.side))?.send(new CardAction({
                 cardId:data,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                cardData:{level:1,shouldGuess:true}
+                cardData:undefined
             }));
             return acceptAndAct(event);
         }
@@ -331,7 +331,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 .find(card=>card.id === game!.getMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED))!;
             const guess = (event as CardAction<FOXY_MAGICIAN_GUESS>).data.cardData;
 
-            if(answer.cardData.level !== guess.level) {
+            if(answer.cardData.level !== guess) {
                 event.sender?.send(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
@@ -348,7 +348,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             sendToGame(new CardAction({
                 cardId:-1,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                cardData: {level:guess.level, shouldGuess:false}
+                cardData: guess
             }), game);
             return acceptAndAct(event);
         }
@@ -397,7 +397,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 event.sender?.send(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
-                    justification: ClarificationJustification.FOXY_MAGICIAN
+                    justification: ClarificationJustification.DCW
                 }));
                 game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(guesserSide)],
                     failed?CardActionOptions.DCW_SCARE:undefined);

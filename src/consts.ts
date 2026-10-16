@@ -1,6 +1,7 @@
 import {Side} from "./GameElement.js";
 import {Stat} from "./Card.js";
 import CardData, {CardTriggerType, type Level} from "./CardData.js";
+import type {Event} from "./networking/Events.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{
@@ -49,7 +50,7 @@ export function verifyNoDuplicateStrVals<T>(miscDataStrings: { [k: string]: T },
 
 export function externalPromise<T=void>(){
     let resolve:(v:T)=>void=undefined!;
-    //@ts-expect-error
+    //@ts-expect-error its fixed in the next line
     const toReturn:
         Promise<T> & {resolve:(v:T)=>void} = new Promise<T>(r=>resolve=r);
     toReturn.resolve=resolve;
@@ -85,4 +86,31 @@ export class WaitChain {
             await currentChain;
         } while (currentChain !== this.chain);
     }
+}
+
+export class EventWaiter{
+    private readonly waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
+
+    /**
+     *
+     * @param filter Returns true if the event is hat you're looking for
+     * @param callback Performs some action, and returns if the event should be handled normally (if not, it is consumed)
+     */
+    waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
+        this.waitingFor.push({filter,callback});
+    }
+    process(event:Event<any>){
+        for(let i=0;i<this.waitingFor.length;i++){
+            if(this.waitingFor[i]!.filter(event)){
+                const processNormally = this.waitingFor[i]!.callback(event);
+                this.waitingFor.splice(i,1);
+                return processNormally;
+            }
+        }
+        return true;
+    }
+}
+
+export function randFrom<T>(a: T[]): T | undefined {
+    return a[Math.floor(Math.random() * a.length)];
 }

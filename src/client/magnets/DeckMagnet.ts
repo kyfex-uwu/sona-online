@@ -7,13 +7,28 @@ import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
-import {sideTernary} from "../../consts.js";
-import type {CardWithRot} from "./RunawayMagnet.js";
+import {externalPromise, shuffled, sideTernary, wait} from "../../consts.js";
+import type {CardWithTransform} from "./RunawayMagnet.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
+import {Animations} from "../ui.js";
 
 export default class DeckMagnet extends CardMagnet{
-    private cards:Array<CardWithRot> = [];
+    private cards:Array<CardWithTransform> = [];
     //Returns a snapshot of the current cards. DOES NOT return the actual data structure, this will not update
+    private shuffleData:{
+        cards:{
+            which:number,
+            outPos:Vector3,
+            angle:number,
+            turns:number,
+            time:number,
+            k:number,
+        }[],
+        waiter?:ReturnType<typeof externalPromise<void>>
+    }={
+        cards:[]
+    };
+    private shuffling=false;
     public getCards(){ return this.cards.map(data=>data.card);}
     /**
      * Creates a deck magnet
@@ -56,15 +71,11 @@ export default class DeckMagnet extends CardMagnet{
 
         sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB).push(card.logicalCard);
 
-        card.position.copy(this.position);
-        card.position.add(new Vector3(Math.random()*2-1,0,Math.random()*2-1));
         const rotAmt = Math.random()*0.04-0.02;
         const newRot = new Euler().setFromQuaternion(this.rotation);
         newRot.y+=rotAmt;
-        card.rotation.copy(new Quaternion().setFromEuler(newRot));
         card.flipFacedown();
-        this.cards.push({card, rot:rotAmt});
-        this.position.add(CardMagnet.offs);
+        this.cards.push({card, rot:rotAmt, pos:new Vector3(Math.random()*2-1,0,Math.random()*2-1)});
 
         super.addCard(card);
         return true;
@@ -74,12 +85,7 @@ export default class DeckMagnet extends CardMagnet{
         const deck = sideTernary(this.getSide(), this.game.getGame().deckA, this.game.getGame().deckB);
         deck.splice(deck.indexOf(card.logicalCard),1);
 
-        let index = this.cards.findIndex(data=>data.card===card);
-        this.cards.splice(index,1);
-        this.position.sub(CardMagnet.offs);
-        for(let i=index;i<this.cards.length;i++){
-            this.cards[i]?.card.position.sub(CardMagnet.offs);
-        }
+        this.cards.splice(this.cards.findIndex(data=>data.card===card),1);
 
         return true;
     }
@@ -103,17 +109,68 @@ export default class DeckMagnet extends CardMagnet{
 
     visualTick() {
         super.visualTick();
-        for(const data of this.cards){
-            data.card.rotation = this.rotation.clone();
-            data.card.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,data.rot,0)))
+        for(let i=0;i<this.cards.length;i++){
+            this.cards[i]!.card.rotation = this.rotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,this.cards[i]!.rot,0)));
+            this.cards[i]!.card.position = this.position.clone().add(this.cards[i]!.pos).add(CardMagnet.offs.clone().multiplyScalar(i));
         }
-        this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
+        if(this.shuffling){
+            let finished=false;
+            for (const data of this.shuffleData.cards) {
+                finished=false;
+
+                const card=this.cards[data.which]!.card;
+                const k=data.k/data.time;
+                if(k<1)
+                    card.position = card.position.add(data.outPos.clone().multiplyScalar(1-Math.abs(k-0.5)*2));
+                else
+                    continue;
+                card.rotation = new Quaternion().setFromEuler(new Euler(
+                    Math.cos(data.angle)*Math.abs(k*0.1-0.05), data.turns * Math.PI * k, Math.sin(data.angle)*Math.abs(k*0.1-0.05), "YXZ"));
+
+                data.k++;
+                if(data.k>=data.time) finished=true;
+            }
+
+            if(finished)
+                this.shuffleData.waiter!.resolve();
+        }
+        this.utilityCard.position.copy(this.position);
         this.utilityCard.rotation.copy(this.rotation);
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.DECK_DRAWABLE) &&
             this.getSide() === this.game.getMySide() &&
             this.game.selectedCard === undefined &&
             sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5,
             highlightLock);
+    }
+
+    async shuffle(){
+        if(this.shuffling) return;
+        this.shuffling=true;
+
+        Animations.run(async ()=> {
+            const order = shuffled(new Array(this.cards.length).fill(0).map((_,i)=>i));
+            this.shuffleData={
+                cards:[],
+                waiter:externalPromise(),
+            };
+
+            for(let i=0;i<order.length;i++){
+                const outDist = 60+Math.random()*30;
+                const angle = Math.random()*Math.PI*2;
+                this.shuffleData.cards.push({
+                    which:order[i]!,
+                    outPos: new Vector3(Math.cos(angle)*outDist, 80, Math.sin(angle)*outDist),
+                    angle,
+                    turns: Math.floor(Math.random()*4+2),
+                    time:25+Math.random()*10,
+                    k:0,
+                });
+                await wait(20+Math.random()*20);
+            }
+
+            await this.shuffleData.waiter;
+            this.shuffling=false;
+        });
     }
 }
 const highlightLock = newHighlightLock();

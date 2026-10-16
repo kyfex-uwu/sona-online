@@ -9,9 +9,9 @@ import {DiscardAction} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
 
-export type CardWithRot = {card:VisualCard,rot:number}
+export type CardWithTransform = {card:VisualCard,rot:number, pos:Vector3}
 export default class RunawayMagnet extends CardMagnet{
-    private cards:Array<CardWithRot> = [];
+    private cards:Array<CardWithTransform> = [];
 
     /**
      * Creates a runaway magnet
@@ -46,14 +46,10 @@ export default class RunawayMagnet extends CardMagnet{
     addCard(card:VisualCard){
         sideTernary(this.getSide(), this.game.getGame().runawayA, this.game.getGame().runawayB).push(card.logicalCard);
 
-        card.position.copy(this.position);
-        card.position.add(new Vector3(Math.random()*14-7,0,Math.random()*14-7));
         const rotAmt = (Math.random()-0.5)*0.1;
         const newRot = new Euler().setFromQuaternion(this.rotation);
         newRot.y+=rotAmt;
-        card.rotation.copy(new Quaternion().setFromEuler(newRot))
-        this.cards.push({card,rot:rotAmt});
-        this.position.add(CardMagnet.offs);
+        this.cards.push({card,rot:rotAmt,pos:new Vector3(Math.random()*14-7,0,Math.random()*14-7)});
         card.setHolder(this);
 
         super.addCard(card);
@@ -68,10 +64,6 @@ export default class RunawayMagnet extends CardMagnet{
         if(index !== -1) return false;
         takeFrom.splice(index,1);
         this.cards.splice(index,1);
-        this.position.sub(CardMagnet.offs);
-        for(let i=index;i<this.cards.length;i++){
-            this.cards[i]?.card.position.sub(CardMagnet.offs);
-        }
 
         return true;
     }
@@ -82,11 +74,12 @@ export default class RunawayMagnet extends CardMagnet{
 
     visualTick() {
         super.visualTick();
-        for(const data of this.cards){
-            data.card.rotation = this.rotation.clone();
-            data.card.rotation.multiply(new Quaternion().setFromEuler(new Euler(0,data.rot,0)));
+        for(let i=0;i<this.cards.length;i++){
+            this.cards[i]!.card.rotation = this.rotation.clone().multiply(new Quaternion().setFromEuler(new Euler(0,this.cards[i]!.rot,0)));
+            this.cards[i]!.card.position = this.position.clone().add(this.cards[i]!.pos).add(CardMagnet.offs.clone().multiplyScalar(i));
         }
-        this.utilityCard.position.copy(this.position).sub(CardMagnet.offs.clone().multiplyScalar(this.cards.length));
+        this.utilityCard.position.copy(this.position);
+        this.utilityCard.rotation.copy(this.rotation);
         this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.CAN_DISCARD_FROM_HAND) && this.getSide() === this.game.getMySide(),
             highlightLock);
     }

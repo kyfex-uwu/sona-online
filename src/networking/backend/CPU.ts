@@ -1,23 +1,28 @@
 import Game, {GameMiscDataStrings} from "../../Game.js";
-import {CardAction, DrawAction, type Event, PassAction, PlaceAction, ScareAction, StartRequestEvent} from "../Events.js"
+import {
+    CardAction,
+    ClarificationJustification,
+    ClarifyCardEvent,
+    DrawAction,
+    type Event,
+    PassAction,
+    PlaceAction,
+    ScareAction,
+    StartRequestEvent
+} from "../Events.js"
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {Side} from "../../GameElement.js";
-import cards from "../../Cards.js";
+import cards, {specialCards} from "../../Cards.js";
 import Card, {getVictim, Stat} from "../../Card.js";
 import {parseEvent} from "./BackendServer.js";
 import {
     type BROY_WEASLA_INCREASE_DATA,
     CardActionOptions,
     type COWGIRL_COYOTE_INCREASE_DATA,
-    type DCW_GUESS,
     type FOXY_MAGICIAN_GUESS,
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
-import {levelOr} from "../../consts.js";
-
-export function randFrom<T>(a:T[]):T|undefined{
-    return a[Math.floor(Math.random()*a.length)];
-}
+import {EventWaiter, levelOr, randFrom, shuffled} from "../../consts.js";
 
 export function canBeat(attacker:Card, attacked:Card){
     if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? Infinity) ) return Stat.RED;
@@ -36,16 +41,18 @@ export function calcWeakness(attacked:Card, attackers:Card[]){
 export default class CPU{
     public game:Game=undefined!;
     public readonly generatedDeck:string[];
-    public readonly miscData:{
-        dcwData?:{ targetLevel:Level, lastGuess:boolean }
-    } = {};
+    public readonly waiter = new EventWaiter();
     constructor() {
-        this.generatedDeck = new Array(19).fill(0).map(_=>"og-"+Math.floor(Math.random()*44+1).toString().padStart(3,"0"))
-            .concat(randFrom(Object.values(cards).filter(card=>card.level === 1))!.name);
+        this.generatedDeck = new Array(19).fill(0).map(()=>randFrom(Object.values(cards)
+                .filter(card=>!specialCards.has(card.name)))!)
+            .concat(randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && card.level === 1))!)
+            .map(card=>card.name);
     }
 
     private sentStartRequest=false;
     send(event:Event<any>){
+        if(!this.waiter.process(event)) return;
+
         if(event instanceof DrawAction){
             if(!this.sentStartRequest &&
                 this.game.state instanceof BeforeGameState &&
@@ -67,42 +74,41 @@ export default class CPU{
         }else if(event instanceof CardAction){
             switch(event.data.actionName){
                 case CardActionOptions.DCW_GUESS:{
-                    const data = event.data.cardData as DCW_GUESS;
-                    console.log(data)
-                    if(data===undefined) {
-                        let not = randFrom([1, 2, 3])
-                        for (const i of [1, 2, 3])
-                            if (i !== not)
+                    const guesses = shuffled([1,2,3] as Level[]);
+                    guesses.splice(Math.floor(Math.random()*guesses.length),1);
+
+                    parseEvent(new CardAction({
+                        cardId: -1,
+                        actionName: CardActionOptions.DCW_GUESS,
+                        cardData: guesses[0]!
+                    }, this));
+
+                    let finished=false;
+                    this.waiter.waitFor(event=>event instanceof ClarifyCardEvent && event.data.justification === ClarificationJustification.DCW,
+                        ()=>{
+                            finished=true;
+                            return true;
+                        });
+                    this.waiter.waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                        ()=>{
+                            if(!finished) {
                                 parseEvent(new CardAction({
                                     cardId: -1,
                                     actionName: CardActionOptions.DCW_GUESS,
-                                    cardData: randFrom([1, 2, 3] satisfies Level[])
+                                    cardData: guesses[1]!
                                 }, this));
-                    }else{
-                        if(this.miscData.dcwData?.targetLevel === data) {
-                            delete this.miscData.dcwData;
-                            break;
-                        }else if(this.miscData.dcwData?.lastGuess){
-                            parseEvent(new CardAction({
-                                cardId: this.game.fieldsB.find(card=>card?.cardData.name === "og-032")!.id,
-                                actionName: CardActionOptions.DCW_SCARE,
-                                cardData: {
-                                    side: Side.A,
-                                    pos: randFrom(this.game.fieldsA
-                                        .map((card, i) => card === undefined ? undefined : i)
-                                        .filter(v => v !== undefined))
-                                }
-                            }, this));
-                        }
-                        this.miscData.dcwData!.lastGuess=true;
-                    }
+                                this.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                    () => false);
+                            }
+                            return false;
+                        });
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
-                    if((event.data.cardData as FOXY_MAGICIAN_GUESS).shouldGuess)
+                    if((event.data.cardData as FOXY_MAGICIAN_GUESS) === undefined)
                         parseEvent(new CardAction({
                             cardId:-1,
                             actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
-                            cardData: {level:randFrom([1, 2, 3] as Level[])!}
+                            cardData: randFrom([1, 2, 3] as Level[])!
                         },this));
                 }break;
                 case CardActionOptions.LITTLEBOSS_IMMUNITY:{
@@ -147,6 +153,7 @@ export default class CPU{
 
     takeAction(){
         if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen) return false;
+        //do i need to wait for cpu waiter? probably
 
         if(!(
             this.game.state instanceof TurnState &&

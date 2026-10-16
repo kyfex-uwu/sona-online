@@ -223,7 +223,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
     const freezeData = game.getMiscData(GameMiscDataStrings.FROZEN);
     if(freezeData!==undefined && freezeData.isFrozen && !freezeData.allowThrough(event))
-        return rejectEvent(event, "game is currently frozen, this event is not allowed through");
+        return rejectEvent(event, "game is currently frozen, this event is not allowed through "+freezeData.allowThrough.toString());
 
     if(event instanceof StartRequestEvent){
         if(!(game.state instanceof BeforeGameState) || //is before game state
@@ -401,7 +401,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         if(!event.isForced() && event.sender !== game.player(event.data.scarerPos[1]))
-            rejectEvent(event, "scarer is not consistent");
+            return rejectEvent(event, "scarer is not consistent");
 
         let scarer = sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1];
         let scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1];
@@ -546,6 +546,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                     shouldClarify = sideTernary(senderSide, game.deckA, game.deckB)
                         .filter(card => card.cardData.level === 1 &&
                             card.isAlwaysFree());
+                    console.log(shouldClarify)
                 }
                 break;
             case ClarificationJustification.AMBER:
@@ -579,18 +580,16 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }break;
         }
 
-        if(shouldClarify instanceof Array){
-            if(shouldClarify.length>0) {
-                network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
-                return acceptEvent(event);
-            }
-        }
         if(shouldClarify instanceof Card){
             network.replyToClient(event, new ClarifyCardEvent({
                 id: shouldClarify.id,
                 cardDataName: shouldClarify.cardData.name,
                 ...(maybeJustfication?{justification:maybeJustfication}:{})
             }));
+            return acceptEvent(event);
+        }
+        if(shouldClarify instanceof Array){
+            network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
             return acceptEvent(event);
         }
 

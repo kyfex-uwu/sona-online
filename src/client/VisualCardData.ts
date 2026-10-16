@@ -27,7 +27,7 @@ import {
 } from "./ui.js";
 import {ViewType} from "./VisualGame.js";
 import {StateFeatures} from "./VisualGameStateTools.js";
-import {waitFor} from "../networking/frontend/LocalServer.js";
+import {localWaiter} from "../networking/frontend/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";
 
@@ -587,6 +587,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                         .addCard(realCard);
                     realCard.flipFaceup();
                 }
+                sideTernary(getLocalGame().getMySide(), getLocalGame().deckA, getLocalGame().deckB).shuffle();
             },
             init:(self)=>{
                 self.blackBg(true);
@@ -608,9 +609,9 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             }));
 
                             uiState = "wait";
-                            waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                            localWaiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 (guessEvent) => {
-                                    guess = ((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS).level;
+                                    guess = ((guessEvent as CardAction<any>).data.cardData as FOXY_MAGICIAN_GUESS);
                                     uiState = "end";
                                     return false;
                                 });
@@ -704,6 +705,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                         }
                     }), oldState[1]);
                 }
+                sideTernary(getLocalGame().getMySide(), getLocalGame().deckA, getLocalGame().deckB).shuffle();
                 return true;
             },
             init: (self) => {
@@ -726,7 +728,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             }));
 
                             uiState = "wait";
-                            waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                            localWaiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                                 (guessEvent) => {
                                     guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
                                     if (guess !== undefined && guess === selectedCard?.logicalCard.cardData.level)
@@ -734,7 +736,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                     else {
                                         uiState = "wait";
 
-                                        waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                        localWaiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                                             (guessEvent) => {
                                                 guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
                                                 uiState = "end";
@@ -802,12 +804,7 @@ wrap(cards["og-041"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
 
     self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
 });
-wrap(cards["og-043"]!, CardTriggerType.PRE_PLACED, (orig, {self, game})=>{
-    if(orig) orig({self, game});
 
-    if(game.state instanceof BeforeGameState)
-        self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
-});
 const og043Highlight = newHighlightLock();
 wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     if(orig) orig({self:card, game});

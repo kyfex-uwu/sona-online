@@ -14,15 +14,13 @@ import {log, websocket, websocketReady} from "../../client/clientConsts.js";
 import {eventReplyIds} from "../Server.js";
 import {EndGameState} from "../../GameStates.js";
 import {VEndState} from "../../client/VisualGameStates.js";
+import {EventWaiter} from "../../consts.js";
 
 export function loadLocalNetwork(){
     //this is here to load the file
 }
 
-const waitingFor:({filter:(event:Event<any>)=>boolean,callback:(event:Event<any>)=>boolean})[] = [];
-export function waitFor(filter:(event:Event<any>)=>boolean, callback:(event:Event<any>)=>boolean){
-    waitingFor.push({filter,callback});
-}
+export const localWaiter = new EventWaiter();
 
 websocketReady.then(() => {
     websocket.onmessage = (message:MessageEvent<any>) => {
@@ -51,14 +49,8 @@ export async function receiveFromServer(packed:{
         return;
     }
 
-    for(let i=0;i<waitingFor.length;i++){
-        if(waitingFor[i]!.filter(event)){
-            let processNormally = waitingFor[i]!.callback(event);
-            waitingFor.splice(i,1);
-            if(!processNormally) return;
-            else break;
-        }
-    }
+    if(!localWaiter.process(event)) return;
+
     if(event instanceof GameEvent) gameReceiveFromServer(event);
     else if(event instanceof GameWinDefaultEvent){
         getLocalGame().setState(new VEndState(getLocalGame(), getLocalGame().getMySide(), "disconnect"),

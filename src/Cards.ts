@@ -122,9 +122,10 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE,Temperament.DOMESTIC, 
     }));
 setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE,Temperament.WILD, "og/043.jpg")
     .with(CardTriggerType.PRE_PLACED, ({self, game})=>{
-        if(game.state instanceof BeforeGameState)
+        if(game.state instanceof BeforeGameState) {
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";
-        else
+            self.setMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED, true);
+        }else
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.CLOUD_CAT_PICK);
     }).with(CardTriggerType.ON_RUNAWAY, ({self, scarer, toRunaway, stat, game})=>{
         if(toRunaway===self) game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = false;
