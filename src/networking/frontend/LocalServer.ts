@@ -6,7 +6,6 @@ import {
     InvalidEvent,
     PerchanceEvent,
     RejectEvent,
-    SerializableClasses,
     type SerializableType
 } from "../Events.js";
 import {gameReceiveFromServer, getLocalGame} from "./LocalGameServer.js";
@@ -15,6 +14,7 @@ import {eventReplyIds} from "../Server.js";
 import {EndGameState} from "../../GameStates.js";
 import {VEndState} from "../../client/VisualGameStates.js";
 import {EventWaiter} from "../../consts.js";
+import {SerializableEvents} from "../SerializableShapeConsts.js";
 
 export function loadLocalNetwork(){
     //this is here to load the file
@@ -36,7 +36,7 @@ export async function receiveFromServer(packed:{
     id:string,
 }) {
     //todo: this smells like vulnerability (but less!)
-    const event = new (SerializableClasses[packed.type] || InvalidEvent)(
+    const event = new (SerializableEvents[packed.type] || InvalidEvent)(
         //@ts-expect-error
         packed.data,
         undefined, packed.id) as Event<any>;

@@ -19,8 +19,8 @@ import VisualCard, {newHighlightLock} from "../../client/VisualCard.js";
 import cards from "../../Cards.js";
 import {Euler, Quaternion, Vector2, Vector3} from "three";
 import VisualGame, {ViewType} from "../../client/VisualGame.js";
-import {other, Side} from "../../GameElement.js";
-import {externalPromise, sideTernary, statTernary, wait, WaitChain} from "../../consts.js";
+import {other} from "../../GameElement.js";
+import {externalPromise, Side, sideTernary, statTernary, wait, WaitChain} from "../../consts.js";
 import type FieldMagnet from "../../client/magnets/FieldMagnet.js";
 import {VChoosingStartState, VGuiState, VTurnState} from "../../client/VisualGameStates.js";
 import {
@@ -40,11 +40,9 @@ import {
     type AMBER_PICK,
     AmberData,
     type BOTTOM_DRAW,
-    type BROWNIE_DRAW,
-    type BROY_WEASLA_INCREASE_DATA,
+    type BROWNIE_DRAW, type BROY_WEASLA_INCREASE,
     CardActionOptions,
-    type CLOUD_CAT_PICK,
-    type COWGIRL_COYOTE_INCREASE_DATA,
+    type CLOUD_CAT_PICK, type COWGIRL_COYOTE_INCREASE,
     type FURMAKER_PICK,
     type NOBLE_RETARGET,
     type WORICK_RESCUE,
@@ -147,6 +145,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     }else if(event instanceof MultiClarifyCardEvent){
         if(event.data !== undefined) {
             for (const id in event.data) {
+                if(id==="justification") continue;
                 clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
             }
             if(event.data.justification !== undefined) {
@@ -547,7 +546,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
+                const data = (event.data.cardData as COWGIRL_COYOTE_INCREASE).data;
+                if(!data) break;
                 const particleData = [
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
                     sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
@@ -595,13 +595,13 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     network.sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                                        cardData:{
+                                        cardData:{data:{
                                             stat:selectedStat!,
                                             pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
                                                 .map(field=>field.getCard())
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
-                                        }
+                                        }}
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
                                         self.end("finished");
                                     }));
@@ -613,7 +613,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     network.sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                                        cardData:false
+                                        cardData:{}
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
                                         self.end("finished");
                                     }));
@@ -634,7 +634,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             case CardActionOptions.BROY_WEASLA_INCREASE:{
                 let drawCallback:()=>void;
                 let releases:(()=>void)[] = [];
-                const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
+                const data = (event.data.cardData as BROY_WEASLA_INCREASE).data;
+                if(!data) break;
                 const particleData = [
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
                     sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
@@ -684,13 +685,13 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     network.sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                                        cardData:{
+                                        cardData:{data:{
                                             stat:selectedStat!,
                                             pos:[(sideTernary(selectedCard!.getSide(), game.fieldsA, game.fieldsB)
                                                 .map(field=>field.getCard())
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
-                                        }
+                                        }}
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
                                         self.end("finished");
                                     }));
@@ -702,7 +703,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     network.sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                                        cardData:false
+                                        cardData:{}
                                     })).onReply(successOrFail(()=>{},()=>{},()=>{
                                         self.end("finished");
                                     }));
@@ -722,7 +723,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             }break;
             case CardActionOptions.NOBLE_RETARGET:{
                 let release:()=>void;
-                const data = (event.data.cardData as NOBLE_RETARGET)[1]!;
+                const data = (event.data.cardData as NOBLE_RETARGET).data!;
                 const particleData = [
                     sideTernary(data.scared[1], game.fieldsA, game.fieldsB)[data.scared[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
                     sideTernary(data.scarer![1], game.fieldsA, game.fieldsB)[data.scarer![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
@@ -736,7 +737,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                         network.sendToServer(new CardAction({
                             cardId: -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
-                            cardData: [type === "finished"]
+                            cardData: {redirect:type === "finished"}
                         }));
                     },
                     init:(self)=>{

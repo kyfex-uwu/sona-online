@@ -3,10 +3,10 @@ import cards from "../../Cards.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "../Events.js";
 import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
-import {sideTernary, wrap} from "../../consts.js";
+import {Side, sideTernary, Stat, wrap} from "../../consts.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {other, Side} from "../../GameElement.js";
-import {CardMiscDataStrings, Stat} from "../../Card.js";
+import {other} from "../../GameElement.js";
+import {CardMiscDataStrings} from "../../Card.js";
 import {TurnState} from "../../GameStates.js";
 
 export function loadBackendWrappers(){}
@@ -106,11 +106,13 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         game.player(self.side)?.send(new CardAction({
             cardId:-1,
             actionName:CardActionOptions.NOBLE_RETARGET,
-            cardData:[false, {
-                scared:scared.getCardPos()!,
-                scarer:scarer.getCardPos()!,
-                stat
-            }]
+            cardData:{
+                data:{
+                    scared:scared.getCardPos()!,
+                    scarer:scarer.getCardPos()!,
+                    stat
+                }
+            }
         }));
     game.freeze(event=>
         event instanceof CardAction &&
@@ -177,11 +179,11 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-        cardData:{
+        cardData:{data:{
             stat,
             pos:origEvent.data.scarerPos,
             otherPos:origEvent.data.scaredPos,
-        }
+        }}
     }));
 
     return true;
@@ -274,11 +276,11 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     game.player(self.side)?.send(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-        cardData:{
+        cardData:{data:{
             stat,
             pos:origEvent.data.scaredPos,
             otherPos:origEvent.data.scarerPos,
-        }
+        }}
     }));
 
     return true;

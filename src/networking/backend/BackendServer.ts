@@ -5,10 +5,7 @@ import {
     FindGameEvent,
     GameEvent,
     InternalStartGameEvent,
-    InvalidEvent,
     RejectEvent,
-    SerializableClasses,
-    type SerializableType,
 } from "../Events.js";
 import Game from "../../Game.js";
 import {v4 as uuid} from "uuid"
@@ -20,6 +17,7 @@ import type {Server} from "ws";
 import * as ws from "ws";
 import CPU from "./CPU.js";
 import {loadCPUWrappers} from "./CPUCardData.js";
+import {inflate} from "./EventInflator.js";
 
 export type Client ={
     send:(v:Event<any>)=>void,
@@ -147,23 +145,20 @@ export function parseEvent(event:Event<any>):processedEvent{
     else return rejectEvent(event, "not a recognized event");
 }
 
-export async function receiveFromClient(packed:{
-    type:string,
-    data:SerializableType,
-    id:string
-}, client:Client) {
-    //todo: this smells like vulnerability (but less now!)
-    const event = new (SerializableClasses[packed.type] || InvalidEvent)(
-        //@ts-ignore
-        packed.data, client, packed.id) as Event<any>;
-    if(true) console.log("received "+event.serialize());
+export async function receiveFromClient(packed:any, client:Client) {
+    const event = inflate(packed, client);
+    if(typeof event === "string"){
+        console.log("invalid event received: "+JSON.stringify(packed)+"\n"+event);
+        return;
+    }else{
+        console.log("received "+event.serialize());
+    }
 
     if(eventReplyIds[event.id] !== undefined){
         (eventReplyIds[event.id]?._callback||(()=>{}))(event);
         return;
     }
 
-    //todo: verify shape of event
     parseEvent(event);
 }
 

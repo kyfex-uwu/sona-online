@@ -2,10 +2,10 @@ import CardData, {CardTriggerType, type Level, Species} from "../CardData.js";
 import cards from "../Cards.js";
 import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {externalPromise, sideTernary, statTernary, wrap} from "../consts.js";
+import {externalPromise, sideTernary, Stat, statTernary, wrap} from "../consts.js";
 import {network, successOrFail} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
-import {CardMiscDataStrings, Stat} from "../Card.js";
+import {CardMiscDataStrings} from "../Card.js";
 import {
     AmberData,
     CardActionOptions,
@@ -207,7 +207,7 @@ visualCardClientActions["og-028"] = (card)=>{
                 network.sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName:CardActionOptions.KIBBY_SCARE,
-                    cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? false) as [number|false,number|false,number|false]}
+                    cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? -1) as [number,number,number]}
                 })).onReply(successOrFail(()=>{
                     lastAction();
                     toReturn.resolve(true);

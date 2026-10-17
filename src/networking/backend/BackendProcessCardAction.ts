@@ -29,12 +29,12 @@ import {
     type WORICK_RESCUE,
     type YASHI_REORDER
 } from "../CardActionOption.js";
-import {other, Side} from "../../GameElement.js";
+import {other} from "../../GameElement.js";
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, Species} from "../../CardData.js";
 import Card, {CardMiscDataStrings} from "../../Card.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
-import {sideTernary} from "../../consts.js";
+import {Side, sideTernary} from "../../consts.js";
 import {actIfCpu, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {acceptEvent, type processedEvent, rejectEvent} from "./BackendServer.js";
 
@@ -276,7 +276,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(actor.hasAttacked) return rejectEvent(event, "failed special kibby otes check");
             const fields = sideTernary(actor.side, game.fieldsA, game.fieldsB);
-            for(const card of fields.filter((card, i) => data.cards[i] !== false && card !== undefined)
+            for(const card of fields.filter((card, i) => data.cards[i] !== -1 && card !== undefined)
                 .sort((c1,c2)=> {return{//this sorting ensure kibby otes is scared last
                     [c1!.id]:1,
                     [c2!.id]:-1
@@ -290,7 +290,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             }
             for(let i=0;i<3;i++){
-                if(data.cards[i] === false) continue;
+                if(data.cards[i] === -1) continue;
 
                 parseEvent(new PlaceAction({
                     cardId:data.cards[i] as number,
@@ -534,9 +534,9 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 actor.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true)
                 return rejectEvent(event, "failed cowgirl check");
 
-            const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData;
+            const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData.data;
             //do stuff
-            if(data !== false){
+            if(data){
                 const target = sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1];
                 if(target === undefined) return rejectEvent(event, "cowgirl: tried to change nonexistent card");
 
@@ -569,9 +569,9 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.BROY_WEASLA_INCREASE)
                 return rejectEvent(event, "failed broy weasla check");
 
-            const data = (event as CardAction<BROY_WEASLA_INCREASE>).data.cardData;
+            const data = (event as CardAction<BROY_WEASLA_INCREASE>).data.cardData.data;
             //do stuff
-            if(data !== false){
+            if(data){
                 const target = sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1];
                 if(target === undefined) return rejectEvent(event, "broy weasla: tried to change nonexistent card");
 
@@ -601,7 +601,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.NOBLE_RETARGET)
                 return rejectEvent(event, "failed noble check");
 
-            if((event as CardAction<NOBLE_RETARGET>).data.cardData[0]){
+            if((event as CardAction<NOBLE_RETARGET>).data.cardData.redirect){
                 const origScare = actor.getMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE);
                 if(origScare) origScare.data.scaredPos = [
                     (sideTernary(actor.side, game.fieldsA, game.fieldsB).findIndex(card=>card?.id === actor.id)+1) as 1|2|3,

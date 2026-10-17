@@ -1,10 +1,6 @@
 //The side of some element
 import type Game from "./Game.js";
-
-export enum Side{
-    A,
-    B
-}
+import {Side} from "./consts.js";
 
 //@returns the opposite side
 export function other(side:Side):Side{

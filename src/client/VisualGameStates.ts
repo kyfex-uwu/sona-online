@@ -1,11 +1,10 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
 import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox} from "./ui.js";
 import {StartRequestEvent} from "../networking/Events.js";
-import {other, type Side} from "../GameElement.js";
+import {other} from "../GameElement.js";
 import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
-import {Stat} from "../Card.js";
-import {levelOr, sideTernary} from "../consts.js";
+import {levelOr, Side, sideTernary, Stat} from "../consts.js";
 import {camera, clickListener} from "./clientConsts.js";
 import {Color, Euler, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";

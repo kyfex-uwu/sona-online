@@ -1,10 +1,9 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
-import type {Side} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
-import {sideTernary} from "../../consts.js";
+import {Side, sideTernary} from "../../consts.js";
 import {DiscardAction} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 import {StateFeatures} from "../VisualGameStateTools.js";

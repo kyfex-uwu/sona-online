@@ -1,14 +1,14 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
-import {other, Side} from "../../GameElement.js";
+import {other} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {VAttackingState, VTurnState} from "../VisualGameStates.js";
-import {CardMiscDataStrings, getVictim, Stat} from "../../Card.js";
+import {CardMiscDataStrings, getVictim} from "../../Card.js";
 import {successOrFail} from "../../networking/Server.js";
-import {sideTernary} from "../../consts.js";
+import {Side, sideTernary, Stat} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";

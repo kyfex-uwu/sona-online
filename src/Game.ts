@@ -1,11 +1,10 @@
 import Card from "./Card.js";
-import {Side} from "./GameElement.js";
 import {Event} from "./networking/Events.js";
 import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
-import {BeforeGameState, type GameState} from "./GameStates.js";
+import {BeforeGameState, EndGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/backend/BackendServer.js";
-import {sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
+import {Side, sideTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import type {CardActionOption} from "./networking/CardActionOption.js";
 
 export type GameMiscDataString<T> = {};
@@ -58,6 +57,8 @@ export default class Game{
     public _state:GameState = new BeforeGameState(this);
     public get state(){ return this._state; }
     public set state(newState:GameState){
+        if(newState instanceof EndGameState)
+            console.trace("whered u go :c")
         const oldState = this._state;
         this._state = newState;
         newState.init();

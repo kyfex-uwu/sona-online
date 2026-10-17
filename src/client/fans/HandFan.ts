@@ -1,9 +1,8 @@
 import VisualCardFan from "./CardFan.js";
-import type {Side} from "../../GameElement.js";
 import {Euler, Quaternion, Vector3} from "three";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
-import {sideTernary} from "../../consts.js";
+import {Side, sideTernary} from "../../consts.js";
 import {getLocalGame} from "../../networking/frontend/LocalGameServer.js";
 
 export default class HandFan extends VisualCardFan{

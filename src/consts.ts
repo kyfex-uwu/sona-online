@@ -1,7 +1,6 @@
-import {Side} from "./GameElement.js";
-import {Stat} from "./Card.js";
-import CardData, {CardTriggerType, type Level} from "./CardData.js";
-import type {Event} from "./networking/Events.js";
+import type CardData from "./CardData.js";
+import type { CardTriggerType, Level } from "./CardData.js";
+import {type Event} from "./networking/Events.js";
 
 //Shuffles the array in place and returns it
 export function shuffled<T>(array:Array<T>):Array<T>{
@@ -16,12 +15,24 @@ export function shuffled<T>(array:Array<T>):Array<T>{
     return array;
 }
 
+export enum Side {
+    A,
+    B
+}
+
 /**
  * Returns either param a or param b, depending on the given side
  * @param side The side that determines what to return. If this is a {@link Game}, use the game's side
  */
 export function sideTernary<T>(side:Side, a:T, b:T){
     return side == Side.A ? a : b;
+}
+
+//Which stat on a card
+export enum Stat {
+    RED = 0,
+    BLUE = 1,
+    YELLOW = 2
 }
 
 export function statTernary<T>(stat:Stat, red:T, blue: T, yellow:T){
@@ -113,4 +124,8 @@ export class EventWaiter{
 
 export function randFrom<T>(a: T[]): T | undefined {
     return a[Math.floor(Math.random() * a.length)];
+}
+
+export function enumValues(eenum:any){
+    return Object.values(eenum).filter(v=>typeof v === "number");
 }

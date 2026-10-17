@@ -1,13 +1,23 @@
-import IngameCard, {type CardPos, Stat} from "../Card.js";
-import {Side} from "../GameElement.js";
+import type IngameCard from "../Card.js";
+import type { CardPos } from "../Card.js";
 import type Game from "../Game.js";
 import type {Client} from "./backend/BackendServer.js";
-import {type CardActionOption} from "./CardActionOption.js";
+import {type CardActionOption, cardActionValidator} from "./CardActionOption.js";
 import type CardData from "../CardData.js";
+import {enumValues, Side, Stat} from "../consts.js";
+import {
+    type dataShape,
+    SerializableEventNames,
+    SerializableEvents,
+    SerializableEventShapes,
+    ShapeKeywords
+} from "./SerializableShapeConsts.js";
 
-export const SerializableClasses:{[k:string]:{new():Event<any>}} = {};
-function addToSerializableClasses(clazz:{new(...params:any):Event<any>, prototype:{constructor:{name:string}}}) {
-    SerializableClasses[clazz.prototype.constructor.name]=clazz;
+function addToSerializableClasses(clazz:{new(...params:any):Event<any>, prototype:{constructor:{name:string}}},
+                                  dataShape:dataShape) {
+    SerializableEvents[clazz.prototype.constructor.name]=clazz;
+    SerializableEventShapes[clazz.prototype.constructor.name]=dataShape;
+    SerializableEventNames.add(clazz.prototype.constructor.name);
     return clazz;
 }
 
@@ -48,7 +58,7 @@ export abstract class Event<T extends SerializableEventData>{
 }
 
 export class InvalidEvent extends Event<{}>{}
-addToSerializableClasses(InvalidEvent);
+addToSerializableClasses(InvalidEvent,{});
 
 export abstract class GameEvent<T extends SerializableEventData> extends Event<T>{}
 
@@ -70,12 +80,23 @@ export class ClarifyCardEvent extends GameEvent<{
     faceUp?: boolean,
     justification?: ClarificationJustification
 }>{}
-addToSerializableClasses(ClarifyCardEvent);
+addToSerializableClasses(ClarifyCardEvent,{
+    id:"number",
+    "cardDataName?":"string",
+    "faceUp?":"boolean",
+    "justification?":enumValues(ClarificationJustification),
+});
 export class MultiClarifyCardEvent extends GameEvent<{
     [id: number]: {cardDataName?:string, faceUp?:boolean},
     justification?: ClarificationJustification
 }>{}
-addToSerializableClasses(MultiClarifyCardEvent);
+addToSerializableClasses(MultiClarifyCardEvent,{
+    "justification?":enumValues(ClarificationJustification),
+    [ShapeKeywords.ALL_NUMBERS]:{
+        "cardDataName?":"string",
+        "faceUp?":"boolean",
+    }
+});
 export function multiClarifyFactory(cards:{id:number,cardData:CardData}[],
                                     justification?:ClarificationJustification){
     return new MultiClarifyCardEvent({
@@ -88,20 +109,23 @@ export function multiClarifyFactory(cards:{id:number,cardData:CardData}[],
 
 //(S2C) Rejects a client-side event
 export class RejectEvent extends Event<{}>{}
-addToSerializableClasses(RejectEvent);
+addToSerializableClasses(RejectEvent,{});
 //(S2C) Accepts a client-side event
 export class AcceptEvent extends Event<{}>{}
-addToSerializableClasses(AcceptEvent);
+addToSerializableClasses(AcceptEvent,{});
 //(S2C) Tells the client that the event hasn't been rejected... yet
 export class PerchanceEvent extends Event<{}>{}
-addToSerializableClasses(PerchanceEvent);
+addToSerializableClasses(PerchanceEvent,{});
 
 //(C2S) Asks the server to find this client a game
 export class FindGameEvent extends Event<{
     deck:Array<string>,
     requestCPU:boolean
 }>{}
-addToSerializableClasses(FindGameEvent);
+addToSerializableClasses(FindGameEvent,{
+    deck:"arraystring",
+    requestCPU:"boolean"
+});
 //only for use internally
 export class InternalStartGameEvent extends GameEvent<{}>{
     public readonly game:Game;
@@ -122,28 +146,30 @@ export class GameStartEvent extends GameEvent<{
     which:Side,
     cpuGame:boolean
 }>{}
-addToSerializableClasses(GameStartEvent);
-
-//(S2C) Tells a watcher about the game they are watching
-export class GameStartEventWatcher extends GameEvent<{
-    deck:Array<number>,
-    otherDeck:Array<number>,
-    which:Side,
-}>{}
-addToSerializableClasses(GameStartEventWatcher);
+addToSerializableClasses(GameStartEvent,{
+    deck:"arraynumber",
+    otherDeck:"arraynumber",
+    which:enumValues(Side),
+    cpuGame:"boolean"
+});
 
 //(C2S) Tells the server if they want to start first or second
 export class StartRequestEvent extends GameEvent<{
     which:"first"|"second"|"nopref",
 }>{}
-addToSerializableClasses(StartRequestEvent);
+addToSerializableClasses(StartRequestEvent,{
+    which:["first","second","nopref"],
+});
 
 //(S2C) Tells the client which side is starting
 export class DetermineStarterEvent extends GameEvent<{
     starter:Side,
     flippedCoin:boolean
 }>{}
-addToSerializableClasses(DetermineStarterEvent);
+addToSerializableClasses(DetermineStarterEvent,{
+    starter:enumValues(Side),
+    flippedCoin:"boolean",
+});
 
 //An event that constitutes an action
 export abstract class ActionEvent<T extends {[k:string]:SerializableType}> extends GameEvent<T>{
@@ -179,7 +205,10 @@ export class DrawAction extends ActionEvent<{
     side?:Side,
     isAction?:boolean,//default true
 }>{}
-addToSerializableClasses(DrawAction);
+addToSerializableClasses(DrawAction,{
+    "side?":enumValues(Side),
+    "isAction?":"boolean",
+});
 
 //Places a card in a specific slot
 export class PlaceAction extends ActionEvent<{
@@ -188,7 +217,12 @@ export class PlaceAction extends ActionEvent<{
     side:Side,
     forFree?:boolean//default false
 }>{}
-addToSerializableClasses(PlaceAction);
+addToSerializableClasses(PlaceAction,{
+    cardId:"number",
+    position:[1,2,3],
+    side:enumValues(Side),
+    "forFree?":"boolean"
+});
 
 const backendMarker = {};
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
@@ -203,7 +237,17 @@ export class ScareAction extends ActionEvent<{
         shouldRunaway?:boolean
     }
 }>{}
-addToSerializableClasses(ScareAction);
+addToSerializableClasses(ScareAction,{
+    scarerPos:"cardpos",
+    scaredPos:"cardpos",
+    attackingWith:(enumValues(Stat) as (number|string)[]).concat("card"),
+    "failed?":"boolean",
+    "free?":"boolean",
+
+    "extra?":{
+        "shouldRunaway?":"boolean"
+    }
+});
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{
@@ -211,15 +255,22 @@ export class CardAction<T extends SerializableType> extends ActionEvent<{
     actionName:CardActionOption<T>,
     cardData:T
 }>{}
-addToSerializableClasses(CardAction);
+addToSerializableClasses(CardAction,{
+    cardId:"number",
+    actionName:"string",
+    cardData:cardActionValidator,
+});
 
 //Discards a card
 export class DiscardAction extends ActionEvent<{id:number, side?:Side}>{}
-addToSerializableClasses(DiscardAction);
+addToSerializableClasses(DiscardAction,{
+    id:"number",
+    "side?":enumValues(Side)
+});
 
 //Passes without doing anything
 export class PassAction extends ActionEvent<{}>{}
-addToSerializableClasses(PassAction);
+addToSerializableClasses(PassAction,{});
 
 export type Card = {
     id:number,
@@ -228,7 +279,7 @@ export type Card = {
 }
 
 export class GameWinDefaultEvent extends Event<{}>{}
-addToSerializableClasses(GameWinDefaultEvent);
+addToSerializableClasses(GameWinDefaultEvent,{});
 
 /**
  * Transforms a logical card into one that can be sent in an event
@@ -256,7 +307,7 @@ export function cardsTransform(cards:Array<IngameCard>, {cardData = true, faceUp
 }
 
 export class RequestServerDumpAction extends ActionEvent<{}>{}
-addToSerializableClasses(RequestServerDumpAction);
+addToSerializableClasses(RequestServerDumpAction,{});
 export class ServerDumpEvent extends Event<{
     fieldsA:[string|undefined,string|undefined,string|undefined],
     fieldsB:[string|undefined,string|undefined,string|undefined],
@@ -271,4 +322,4 @@ export class ServerDumpEvent extends Event<{
     currTurn?:"A"|"B",
     actionsLeft?:number,
 }>{}
-addToSerializableClasses(ServerDumpEvent);
+addToSerializableClasses(ServerDumpEvent,{});

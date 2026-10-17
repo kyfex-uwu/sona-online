@@ -5,9 +5,8 @@ import {CardAction} from "../Events.js";
 import {CardActionOptions, type DCW_GUESS} from "../CardActionOption.js";
 import CPU, {calcStrength} from "./CPU.js";
 import type Game from "../../Game.js";
-import Card, {CardMiscDataStrings, Stat} from "../../Card.js";
-import {Side} from "../../GameElement.js";
-import {randFrom, wrap} from "../../consts.js";
+import Card, {CardMiscDataStrings} from "../../Card.js";
+import {randFrom, Side, Stat, wrap} from "../../consts.js";
 import {cpuPauser} from "./BackendGameServer.js";
 
 export function loadCPUWrappers(){}
@@ -47,6 +46,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
 }));
 
 wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
+    console.log("EAOWW")
     parseEvent(new CardAction({
         cardId:card.id,
         actionName:CardActionOptions.YASHI_REORDER,

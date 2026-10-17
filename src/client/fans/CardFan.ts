@@ -1,10 +1,10 @@
-import {Side} from "../../GameElement.js";
 import {Euler, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector3} from "three";
 import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
 import VisualCard from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {clickListener} from "../clientConsts.js";
 import type {CardHoldable} from "../CardHoldable.js";
+import {Side} from "../../consts.js";
 
 export default class CardFan extends SidedPositionedVisualGameElement implements CardHoldable{
     public readonly cards: Array<VisualCard> = [];

@@ -9,7 +9,6 @@ import {
     DrawAction,
     GameEvent,
     GameStartEvent,
-    GameStartEventWatcher,
     GameWinDefaultEvent,
     InternalStartGameEvent,
     multiClarifyFactory,
@@ -22,9 +21,9 @@ import {
     StartRequestEvent
 } from "../Events.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
-import {other, Side} from "../../GameElement.js";
-import {externalPromise, levelOr, shuffled, sideTernary, WaitChain} from "../../consts.js";
-import Card, {getVictim, Stat} from "../../Card.js";
+import {other} from "../../GameElement.js";
+import {externalPromise, levelOr, shuffled, Side, sideTernary, Stat, WaitChain} from "../../consts.js";
+import Card, {getVictim} from "../../Card.js";
 import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, type ScareResultStruct} from "../../CardData.js";
 import {CardActionOptions} from "../CardActionOption.js";
@@ -194,11 +193,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 which:Side.B,
                 cpuGame:false,
             }));
-            sendToGame(new GameStartEventWatcher({
-                deck:event.game.deckA.map(card => card.id),
-                otherDeck:event.game.deckB.map(card => card.id),
-                which:Side.B,
-            }), event.game, event.p1, event.p2);
             for(let i=0;i<3;i++){
                 draw(event.game, undefined, Side.A, true, event.game.player(Side.A));
                 draw(event.game, undefined, Side.B, true, event.game.player(Side.B));

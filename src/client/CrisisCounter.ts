@@ -1,10 +1,9 @@
 import {SidedPositionedVisualGameElement} from "./PositionedVisualGameElement.js";
 import type VisualGame from "./VisualGame.js";
-import type {Side} from "../GameElement.js";
 import {Euler, Group, Mesh, Quaternion, Vector3} from "three";
 import type {SmartGameElement} from "./VisualGameElement.js";
 import {modelLoader} from "./clientConsts.js";
-import {externalPromise} from "../consts.js";
+import {externalPromise, Side} from "../consts.js";
 import {lerp} from "./ui.js";
 
 const counterModel = (() => {

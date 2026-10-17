@@ -1,13 +1,12 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {updateOrder} from "../clientConsts.js";
-import {Side} from "../../GameElement.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {VTurnState} from "../VisualGameStates.js";
 import {successOrFail} from "../../networking/Server.js";
-import {externalPromise, shuffled, sideTernary, wait} from "../../consts.js";
+import {externalPromise, shuffled, Side, sideTernary, wait} from "../../consts.js";
 import type {CardWithTransform} from "./RunawayMagnet.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
 import {Animations} from "../ui.js";

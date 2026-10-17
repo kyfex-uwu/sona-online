@@ -1,16 +1,10 @@
-import {type GameElement, Side} from "./GameElement.js";
+import {type GameElement} from "./GameElement.js";
 import CardData, {CardTriggerType, type ScareResultStruct} from "./CardData.js";
-import {statTernary, verifyNoDuplicateStrVals} from "./consts.js";
+import {Side, Stat, statTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {addTempStats} from "./Cards.js";
 import type {ScareAction} from "./networking/Events.js";
 
-//Which stat on a card
-export enum Stat{
-    RED=0,
-    BLUE=1,
-    YELLOW=2
-}
 export function getVictim(stat:Stat){
     return statTernary(stat, Stat.YELLOW, Stat.RED, Stat.BLUE);
 }

@@ -14,12 +14,11 @@ import {
     Vector3
 } from "three";
 import {modelLoader, textureLoader, updateOrder} from "./clientConsts.js";
-import Card, {Stat} from "../Card.js";
+import Card from "../Card.js";
 import {PositionedVisualGameElement} from "./PositionedVisualGameElement.js";
-import {externalPromise, statTernary} from "../consts.js";
+import {externalPromise, Side, Stat, statTernary} from "../consts.js";
 import CardData, {CardTriggerType, Species, Temperament} from "../CardData.js";
 import type ElementScene from "./ElementScene.js";
-import {Side} from "../GameElement.js";
 
 const cardModel = (() => {
     let promise = externalPromise<Group>();

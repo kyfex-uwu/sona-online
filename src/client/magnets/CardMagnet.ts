@@ -1,4 +1,3 @@
-import {Side} from "../../GameElement.js";
 import {clickListener, updateOrder} from "../clientConsts.js";
 import {Quaternion, Vector3} from "three";
 import {SidedPositionedVisualGameElement} from "../PositionedVisualGameElement.js";
@@ -7,6 +6,7 @@ import VisualCard from "../VisualCard.js";
 import type {CardHoldable} from "../CardHoldable.js";
 import Card from "../../Card.js";
 import cards from "../../Cards.js";
+import {Side} from "../../consts.js";
 
 //A game element that holds and attracts cards
 export default abstract class CardMagnet extends SidedPositionedVisualGameElement implements CardHoldable{

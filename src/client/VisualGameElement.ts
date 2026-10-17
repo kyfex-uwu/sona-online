@@ -1,6 +1,6 @@
 import type VisualGame from "./VisualGame.js";
-import type {Side} from "../GameElement.js";
 import type ElementScene from "./ElementScene.js";
+import {Side} from "../consts.js";
 
 //A game element that has a model and should update
 export abstract class VisualGameElement{

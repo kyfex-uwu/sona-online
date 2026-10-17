@@ -1,6 +1,6 @@
 import Game, {GameMiscDataStrings} from "./Game.js";
-import {other, type Side} from "./GameElement.js";
-import {sideTernary} from "./consts.js";
+import {other} from "./GameElement.js";
+import {Side, sideTernary} from "./consts.js";
 import {CardTriggerType} from "./CardData.js";
 
 //A logical game state

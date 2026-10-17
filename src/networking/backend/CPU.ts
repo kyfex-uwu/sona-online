@@ -11,18 +11,16 @@ import {
     StartRequestEvent
 } from "../Events.js"
 import {BeforeGameState, TurnState} from "../../GameStates.js";
-import {Side} from "../../GameElement.js";
 import cards, {specialCards} from "../../Cards.js";
-import Card, {getVictim, Stat} from "../../Card.js";
+import Card, {getVictim} from "../../Card.js";
 import {parseEvent} from "./BackendServer.js";
 import {
-    type BROY_WEASLA_INCREASE_DATA,
-    CardActionOptions,
-    type COWGIRL_COYOTE_INCREASE_DATA,
+    type BROY_WEASLA_INCREASE,
+    CardActionOptions, type COWGIRL_COYOTE_INCREASE,
     type FOXY_MAGICIAN_GUESS,
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
-import {EventWaiter, levelOr, randFrom, shuffled} from "../../consts.js";
+import {EventWaiter, levelOr, randFrom, shuffled, Side, Stat} from "../../consts.js";
 
 export function canBeat(attacker:Card, attacked:Card){
     if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? Infinity) ) return Stat.RED;
@@ -119,32 +117,34 @@ export default class CPU{
                     }, this));
                 }break;
                 case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
-                    const data = event.data.cardData as COWGIRL_COYOTE_INCREASE_DATA;
-                    parseEvent(new CardAction({
-                        cardId:-1,
-                        actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
-                        cardData:{
-                            stat:data.stat,
-                            pos:data.pos
-                        }
-                    }, this));
+                    const data = (event.data.cardData as COWGIRL_COYOTE_INCREASE).data;
+                    if(data)
+                        parseEvent(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
+                            cardData:{data:{
+                                stat:data.stat,
+                                pos:data.pos
+                            }}
+                        }, this));
                 }break;
                 case CardActionOptions.BROY_WEASLA_INCREASE:{
-                    const data = event.data.cardData as BROY_WEASLA_INCREASE_DATA;
-                    parseEvent(new CardAction({
-                        cardId:-1,
-                        actionName:CardActionOptions.BROY_WEASLA_INCREASE,
-                        cardData:{
-                            stat:data.stat,
-                            pos:data.pos
-                        }
-                    }, this));
+                    const data = (event.data.cardData as BROY_WEASLA_INCREASE).data;
+                    if(data)
+                        parseEvent(new CardAction({
+                            cardId:-1,
+                            actionName:CardActionOptions.BROY_WEASLA_INCREASE,
+                            cardData:{data:{
+                                stat:data.stat,
+                                pos:data.pos
+                            }}
+                        }, this));
                 }break;
                 case CardActionOptions.NOBLE_RETARGET:{
                     parseEvent(new CardAction({
                         cardId: -1,
                         actionName: CardActionOptions.NOBLE_RETARGET,
-                        cardData: [true]
+                        cardData: {redirect:true},
                     }, this));
                 }break;
             }

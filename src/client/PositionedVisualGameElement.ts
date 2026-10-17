@@ -1,8 +1,8 @@
 import type VisualGame from "./VisualGame.js";
 import {type Quaternion, Vector3} from "three";
-import type {Side} from "../GameElement.js";
 import {type SidedVisualGameElement, VisualGameElement} from "./VisualGameElement.js";
 import type ElementScene from "./ElementScene.js";
+import {Side} from "../consts.js";
 
 //A sided game element that has a position
 export abstract class PositionedVisualGameElement extends VisualGameElement{
