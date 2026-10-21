@@ -155,6 +155,9 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
         }
         case CardActionOptions.BROWNIE_DRAW: {//og-005
             const id = (event as CardAction<BROWNIE_DRAW>).data.cardData.id;
+
+            // if(id === -1)
+
             const card = [...game.cards.values()].find(card => card.id === id);
 
             if (!(card && game.player(card.side) === event.sender &&//card exists and card belongs to sender

@@ -27,7 +27,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game},
         cardId:card.id,
         actionName: CardActionOptions.BROWNIE_DRAW,
         cardData: {
-            id:randFrom(game.deckB.filter(card=>card.cardData.level===1 && card.isAlwaysFree()))!.id
+            id:randFrom(game.deckB.filter(card=>card.cardData.level===1 && card.isAlwaysFree()))?.id ?? -1
         },
     }, cpu))
 }));

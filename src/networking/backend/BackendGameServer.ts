@@ -437,44 +437,42 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             const toRunaway = failed ? scarer : scared;
 
             scarer.hasAttacked = true;
-            if(!failed) {
-                const toSend = new ScareAction({
-                    scaredPos: toRunaway.getCardPos()!,
-                    scarerPos: scarer.getCardPos()!,
-                    attackingWith: event.data.attackingWith,
-                    failed,
-                    free: event.isForcedFree(),
+            const toSend = new ScareAction({
+                scaredPos: scared.getCardPos()!,
+                scarerPos: scarer.getCardPos()!,
+                attackingWith: event.data.attackingWith,
+                failed,
+                free: event.isForcedFree(),
 
-                    extra:{
-                        shouldRunaway:scareResult.runaway,
-                    }
-                });
-                for (const user of (usersFromGameIDs[game.gameID] || [])) {
-                    user.send(toSend);
+                extra:{
+                    shouldRunaway:scareResult.runaway,
                 }
+            });
+            for (const user of (usersFromGameIDs[game.gameID] || [])) {
+                user.send(toSend);
+            }
 
-                if(scareResult.runaway) {
-                    sideTernary(toRunaway.side, game.runawayA, game.runawayB).push(
-                        sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
-                    sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
+            if(scareResult.runaway) {
+                sideTernary(toRunaway.side, game.runawayA, game.runawayB).push(
+                    sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1]!);
+                sideTernary(toRunaway.side, game.fieldsA, game.fieldsB)[event.data.scaredPos[0] - 1] = undefined;
 
-                    toRunaway.callAction(CardTriggerType.ON_RUNAWAY,
-                        {self: toRunaway, toRunaway, scarer, game: game, stat: event.data.attackingWith});
-                    for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
-                        if (card === undefined) continue;
-
-                        card.callAction(CardTriggerType.ON_RUNAWAY,
-                            {self: card, toRunaway, scarer, game: game, stat: event.data.attackingWith});
-                    }
-                }
-                scared.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
-                    {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
+                toRunaway.callAction(CardTriggerType.ON_RUNAWAY,
+                    {self: toRunaway, toRunaway, scarer, game: game, stat: event.data.attackingWith});
                 for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
                     if (card === undefined) continue;
 
-                    card.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
-                        {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
+                    card.callAction(CardTriggerType.ON_RUNAWAY,
+                        {self: card, toRunaway, scarer, game: game, stat: event.data.attackingWith});
                 }
+            }
+            scared.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
+                {self: scared, scared, scarer, game: game, stat: event.data.attackingWith});
+            for (const card of [...game.fieldsA, ...game.fieldsB, ...game.handA, ...game.handB]) {
+                if (card === undefined) continue;
+
+                card.callAction(CardTriggerType.AFTER_SCARE_ATTEMPT,
+                    {self: card, scared, scarer, game: game, stat: event.data.attackingWith});
             }
 
 

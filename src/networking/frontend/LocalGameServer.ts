@@ -232,7 +232,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             if(game.state instanceof VTurnState) console.log(game.state.currTurn, game.state.getNonVisState().turn)
         });
     }else if(event instanceof ScareAction){
-        const scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1]!.getCard();
+        const scaredPos = event.data.failed ? event.data.scarerPos : event.data.scaredPos;
+        const scared = sideTernary(scaredPos[1], game.fieldsA, game.fieldsB)[scaredPos[0]-1]!.getCard();
         if (scared !== undefined) {
             if(event.data.failed !== true)
                 Animations.run(async ()=>{
