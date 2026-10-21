@@ -61,6 +61,11 @@ window.addEventListener("mouseup", (e:MouseEvent)=>{
     for(const listener of dragListeners) listener({type:"end",x:e.x,y:e.y});
     dragging=false;
 });
+window.addEventListener("keyup", (e:KeyboardEvent)=>{
+    if(e.key === "Enter")
+        for(const listener of Object.entries(clickedListeners).sort((a,b)=>
+            parseInt(a[0])-parseInt(b[0])).map(v=>v[1]).flat()) if(listener()) break;
+});
 window.addEventListener("mousemove", (e:MouseEvent)=>{
     if(dragging) for(const listener of dragListeners) listener({type:"move",x:e.x,y:e.y});
 });
@@ -69,6 +74,7 @@ window.addEventListener("wheel", (e:WheelEvent)=>{
 })
 
 //@param listener The function that will run every time the mouse is clicked
+//@param priority The higher the priority, the firster itll be checked (defaults to 0)
 //@return The id of this listener
 export function clickListener(listener:()=>boolean, priority=0){
     clickedListeners[priority] = clickedListeners[priority] ?? [];

@@ -40,14 +40,28 @@ export class Replyable<T extends SerializableEventData>{
         return this.source;
     }
 }
-export function successOrFail(success: () => void, fail?: () => void, finaly?: () => void){
-    return (event:Event<any>) =>{
+export function acceptEvent(){
+    const data:{success?: () => void, fail?: () => void, finally?: () => void} = {};
+    const toReturn = (event:Event<any>) =>{
         if(event instanceof PerchanceEvent) return;
 
-        if(event instanceof AcceptEvent) success();
-        else if(fail !== undefined && event instanceof RejectEvent) fail();
-        if(finaly !== undefined) finaly();
+        if(event instanceof AcceptEvent && data.success) data.success();
+        else if(event instanceof RejectEvent && data.fail) data.fail();
+        if(data.finally) data?.finally();
     }
+    toReturn.success = (callback:()=>void)=> {
+        data.success = callback;
+        return toReturn;
+    };
+    toReturn.fail = (callback:()=>void)=> {
+        data.fail = callback;
+        return toReturn;
+    };
+    toReturn.finally = (callback:()=>void)=> {
+        data.finally = callback;
+        return toReturn;
+    };
+    return toReturn;
 }
 export function cancelCallback(callback: () => void, finaly?:()=>void){
     return (event:Event<any>) =>{

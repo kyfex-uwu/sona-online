@@ -29,7 +29,7 @@ export type SerializableEventData = {[k:string]:SerializableType};
 // An event that can be sent to or from the server
 export abstract class Event<T extends SerializableEventData>{
     public readonly data:T;
-    public readonly sender:Client|undefined;
+    public sender:Client|undefined;
     public readonly id;
 
     /**

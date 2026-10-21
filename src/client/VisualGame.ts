@@ -12,7 +12,7 @@ import {button, buttonId, registerDrawCallback} from "./ui.js";
 import p5 from "p5";
 import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
-import {successOrFail} from "../networking/Server.js";
+import {acceptEvent} from "../networking/Server.js";
 import {Side, sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
@@ -163,9 +163,9 @@ export default class VisualGame extends ElementScene{
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
                         this.state.getActionsLeft() <= 0 ? "End Turn" : "Pass", ()=>{
                     this.frozen=true;
-                    this.sendEvent(new PassAction({})).onReply(successOrFail(() => {
+                    this.sendEvent(new PassAction({})).onReply(acceptEvent().success(() => {
                         this.state.decrementTurn(true);
-                    },()=>{},()=>{
+                    }).fail(()=>{
                         this.frozen=false;
                     }));
                 }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 ||

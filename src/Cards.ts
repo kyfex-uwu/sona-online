@@ -25,7 +25,7 @@ export const addTempStats = (self:Card, toAdd:[number|undefined,number|undefined
 // setCard(new CardData("supporters-002",[undefined,undefined,undefined],2,Species.UROCYON, Temperament.DOMESTIC, "supporters/002.jpg"));
 // setCard(new CardData("supporters-003",[undefined,undefined,undefined],2,Species.UNKNOWN, Temperament.DOMESTIC, "supporters/003.jpg"));
 
-setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE,Temperament.DOMESTIC,"og/001.jpg")
+setCard(new CardData("og-001", [6,5,6], 3, Species.CANINE,Temperament.DOMESTIC,"og/001.jpg")
     .with(CardTriggerType.GET_STATS, ({self, game})=>{
         const toReturn:[number|undefined,number|undefined,number|undefined] = [...self.cardData.stats];
         const newStatData = self.getMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE);
@@ -33,20 +33,20 @@ setCard(new CardData("og-001", [5,5,5], 3, Species.CANINE,Temperament.DOMESTIC,"
             toReturn[newStatData?.stat]=newStatData.newVal;
         return addTempStats(self, toReturn);
     }));
-setCard(new CardData("og-002", [9,7,5], 3, Species.CANINE,Temperament.DOMESTIC,"og/002.jpg"));
+setCard(new CardData("og-002", [9,7,6], 3, Species.CANINE,Temperament.DOMESTIC,"og/002.jpg"));
 setCard(new CardData("og-003", [3,3,3], 3, Species.FELINE,Temperament.WILD, "og/003.jpg")
     .with(CardTriggerType.GET_STATS, ({self, game})=>{
         return addTempStats(self, new Array(3).fill(sideTernary(self.side, game.fieldsA, game.fieldsB)
             .filter(c=>c?.cardData.species === Species.FELINE).length*3) as [number,number,number]);
     }));
-setCard(new CardData("og-004", [7,9,5], 3, Species.FELINE,Temperament.WILD, "og/004.jpg"));
+setCard(new CardData("og-004", [7,9,6], 3, Species.FELINE,Temperament.WILD, "og/004.jpg"));
 setCard(new CardData("og-005", [2,2,2], 1, Species.CANINE,Temperament.DOMESTIC, "og/005.jpg"));
 setCard(new CardData("og-006", [undefined,2,1], 1, Species.FELINE,Temperament.WILD, "og/006.jpg").setFree());
 setCard(new CardData("og-007", [2,1,undefined], 1, Species.CANINE,Temperament.DOMESTIC, "og/007.jpg").setFree());
 setCard(new CardData("og-008", [1,undefined,2], 1, Species.CANINE,Temperament.DOMESTIC, "og/008.jpg").setFree());
-setCard(new CardData("og-009", [2,2,2], 1, Species.FELINE,Temperament.WILD, "og/009.jpg"));
+setCard(new CardData("og-009", [2,1,1], 1, Species.FELINE,Temperament.WILD, "og/009.jpg"));
 setCard(new CardData("og-010", [1,2,undefined], 1, Species.CHIROPTERA,Temperament.WILD, "og/010.jpg").setFree());
-setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID,Temperament.WILD, "og/011.jpg")
+setCard(new CardData("og-011", [1,2,1], 1, Species.MUSTELOID,Temperament.WILD, "og/011.jpg")
     .with(CardTriggerType.PLACED, ({self, game})=>{
         self.setMiscData(CardMiscDataStrings.TRASH_PANDA_IMMUNITY, "wait");
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
@@ -63,7 +63,7 @@ setCard(new CardData("og-011", [1,3,1], 1, Species.MUSTELOID,Temperament.WILD, "
     });
 setCard(new CardData("og-012", [1,1,1], 1, Species.LAGOMORPH,Temperament.DOMESTIC, "og/012.jpg").setFree());
 setCard(new CardData("og-013", [undefined,1,2], 1, Species.FELINE,Temperament.DOMESTIC, "og/013.jpg").setFree());
-setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE,Temperament.DOMESTIC, "og/014.jpg")
+setCard(new CardData("og-014", [3,6,2], 2, Species.EQUINE,Temperament.DOMESTIC, "og/014.jpg")
     .with(CardTriggerType.SPECIAL_PLACEABLE_CHECK, ({self, game, normallyValid})=>{
         if(game.state instanceof TurnState && game.state.turn !== self.side &&
             sideTernary(self.side, game.fieldsA, game.fieldsB)
@@ -76,40 +76,40 @@ setCard(new CardData("og-014", [4,5,3], 2, Species.EQUINE,Temperament.DOMESTIC, 
                 .filter(card => card !== undefined).length === 0 &&
             (game.state.turn !== self.side || !game.state.drawnToStart);
     }));
-setCard(new CardData("og-015", [5,6,5], 3, Species.REPTILE,Temperament.WILD, "og/015.jpg"));
-setCard(new CardData("og-016", [8,2,1], 1, Species.AVIAN,Temperament.WILD, "og/016.jpg"));
-setCard(new CardData("og-017", [5,3,undefined], 1, Species.FELINE,Temperament.WILD, "og/017.jpg"));
-setCard(new CardData("og-018", [3,1,undefined], 1, Species.CANINE,Temperament.DOMESTIC, "og/018.jpg"));
-setCard(new CardData("og-019", [undefined,3,5], 1, Species.CANINE,Temperament.DOMESTIC, "og/019.jpg"));
+setCard(new CardData("og-015", [3,6,3], 3, Species.REPTILE,Temperament.WILD, "og/015.jpg"));
+setCard(new CardData("og-016", [6,2,1], 1, Species.AVIAN,Temperament.WILD, "og/016.jpg"));
+setCard(new CardData("og-017", [4,3,undefined], 1, Species.FELINE,Temperament.WILD, "og/017.jpg"));
+setCard(new CardData("og-018", [3,2,undefined], 1, Species.CANINE,Temperament.DOMESTIC, "og/018.jpg"));
+setCard(new CardData("og-019", [undefined,3,4], 1, Species.CANINE,Temperament.DOMESTIC, "og/019.jpg"));
 setCard(new CardData("og-020", [3,undefined,2], 1, Species.RODENTIA,Temperament.DOMESTIC, "og/020.jpg"));
-setCard(new CardData("og-021", [2,1,8], 1, Species.FELINE,Temperament.DOMESTIC, "og/021.jpg"));
-setCard(new CardData("og-022", [undefined,1,3], 1, Species.UNKNOWN,Temperament.DOMESTIC, "og/022.jpg"));
+setCard(new CardData("og-021", [2,1,6], 1, Species.FELINE,Temperament.DOMESTIC, "og/021.jpg"));
+setCard(new CardData("og-022", [undefined,2,3], 1, Species.UNKNOWN,Temperament.DOMESTIC, "og/022.jpg"));
 setCard(new CardData("og-023", [5,undefined,undefined], 2, Species.MUSTELOID,Temperament.WILD, "og/023.jpg"));
-setCard(new CardData("og-024", [3,1,2], 1, Species.FELINE,Temperament.WILD, "og/024.jpg"));
-setCard(new CardData("og-025", [1,3,2], 1, Species.CANINE,Temperament.WILD, "og/025.jpg"));
+setCard(new CardData("og-024", [3,2,2], 1, Species.FELINE,Temperament.WILD, "og/024.jpg"));
+setCard(new CardData("og-025", [2,3,2], 1, Species.CANINE,Temperament.WILD, "og/025.jpg"));
 setCard(new CardData("og-026", [undefined,5,undefined], 2, Species.FELINE,Temperament.WILD, "og/026.jpg"));
 setCard(new CardData("og-027", [6,3,5], 2, Species.FELINE,Temperament.DOMESTIC, "og/027.jpg"));
-setCard(new CardData("og-028", [4,4,3], 2, Species.CANINE,Temperament.DOMESTIC, "og/028.jpg"));
-setCard(new CardData("og-029", [5,6,3], 2, Species.MUSTELOID,Temperament.DOMESTIC, "og/029.jpg"));
+setCard(new CardData("og-028", [4,3,4], 2, Species.CANINE,Temperament.DOMESTIC, "og/028.jpg"));
+setCard(new CardData("og-029", [5,5,3], 2, Species.MUSTELOID,Temperament.DOMESTIC, "og/029.jpg"));
 setCard(new CardData("og-030", [3,5,6], 2, Species.VULPES,Temperament.DOMESTIC, "og/030.jpg"));
-setCard(new CardData("og-031", [3,4,7], 2, Species.VULPES,Temperament.WILD, "og/031.jpg")
+setCard(new CardData("og-031", [2,4,7], 2, Species.VULPES,Temperament.WILD, "og/031.jpg")
     .with(CardTriggerType.CARD_ACTION_CAN_HAPPEN, ({self,game,event})=>{
         return event.data.actionName === CardActionOptions.FOXY_MAGICIAN_PICK || undefined;
     }));
-setCard(new CardData("og-032", [4,3,7], 2, Species.FELINE,Temperament.WILD, "og/032.jpg"));
+setCard(new CardData("og-032", [4,2,7], 2, Species.FELINE,Temperament.WILD, "og/032.jpg"));
 setCard(new CardData("og-033", [2,undefined,1], 1, Species.CANINE,Temperament.DOMESTIC, "og/033.jpg").setFree());
-setCard(new CardData("og-034", [undefined,5,7], 2, Species.UNKNOWN,Temperament.WILD, "og/034.jpg"));
+setCard(new CardData("og-034", [undefined,4,6], 2, Species.UNKNOWN,Temperament.WILD, "og/034.jpg"));
 setCard(new CardData("og-035", [3,3,3], 2, Species.CANINE,Temperament.DOMESTIC, "og/035.jpg"));
-setCard(new CardData("og-036", [7,undefined,5], 2, Species.CANINE,Temperament.WILD, "og/036.jpg"));
-setCard(new CardData("og-037", [1,8,2], 1, Species.CANINE,Temperament.DOMESTIC, "og/037.jpg"));
+setCard(new CardData("og-036", [6,undefined,4], 2, Species.CANINE,Temperament.WILD, "og/036.jpg"));
+setCard(new CardData("og-037", [1,6,2], 1, Species.CANINE,Temperament.DOMESTIC, "og/037.jpg"));
 setCard(new CardData("og-038", [6,5,8], 3, Species.MUSTELOID,Temperament.WILD, "og/038.jpg"))
-setCard(new CardData("og-039", [5,7,undefined], 2, Species.FELINE,Temperament.WILD, "og/039.jpg"));
+setCard(new CardData("og-039", [4,6,undefined], 2, Species.FELINE,Temperament.WILD, "og/039.jpg"));
 setCard(new CardData("og-040", [undefined,undefined,5], 2, Species.CANINE,Temperament.WILD, "og/040.jpg"));
 setCard(new CardData("og-041", [1,1,1], 1, Species.UNKNOWN,Temperament.UNKNOWN, "og/041.jpg")
     .with(CardTriggerType.SHOULD_SHOW_HAND, ({self, game})=>{
         return true;
     }));
-setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE,Temperament.DOMESTIC, "og/042.jpg")
+setCard(new CardData("og-042", [2,2,3], 1, Species.CANINE,Temperament.DOMESTIC, "og/042.jpg")
     .with(CardTriggerType.INTERRUPT_SCARE, ({self, scared, scarer, stat, game, result})=>{
         if(sideTernary(self.side, game.fieldsA, game.fieldsB).findIndex(card=>card?.id === self.id) === undefined)
             return;
@@ -120,7 +120,7 @@ setCard(new CardData("og-042", [2,2,2], 1, Species.CANINE,Temperament.DOMESTIC, 
             result.determineScare="force_fail";
         }
     }));
-setCard(new CardData("og-043", [2,2,2], 1, Species.FELINE,Temperament.WILD, "og/043.jpg")
+setCard(new CardData("og-043", [1,1,2], 1, Species.FELINE,Temperament.WILD, "og/043.jpg")
     .with(CardTriggerType.PRE_PLACED, ({self, game})=>{
         if(game.state instanceof BeforeGameState) {
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(self.side)] = "first";

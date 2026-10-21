@@ -329,7 +329,7 @@ export class VGuiState extends VisualGameState<TurnState>{
             }
 
             return false;
-        }, -1);
+        }, 1);
 
         for (let i = 0; i < cards.length; i++) {
             let data = cards[i]!.card;

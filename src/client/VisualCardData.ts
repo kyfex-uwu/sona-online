@@ -3,7 +3,7 @@ import cards from "../Cards.js";
 import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {externalPromise, sideTernary, Stat, statTernary, wrap} from "../consts.js";
-import {network, successOrFail} from "../networking/Server.js";
+import {network, acceptEvent} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings} from "../Card.js";
 import {
@@ -92,7 +92,7 @@ visualCardClientActions["og-001"] = (card)=>{
                                 .indexOf(attacking!.logicalCard)+1 as 1|2|3,
                             attackWith:attackStat
                         }
-                    })).onReply(successOrFail(()=>{
+                    })).onReply(acceptEvent().success(()=>{
                         Animations.run(async ()=>{
                             let particles = [];
                             for(const field of sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
@@ -105,7 +105,7 @@ visualCardClientActions["og-001"] = (card)=>{
                             await Promise.all(particles);
                         });
                         lastAction();
-                    },()=>{},()=>{
+                    }).finally(()=>{
                         getLocalGame().changeView(sideTernary(card.getSide(), ViewType.BOARD_A, ViewType.BOARD_B));
                         for(const remove of toRemove) remove();
                         drawCallback();
@@ -208,7 +208,7 @@ visualCardClientActions["og-028"] = (card)=>{
                     cardId:card.logicalCard.id,
                     actionName:CardActionOptions.KIBBY_SCARE,
                     cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? -1) as [number,number,number]}
-                })).onReply(successOrFail(()=>{
+                })).onReply(acceptEvent().success(()=>{
                     lastAction();
                     toReturn.resolve(true);
                 }));
@@ -274,12 +274,12 @@ visualCardClientActions["og-038"] = (card)=>{
                     cardData:{
                         id:selected!.logicalCard.id
                     }
-                })).onReply(successOrFail(()=>{
+                })).onReply(acceptEvent().success(()=>{
                     console.log(selected, selected)
                     sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB)
                         .addCard(selected!);
                     lastAction();
-                },()=>{},()=>{
+                }).fail(()=>{
                     getLocalGame().frozen=false;
                     toReturn.resolve(true);
                     console.log("hi")
@@ -320,7 +320,7 @@ visualCardClientActions["og-041"] = (card)=>{
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
                     cardData: {id:selectedCard!.logicalCard.id},
-                })).onReply(successOrFail(()=>{},()=>{},()=>{
+                })).onReply(acceptEvent().finally(()=>{
                     getLocalGame().frozen=false;
                     toReturn.resolve(true);
                 }));
@@ -369,7 +369,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
     network.sendToServer(new ClarifyCardEvent({
         id:card.id,
         justification:ClarificationJustification.BROWNIE,
-    })).onReply(successOrFail(()=>{
+    })).onReply(acceptEvent().success(()=>{
         let selected:SuperficialVisualCard|undefined;
         let release:()=>void;
 
@@ -386,7 +386,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                         cardData: {
                             id:selected!.logicalCard.id
                         },
-                    })).onReply(successOrFail(()=>{
+                    })).onReply(acceptEvent().success(()=>{
                         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
                     endSignal.resolve();
@@ -680,7 +680,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                     side:scareSelected![0].getSide(),
                                     pos:scareSelected![1]
                                 }
-                            })).onReply(successOrFail(()=>{
+                            })).onReply(acceptEvent().success(()=>{
                                 game.unfreeze();
                             }));
                         },

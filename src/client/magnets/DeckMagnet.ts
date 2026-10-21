@@ -5,7 +5,7 @@ import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {VTurnState} from "../VisualGameStates.js";
-import {successOrFail} from "../../networking/Server.js";
+import {acceptEvent} from "../../networking/Server.js";
 import {externalPromise, shuffled, Side, sideTernary, wait} from "../../consts.js";
 import type {CardWithTransform} from "./RunawayMagnet.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
@@ -46,7 +46,7 @@ export default class DeckMagnet extends CardMagnet{
                     this.game.selectedCard === undefined &&
                     sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5) {
                     this.game.frozen=true;
-                    this.game.sendEvent(new DrawAction({})).onReply(successOrFail(()=>{
+                    this.game.sendEvent(new DrawAction({})).onReply(acceptEvent().success(()=>{
                         this.drawCard();
                         if(this.game.state instanceof VTurnState) {
                             if (this.game.state.getNonVisState().drawnToStart) {
@@ -54,7 +54,7 @@ export default class DeckMagnet extends CardMagnet{
                             }
                             this.game.state.getNonVisState().setDrawnToStart();
                         }
-                    },undefined,()=>{
+                    }).finally(()=>{
                         this.game.frozen=false;
                     }));
                     return true;
@@ -117,7 +117,8 @@ export default class DeckMagnet extends CardMagnet{
             for (const data of this.shuffleData.cards) {
                 finished=false;
 
-                const card=this.cards[data.which]!.card;
+                const card=this.cards[data.which]?.card;
+                if(!card) continue;
                 const k=data.k/data.time;
                 if(k<1)
                     card.position = card.position.add(data.outPos.clone().multiplyScalar(1-Math.abs(k-0.5)*2));

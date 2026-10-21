@@ -18,11 +18,9 @@ preload all game images
 card "accessory" system (allow for custom models to be attached to the card) (3d and 2d)
 "concede" button
 make sure the client can start the turn on their terms when they cant draw to start
-type checking for all packets (need to write some separate thing)
-shuffle everywhere!
 add card texture atlas
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
-figure out why cards shrink sometimes when going in discard (fixed?)
+figure out why cards shrink sometimes when going in discard (fixed? nope)
 
 type safe card models
 clean up dependencies, a lot can be moved to dev dependencies

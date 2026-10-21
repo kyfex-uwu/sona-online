@@ -54,6 +54,11 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         return;
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.GREMLIN_SCARE);
 });
+customAllowWhen(cards["og-009"]!, CardActionOptions.GREMLIN_SCARE, {
+    turnState:State.EITHER,
+    drawnToStart:State.EITHER,
+    free:true
+})
 wrap(cards["og-015"]!, CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, (orig, {self, scared, scarer, stat, game, event})=>{
     return ScareEffectOwner.INTRINSIC;
 });

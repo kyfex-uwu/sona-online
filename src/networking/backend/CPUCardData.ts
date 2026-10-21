@@ -7,16 +7,18 @@ import CPU, {calcStrength} from "./CPU.js";
 import type Game from "../../Game.js";
 import Card, {CardMiscDataStrings} from "../../Card.js";
 import {randFrom, Side, Stat, wrap} from "../../consts.js";
-import {cpuPauser} from "./BackendGameServer.js";
 
 export function loadCPUWrappers(){}
 
-function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self:Card}>(wrapper:(orig:T, data:U, cpu:CPU)=>any){
+function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self:Card}>(wrapper:(orig:T, data:U, cpu:CPU)=>void){
     return (orig:T,data:U)=>{
         if(orig) orig(data);
-        if(data.game.isCpu && data.self.side === Side.B)
-            cpuPauser.run(()=>
-                wrapper(orig, data, data.game.player(Side.B) as CPU))
+        if(data.game.isCpu && data.self.side === Side.B) {
+            const cpu = data.game.player(Side.B) as CPU;
+            cpu.actionDebouncer.run(async () => {
+                wrapper(orig, data, cpu)
+            })
+        }
     }
 }
 
@@ -46,7 +48,6 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
 }));
 
 wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
-    console.log("EAOWW")
     parseEvent(new CardAction({
         cardId:card.id,
         actionName:CardActionOptions.YASHI_REORDER,
@@ -75,11 +76,11 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
         cardData: picked.id
     },cpu));
 
-    cpu.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+    cpu.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
         (guessEvent) => {
             const guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
             if (guess === undefined || guess !== picked.cardData.level)
-                cpu.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                cpu.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                     () => false);
             return false;
         });

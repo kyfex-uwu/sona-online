@@ -1,4 +1,4 @@
-import {network, successOrFail} from "../Server.js";
+import {network, acceptEvent} from "../Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -602,7 +602,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }}
-                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                    })).onReply(acceptEvent().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -614,7 +614,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                         cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:{}
-                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                    })).onReply(acceptEvent().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -692,7 +692,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }}
-                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                    })).onReply(acceptEvent().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -704,7 +704,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                         cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:{}
-                                    })).onReply(successOrFail(()=>{},()=>{},()=>{
+                                    })).onReply(acceptEvent().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },

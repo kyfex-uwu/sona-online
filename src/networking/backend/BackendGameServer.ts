@@ -27,7 +27,7 @@ import Card, {getVictim} from "../../Card.js";
 import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, type ScareResultStruct} from "../../CardData.js";
 import {CardActionOptions} from "../CardActionOption.js";
-import processCardAction from "./BackendProcessCardAction.js";
+import processCardAction, {acceptThenCPUAct} from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
 import dev from "../../dev.js";
 import CPU from "./CPU.js";
@@ -137,15 +137,10 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     next(data.result);
 }
 
-export const cpuPauser = new WaitChain();
-let cpuPauserResumer:ReturnType<typeof externalPromise<void>>;
-cpuPauser.run(()=>cpuPauserResumer=externalPromise());
 export function actIfCpu(game:Game){
-    cpuPauserResumer.resolve();
     const maybeCPU=game.player(Side.B)
     if(maybeCPU instanceof CPU && game.state instanceof TurnState && game.state.turn === Side.B)
         maybeCPU.takeAction();
-    cpuPauser.run(()=>cpuPauserResumer=externalPromise());
 }
 
 /**
@@ -265,9 +260,10 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                         }));
             }
             game.state = new TurnState(game, startingSide);
-            actIfCpu(game);
+            return acceptThenCPUAct(event, game);
+        }else {
+            return acceptEvent(event);
         }
-        return acceptEvent(event);
     }else if(event instanceof PlaceAction){
         const card = [...game.cards.values()]
             .find(card=>card.id === event.data.cardId);
@@ -344,8 +340,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         if(!placedForFree)
             endTurn(game);
-        actIfCpu(game);
-        return acceptEvent(event);
+        return acceptThenCPUAct(event, game);
     }else if(event instanceof DrawAction){
         let side:Side|undefined=undefined;//the side of the player drawing
         if(event.sender === game.player(Side.A)){
@@ -386,8 +381,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         endTurn(game, true);
-        actIfCpu(game);
-        return acceptEvent(event);//todo:validation (what does this mean?)
+        return acceptThenCPUAct(event, game);
     }else if (event instanceof ScareAction){
         if(!event.isForced()) {
             if (game.state instanceof TurnState && !game.state.drawnToStart)
@@ -433,7 +427,8 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             //if either stat is undefined, scare does not happen
             if(event.data.attackingWith !== "card"){
                 if(scarer.stat(event.data.attackingWith) === undefined ||
-                    scared.stat(getVictim(event.data.attackingWith)) === undefined) return;
+                    scared.stat(getVictim(event.data.attackingWith)) === undefined)
+                    return;
             }
 
             const failed = forceFailed ?? (scareResult.determineScare === "force_fail" ||
@@ -485,11 +480,11 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
             if (!event.isForcedFree()) endTurn(game);
         });
-        actIfCpu(game);
         if(ranRightAway)
-            return acceptEvent(event);
+            return acceptThenCPUAct(event, game);
         else{
             network.replyToClient(event, new PerchanceEvent({}, undefined, event.id));
+            actIfCpu(game);
             return processedEventMarker;
         }
     }else if(event instanceof CardAction){
@@ -522,8 +517,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         sideTernary(side, game.runawayA, game.runawayB).push(
             hand.splice(hand.indexOf(toDiscard),1)[0]!);
-        actIfCpu(game);
-        return acceptEvent(event);
+        return acceptThenCPUAct(event, game);
     }else if(event instanceof ClarifyCardEvent){
 
         let shouldClarify:Card|Card[]|undefined=undefined;

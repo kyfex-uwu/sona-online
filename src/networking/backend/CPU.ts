@@ -13,14 +13,14 @@ import {
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import cards, {specialCards} from "../../Cards.js";
 import Card, {getVictim} from "../../Card.js";
-import {parseEvent} from "./BackendServer.js";
 import {
     type BROY_WEASLA_INCREASE,
     CardActionOptions, type COWGIRL_COYOTE_INCREASE,
     type FOXY_MAGICIAN_GUESS,
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
-import {EventWaiter, levelOr, randFrom, shuffled, Side, Stat} from "../../consts.js";
+import {EventWaiter, externalPromise, levelOr, randFrom, shuffled, Side, Stat, WaitChain} from "../../consts.js";
+import {parseEvent} from "./BackendServer.js";
 
 export function canBeat(attacker:Card, attacked:Card){
     if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? Infinity) ) return Stat.RED;
@@ -39,17 +39,21 @@ export function calcWeakness(attacked:Card, attackers:Card[]){
 export default class CPU{
     public game:Game=undefined!;
     public readonly generatedDeck:string[];
-    public readonly waiter = new EventWaiter();
+    public readonly waitForEventer = new EventWaiter();
+    public readonly actionDebouncer = new WaitChain();
+
     constructor() {
-        this.generatedDeck = new Array(19).fill(0).map(()=>randFrom(Object.values(cards)
-                .filter(card=>!specialCards.has(card.name)))!)
-            .concat(randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && card.level === 1))!)
-            .map(card=>card.name);
+        const deck = [randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && card.level === 1))!];
+        for(let i=0;i<19;i++){
+            deck.push(randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && !deck.includes(card)))!);
+        }
+
+        this.generatedDeck = deck.map(card=>card.name);
     }
 
     private sentStartRequest=false;
     send(event:Event<any>){
-        if(!this.waiter.process(event)) return;
+        if(!this.waitForEventer.process(event)) return;
 
         if(event instanceof DrawAction){
             if(!this.sentStartRequest &&
@@ -59,14 +63,14 @@ export default class CPU{
                 const toStart = this.game.handB.filter(card => card.cardData.level === 1)
                     .map(card => [card, Math.min(card.stat(Stat.RED) ?? Infinity, card.stat(Stat.BLUE) ?? Infinity, card.stat(Stat.YELLOW) ?? Infinity)] satisfies [Card, number])
                     .sort((c1, c2) => c2[1] - c1[1])[0]![0];
-                parseEvent(new PlaceAction({
+                this.toServer(new PlaceAction({
                     cardId: toStart.id,
                     position: 2,
                     side: toStart.side
-                }, this));
-                parseEvent(new StartRequestEvent({
+                }));
+                this.toServer(new StartRequestEvent({
                     which: "nopref"
-                }, this));
+                }));
                 this.sentStartRequest=true;
             }
         }else if(event instanceof CardAction){
@@ -75,27 +79,27 @@ export default class CPU{
                     const guesses = shuffled([1,2,3] as Level[]);
                     guesses.splice(Math.floor(Math.random()*guesses.length),1);
 
-                    parseEvent(new CardAction({
+                    this.toServer(new CardAction({
                         cardId: -1,
                         actionName: CardActionOptions.DCW_GUESS,
                         cardData: guesses[0]!
-                    }, this));
+                    }));
 
                     let finished=false;
-                    this.waiter.waitFor(event=>event instanceof ClarifyCardEvent && event.data.justification === ClarificationJustification.DCW,
+                    this.waitForEventer.waitFor(event=>event instanceof ClarifyCardEvent && event.data.justification === ClarificationJustification.DCW,
                         ()=>{
                             finished=true;
                             return true;
                         });
-                    this.waiter.waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                    this.waitForEventer.waitFor(event=>event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                         ()=>{
                             if(!finished) {
-                                parseEvent(new CardAction({
+                                this.toServer(new CardAction({
                                     cardId: -1,
                                     actionName: CardActionOptions.DCW_GUESS,
                                     cardData: guesses[1]!
-                                }, this));
-                                this.waiter.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
+                                }));
+                                this.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                                     () => false);
                             }
                             return false;
@@ -103,55 +107,73 @@ export default class CPU{
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
                     if((event.data.cardData as FOXY_MAGICIAN_GUESS) === undefined)
-                        parseEvent(new CardAction({
+                        this.toServer(new CardAction({
                             cardId:-1,
                             actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
                             cardData: randFrom([1, 2, 3] as Level[])!
-                        },this));
+                        }));
                 }break;
                 case CardActionOptions.LITTLEBOSS_IMMUNITY:{
-                    parseEvent(new CardAction({
+                    this.toServer(new CardAction({
                         cardId:-1,
                         actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                         cardData:true
-                    }, this));
+                    }));
                 }break;
                 case CardActionOptions.COWGIRL_COYOTE_INCREASE:{
                     const data = (event.data.cardData as COWGIRL_COYOTE_INCREASE).data;
                     if(data)
-                        parseEvent(new CardAction({
+                        this.toServer(new CardAction({
                             cardId:-1,
                             actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                             cardData:{data:{
-                                stat:data.stat,
+                                stat:getVictim(data.stat),
                                 pos:data.pos
                             }}
-                        }, this));
+                        }));
                 }break;
                 case CardActionOptions.BROY_WEASLA_INCREASE:{
                     const data = (event.data.cardData as BROY_WEASLA_INCREASE).data;
                     if(data)
-                        parseEvent(new CardAction({
+                        this.toServer(new CardAction({
                             cardId:-1,
                             actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                             cardData:{data:{
                                 stat:data.stat,
                                 pos:data.pos
                             }}
-                        }, this));
+                        }));
                 }break;
                 case CardActionOptions.NOBLE_RETARGET:{
-                    parseEvent(new CardAction({
+                    this.toServer(new CardAction({
                         cardId: -1,
                         actionName: CardActionOptions.NOBLE_RETARGET,
                         cardData: {redirect:true},
-                    }, this));
+                    }));
                 }break;
             }
         }
     }
 
-    takeAction(){
+    toServer(event:Event<any>, data:{callback?: (e: Event<any>) => (void | boolean), waitForConfirm?:boolean }={}){
+        event.sender = this;
+
+        let waitForConfirm = externalPromise();
+        if(data.waitForConfirm ?? true)
+            this.actionDebouncer.run(()=>waitForConfirm);
+        else waitForConfirm.resolve();
+
+        this.waitForEventer.waitFor(e=>e.id === event.id, (e)=> {
+            const toReturn = data.callback ? (data.callback(e) ?? true) : true;
+            waitForConfirm.resolve();
+            return toReturn;
+        });
+        parseEvent(event);
+    }
+
+    async takeAction(){
+        await this.actionDebouncer.end();
+
         if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen) return false;
         //do i need to wait for cpu waiter? probably
 
@@ -161,7 +183,7 @@ export default class CPU{
             return false;
         if(!this.game.state.drawnToStart){
             console.log("draw to start")
-            parseEvent(new DrawAction({}, this));
+            this.toServer(new DrawAction({}));
             return true;
         }
 
@@ -169,7 +191,7 @@ export default class CPU{
         if(fieldCards.length<2){
             if(this.game.handB.length === 0 && this.game.state.actionsLeft>0){
                 console.log("draw")
-                parseEvent(new DrawAction({},this));
+                this.toServer(new DrawAction({}));
                 return true;
             }else {
                 const topLevel = Math.max(0, ...fieldCards.map(card => levelOr(card!.cardData.level,0))) + 1;
@@ -180,13 +202,13 @@ export default class CPU{
                     picked=picked.filter(card=>card.isAlwaysFree());
                 if(picked.length>0) {
                     console.log("place")
-                    parseEvent(new PlaceAction({
+                    this.toServer(new PlaceAction({
                         cardId: randFrom(picked)!.id,
                         side: Side.B,
                         position: randFrom(this.game.fieldsB.map((card, i) => [card, i] satisfies [Card | undefined, number])
                             .filter(data => data[0] === undefined)
                             .map(data => data[1] + 1) as (1 | 2 | 3)[])!
-                    }, this));
+                    }));
                     return true;
                 }
             }
@@ -205,12 +227,12 @@ export default class CPU{
                     if(maybeAttacker!==undefined && !maybeAttacker.hasAttacked){
                         const beatsStat=canBeat(maybeAttacker, danger[0][0]);
                         if(beatsStat!==false) {
-                            console.log("scare")
-                            parseEvent(new ScareAction({
+                            console.trace("scare")
+                            this.toServer(new ScareAction({
                                 scarerPos: [i + 1 as 1 | 2 | 3, Side.B],
                                 scaredPos: [danger[0][1] + 1 as 1 | 2 | 3, Side.A],
                                 attackingWith: beatsStat,
-                            }, this));
+                            }));
                             return true;
                         }
                     }
@@ -219,7 +241,7 @@ export default class CPU{
         }
 
         console.log("end turn")
-        parseEvent(new PassAction({},this));
+        this.toServer(new PassAction({}));
         return false;
     }
 }

@@ -7,7 +7,7 @@ import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim} from "../../Card.js";
-import {successOrFail} from "../../networking/Server.js";
+import {acceptEvent} from "../../networking/Server.js";
 import {Side, sideTernary, Stat} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
@@ -47,13 +47,13 @@ export default class FieldMagnet extends CardMagnet{
                             cardId: card.logicalCard.id,
                             position: this.which,
                             side:this.game.getMySide(),
-                        })).onReply(successOrFail(()=>{
+                        })).onReply(acceptEvent().success(()=>{
                             if((!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))
                                 state.decrementTurn();
-                        },()=>{
+                        }).fail(()=>{
                             card.removeFromHolder();
                             this.game.selectedCard = card;
-                        },()=>{
+                        }).finally(()=>{
                             this.game.frozen=false;
                         }));
 
@@ -124,7 +124,7 @@ export default class FieldMagnet extends CardMagnet{
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
-                                        })).onReply(successOrFail(()=>{}, ()=>{}, ()=>{
+                                        })).onReply(acceptEvent().finally(()=>{
                                             sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard()
                                                 ?.highlightStat({[Stat.RED]:false, [Stat.BLUE]:false, [Stat.YELLOW]:false}, attackLock);
                                         }));
