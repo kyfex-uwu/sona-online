@@ -27,7 +27,7 @@ export type DCW_SCARE={side:Side,pos:1|2|3};
 export type LITTLEBOSS_IMMUNITY=boolean;
 export type COWGIRL_COYOTE_INCREASE = {data?:{ stat:Stat, pos:CardPos, otherPos?:CardPos }}
 export type BROY_WEASLA_INCREASE = {data?:{ stat:Stat, pos:CardPos, otherPos?:CardPos }}
-export type NOBLE_RETARGET = {data?:{scarer:CardPos,scared:CardPos,stat:Stat}, redirect?:boolean}
+export type NOBLE_RETARGET = {data?:{scarer:CardPos,scared:CardPos,stat:Stat|"card"}, redirect?:boolean}
 
 export type CardActionOption<T> = {};
 export const CardActionOptions = {

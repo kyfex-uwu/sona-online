@@ -156,37 +156,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         }
     }else if(event instanceof DetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
-            const finish = ()=>{
-                game.cursorActive=true;
-                game.setState(new VTurnState(event.data.starter, game, false),
-                    new TurnState(game.getGame(), event.data.starter));
-                (game.state as VTurnState).canInit=true;//top 10 worst things
-
-                for(const field of game.fieldsA) {
-                    field.getCard()?.flipFaceup();
-                    field.startGame();
-                }
-                for(const field of game.fieldsB) {
-                    field.getCard()?.flipFaceup();
-                    field.startGame();
-                }
-                if(game.state instanceof VTurnState) game.state.init();
-            }
-            if(event.data.flippedCoin){
-                let timer=0;
-                let removeCallback = registerDrawCallback(0,(p5, _scale) =>{
-                    p5.background(30,30,30,150);
-
-                    if(timer>60*3) {
-                        removeCallback();
-                        finish();
-                    }
-
-                    timer++;
-                })
-            }else{
-                finish();
-            }
+            game.state.startGame(event);
         }
     }
 
@@ -725,11 +695,17 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             case CardActionOptions.NOBLE_RETARGET:{
                 let release:()=>void;
                 const data = (event.data.cardData as NOBLE_RETARGET).data!;
+                const scared = sideTernary(data.scared[1], game.fieldsA, game.fieldsB)[data.scared[0]-1]?.getCard();
+                const scarer = sideTernary(data.scarer![1], game.fieldsA, game.fieldsB)[data.scarer![0]-1]?.getCard();
+                const noble = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB).find(f=>f.getCard()?.logicalCard.cardData.name === "og-020")
+                    ?.getCard();
                 const particleData = [
-                    sideTernary(data.scared[1], game.fieldsA, game.fieldsB)[data.scared[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
-                    sideTernary(data.scarer![1], game.fieldsA, game.fieldsB)[data.scarer![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
-                    sideTernary(game.getMySide(), game.fieldsA, game.fieldsB).find(f=>f.getCard()?.logicalCard.cardData.name === "og-020")
-                        ?.getCard()?.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3())!
+                    (data.stat === "card" ? scared?.model.getWorldPosition(new Vector3()) :
+                        scared?.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3())) ?? new Vector3(),
+                    (data.stat === "card" ? scarer?.model.getWorldPosition(new Vector3()) :
+                        scarer?.getStatModel(data.stat)!.getWorldPosition(new Vector3())) ?? new Vector3(),
+                    (data.stat === "card" ? noble?.model.getWorldPosition(new Vector3()) :
+                        noble?.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3())) ?? new Vector3()
                 ] satisfies [Vector3, Vector3, Vector3];
 
                 game.setState(new VGuiState(game, [game.state,game.getGame().state], {
@@ -754,11 +730,11 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             self.infoText(p5,scale,"Chose whether to redirect the scare to Noble Rat or leave it as-is");
 
                             particleArc(particleData[1], particleData[0],
-                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
-                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                                data.stat === "card" ? whiteColor : statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                                data.stat === "card" ? whiteColor : statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
                             particleArc(particleData[1], particleData[2],
-                                statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
-                                statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
+                                data.stat === "card" ? whiteColor : statTernary(data.stat, redStatColor, blueStatColor, yellowStatColor),
+                                data.stat === "card" ? whiteColor : statTernary(getVictim(data.stat), redStatColor, blueStatColor, yellowStatColor));
                         });
                     }
                 }), game.getGame().state);

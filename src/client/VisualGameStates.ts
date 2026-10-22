@@ -1,6 +1,6 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
 import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox} from "./ui.js";
-import {StartRequestEvent} from "../networking/Events.js";
+import {DetermineStarterEvent, StartRequestEvent} from "../networking/Events.js";
 import {other} from "../GameElement.js";
 import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
@@ -106,37 +106,42 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     private picked=false;
     private timer=0;
     private readonly buttonIds:[number,number,number]=[buttonId(), buttonId(), buttonId()];
+    private flippingCoin:DetermineStarterEvent|undefined=undefined;
     constructor(game:VisualGame) {
         super(game);
         this.removeDraw = registerDrawCallback(0, (p5, scale) => {
-            p5.background(30,30,30,150);
-            if(!this.picked) {
-                button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.8, scale, scale * 0.5, "Go First", () => {
-                    this.game.sendEvent(new StartRequestEvent({
-                        which: "first",
-                    }));
-                    this.picked = true;
-                }, scale, this.buttonIds[0]);
-                button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.25, scale, scale * 0.5, "Go Second", () => {
-                    this.game.sendEvent(new StartRequestEvent({
-                        which: "second",
-                    }));
-                    this.picked = true;
-                }, scale, this.buttonIds[1]);
-                button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 + scale * 0.3, scale, scale * 0.5, "No Preference", () => {
-                    this.game.sendEvent(new StartRequestEvent({
-                        which: "nopref",
-                    }));
-                    this.picked = true;
-                }, scale, this.buttonIds[2]);
-            }else{
-                p5.textAlign(p5.CENTER,p5.CENTER);
-                p5.fill(255,255,255);
-                p5.textSize(scale/3);
-                p5.text("Waiting"+".".repeat(this.timer), p5.width/2,p5.height/2);
+            if(this.flippingCoin!==undefined){
+                this.startGame(this.flippingCoin);
+            }else {
+                p5.background(30,30,30,150);
+                if (!this.picked) {
+                    button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.8, scale, scale * 0.5, "Go First", () => {
+                        this.game.sendEvent(new StartRequestEvent({
+                            which: "first",
+                        }));
+                        this.picked = true;
+                    }, scale, this.buttonIds[0]);
+                    button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.25, scale, scale * 0.5, "Go Second", () => {
+                        this.game.sendEvent(new StartRequestEvent({
+                            which: "second",
+                        }));
+                        this.picked = true;
+                    }, scale, this.buttonIds[1]);
+                    button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 + scale * 0.3, scale, scale * 0.5, "No Preference", () => {
+                        this.game.sendEvent(new StartRequestEvent({
+                            which: "nopref",
+                        }));
+                        this.picked = true;
+                    }, scale, this.buttonIds[2]);
+                } else {
+                    p5.textAlign(p5.CENTER, p5.CENTER);
+                    p5.fill(255, 255, 255);
+                    p5.textSize(scale / 3);
+                    p5.text("Waiting" + ".".repeat(this.timer), p5.width / 2, p5.height / 2);
 
-                this.timer+=0.02;
-                if(this.timer>=4) this.timer=0;
+                    this.timer += 0.02;
+                    if (this.timer >= 4) this.timer = 0;
+                }
             }
         });
     }
@@ -149,6 +154,28 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
         super.swapAway();
         this.removeDraw();
     }
+
+    private internalStartGame(event:DetermineStarterEvent){
+        this.game.cursorActive=true;
+        this.game.setState(new VTurnState(event.data.starter, this.game),
+            new TurnState(this.game.getGame(), event.data.starter));
+
+        for(const field of this.game.fieldsA) {
+            field.getCard()?.flipFaceup();
+            field.startGame();
+        }
+        for(const field of this.game.fieldsB) {
+            field.getCard()?.flipFaceup();
+            field.startGame();
+        }
+        if(this.game.state instanceof VTurnState) this.game.state.init();
+    }
+    startGame(event:DetermineStarterEvent){
+        if(event.data.flippedCoin){
+            this.game.changeView(sideTernary(this.game.getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
+            this.flippingCoin=event;
+        }else this.internalStartGame(event);
+    }
 }
 
 /**
@@ -158,22 +185,16 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
  */
 export class VTurnState extends VisualGameState<TurnState>{
     public readonly currTurn;
-    public canInit;
-    constructor(currTurn:Side, game:VisualGame, canInit=true) {
+    constructor(currTurn:Side, game:VisualGame) {
         super(game);
         this.currTurn=currTurn;
-        this.canInit=canInit;
 
     }
-    private initedAlready=false;
     private triggerDrawn = false;
     init() {
         super.init();
         this.addFeatures(StateFeatures.DECK_DRAWABLE);
 
-        if(!this.initedAlready && this.canInit) {
-            this.initedAlready=true;
-        }
         this.game.changeView(sideTernary(this.game.getMySide(), ViewType.BOARD_A, ViewType.BOARD_B));
     }
 

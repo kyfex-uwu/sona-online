@@ -413,9 +413,9 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             forceFailed=event.data.failed;
         }
 
-        let ranRightAway=false;
+        let ranRightAway:boolean|undefined=undefined;
         scareInterrupt(event, game, scarer, scared, event.data.attackingWith, (scareResult) => {
-            ranRightAway = true;
+            if(ranRightAway!==false) ranRightAway = true;
 
             let scarer = sideTernary(event.data.scarerPos[1], game!.fieldsA, game!.fieldsB)[event.data.scarerPos[0] - 1];
             let scared = sideTernary(event.data.scaredPos[1], game!.fieldsA, game!.fieldsB)[event.data.scaredPos[0] - 1];
@@ -477,10 +477,12 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
 
             if (!event.isForcedFree()) endTurn(game);
+            if(!ranRightAway) acceptThenCPUAct(event, game);
         });
         if(ranRightAway)
             return acceptThenCPUAct(event, game);
         else{
+            ranRightAway=false;
             network.replyToClient(event, new PerchanceEvent({}, undefined, event.id));
             actIfCpu(game);
             return processedEventMarker;

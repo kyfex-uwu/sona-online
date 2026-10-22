@@ -101,24 +101,23 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     if(orig) orig({self, scared, scarer, stat, game, origEvent, next, result});
 
     if(sideTernary(self.side, game.fieldsA, game.fieldsB).find(card=>card?.id === self.id) === undefined ||
-        self.side === scarer.side)
+        self.side === scarer.side || self === scared)
         return;
 
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
     self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_RETARGET);
-    if(stat !== "card")
-        game.player(self.side)?.send(new CardAction({
-            cardId:-1,
-            actionName:CardActionOptions.NOBLE_RETARGET,
-            cardData:{
-                data:{
-                    scared:scared.getCardPos()!,
-                    scarer:scarer.getCardPos()!,
-                    stat
-                }
+    game.player(self.side)?.send(new CardAction({
+        cardId:-1,
+        actionName:CardActionOptions.NOBLE_RETARGET,
+        cardData:{
+            data:{
+                scared:scared.getCardPos()!,
+                scarer:scarer.getCardPos()!,
+                stat
             }
-        }));
+        }
+    }));
     game.freeze(event=>
         event instanceof CardAction &&
         event.sender === game.player(self.side) &&

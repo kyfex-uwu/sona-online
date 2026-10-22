@@ -5,7 +5,7 @@ import {
     ClarifyCardEvent,
     DrawAction,
     type Event,
-    PassAction,
+    PassAction, PerchanceEvent,
     PlaceAction,
     ScareAction,
     StartRequestEvent
@@ -163,11 +163,16 @@ export default class CPU{
             this.actionDebouncer.run(()=>waitForConfirm);
         else waitForConfirm.resolve();
 
-        this.waitForEventer.waitFor(e=>e.id === event.id, (e)=> {
-            const toReturn = data.callback ? (data.callback(e) ?? true) : true;
-            waitForConfirm.resolve();
-            return toReturn;
-        });
+        const waitFor = ()=>{
+            this.waitForEventer.waitFor(e=>e.id === event.id, (e)=> {
+                const toReturn = data.callback ? (data.callback(e) ?? true) : true;
+                if(!(e instanceof PerchanceEvent)) waitForConfirm.resolve();
+                else waitFor();
+                return toReturn;
+            });
+        }
+        waitFor();
+
         parseEvent(event);
     }
 
