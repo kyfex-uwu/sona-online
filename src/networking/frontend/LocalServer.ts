@@ -9,8 +9,7 @@ import {
     type SerializableType
 } from "../Events.js";
 import {gameReceiveFromServer, getLocalGame} from "./LocalGameServer.js";
-import {log, websocket, websocketReady} from "../../client/clientConsts.js";
-import {eventReplyIds} from "../Server.js";
+import {eventReplyIds, log, websocket, websocketReady} from "../../client/clientConsts.js";
 import {EndGameState} from "../../GameStates.js";
 import {VEndState} from "../../client/VisualGameStates.js";
 import {EventWaiter} from "../../consts.js";

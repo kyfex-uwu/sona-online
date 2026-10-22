@@ -5,7 +5,7 @@ import {other} from "../GameElement.js";
 import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {levelOr, Side, sideTernary, Stat} from "../consts.js";
-import {camera, clickListener} from "./clientConsts.js";
+import {camera, clickListener, sendToServer} from "./clientConsts.js";
 import {Color, Euler, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector2, Vector3} from "three";
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
@@ -116,19 +116,19 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
                 p5.background(30,30,30,150);
                 if (!this.picked) {
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.8, scale, scale * 0.5, "Go First", () => {
-                        this.game.sendEvent(new StartRequestEvent({
+                        sendToServer(new StartRequestEvent({
                             which: "first",
                         }));
                         this.picked = true;
                     }, scale, this.buttonIds[0]);
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.25, scale, scale * 0.5, "Go Second", () => {
-                        this.game.sendEvent(new StartRequestEvent({
+                        sendToServer(new StartRequestEvent({
                             which: "second",
                         }));
                         this.picked = true;
                     }, scale, this.buttonIds[1]);
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 + scale * 0.3, scale, scale * 0.5, "No Preference", () => {
-                        this.game.sendEvent(new StartRequestEvent({
+                        sendToServer(new StartRequestEvent({
                             which: "nopref",
                         }));
                         this.picked = true;

@@ -76,7 +76,7 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
             next(data);
         }]);
 
-        game.player(self.side)?.send(new CardAction({
+        game.player(self.side)?.queueSend(new CardAction({
             cardId:-1,
             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
             cardData:false
@@ -107,7 +107,7 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
     self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_RETARGET);
-    game.player(self.side)?.send(new CardAction({
+    game.player(self.side)?.queueSend(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.NOBLE_RETARGET,
         cardData:{
@@ -145,7 +145,7 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},
         }), game);
-        game.player(self.side)?.send(new ClarifyCardEvent({
+        game.player(self.side)?.queueSend(new ClarifyCardEvent({
             id:card.id,
             cardDataName:card.cardData.name
         }));
@@ -153,7 +153,7 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
 });
 wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(orig) orig({self, game});
-    game.player(self.side)?.send(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
+    game.player(self.side)?.queueSend(multiClarifyFactory(sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.YASHI));
     game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.YASHI_REORDER);
 });
@@ -180,7 +180,7 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event instanceof CardAction &&
         event.data.actionName === CardActionOptions.BROY_WEASLA_INCREASE &&
         event.sender === game.player(self.side));
-    game.player(self.side)?.send(new CardAction({
+    game.player(self.side)?.queueSend(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
         cardData:{data:{
@@ -223,7 +223,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
             event.data.justification === ClarificationJustification.FOXY_MAGICIAN &&
             event.sender === game.player(self.side)));
 
-    game.player(self.side)?.send(multiClarifyFactory(
+    game.player(self.side)?.queueSend(multiClarifyFactory(
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.FOXY_MAGICIAN));
 });
@@ -248,7 +248,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
             event.isForced() && event.sender === undefined));
 
 
-    game.player(self.side)?.send(multiClarifyFactory(
+    game.player(self.side)?.queueSend(multiClarifyFactory(
         sideTernary(self.side, game.deckA, game.deckB),
         ClarificationJustification.DCW));
 });
@@ -277,7 +277,7 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event instanceof CardAction &&
         event.data.actionName === CardActionOptions.COWGIRL_COYOTE_INCREASE &&
         event.sender === game.player(self.side));
-    game.player(self.side)?.send(new CardAction({
+    game.player(self.side)?.queueSend(new CardAction({
         cardId:-1,
         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
         cardData:{data:{

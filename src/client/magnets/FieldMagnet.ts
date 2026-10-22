@@ -1,13 +1,13 @@
 import CardMagnet from "./CardMagnet.js";
 import {Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {sendToServer, updateOrder} from "../clientConsts.js";
 import {other} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
 import {PlaceAction, ScareAction} from "../../networking/Events.js";
 import {VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim} from "../../Card.js";
-import {acceptEvent} from "../../networking/Server.js";
+import {eventReply} from "../../networking/Server.js";
 import {Side, sideTernary, Stat} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
@@ -43,11 +43,11 @@ export default class FieldMagnet extends CardMagnet{
                         this.game.selectedCard = undefined;
 
                         this.game.frozen=true;
-                        this.game.sendEvent(new PlaceAction({
+                        sendToServer(new PlaceAction({
                             cardId: card.logicalCard.id,
                             position: this.which,
                             side:this.game.getMySide(),
-                        })).onReply(acceptEvent().success(()=>{
+                        })).onReply(eventReply().success(()=>{
                             if((!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))
                                 state.decrementTurn();
                         }).fail(()=>{
@@ -120,11 +120,11 @@ export default class FieldMagnet extends CardMagnet{
                             if(state.attackData.type !== undefined && this.card.logicalCard.stat(getVictim(state.attackData.type)) !== undefined) {
                                 if (this.game.raycastCards([this.card])) {
                                     if (!this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
-                                        this.game.sendEvent(new ScareAction({
+                                        sendToServer(new ScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,
-                                        })).onReply(acceptEvent().finally(()=>{
+                                        })).onReply(eventReply().finally(()=>{
                                             sideTernary(this.getSide(), game.fieldsA, game.fieldsB)[state.cardIndex-1]!.getCard()
                                                 ?.highlightStat({[Stat.RED]:false, [Stat.BLUE]:false, [Stat.YELLOW]:false}, attackLock);
                                         }));

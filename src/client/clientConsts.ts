@@ -1,7 +1,7 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PerspectiveCamera, Scene, TextureLoader, WebGLRenderer} from "three";
-import {network, Replyable} from "../networking/Server.js";
 import dev from "../dev.js";
+import {Event, type SerializableEventData} from "../networking/Events.js";
 
 export const modelLoader = new GLTFLoader();
 
@@ -102,7 +102,28 @@ export const updateOrder: {[k:string]:number}={};
 export const websocket = new WebSocket("ws://" + window.location.host);
 export const websocketReady = new Promise(r => websocket.addEventListener("open", r));
 
-network.sendToServer = (event) => {
+export const eventReplyIds: { [k: string]: Replyable<any> } = {}
+export class Replyable<T extends SerializableEventData> {
+    public _callback?: (event: Event<any>) => void;
+    private readonly source: Event<T>;
+
+    constructor(source: Event<T>) {
+        this.source = source;
+    }
+
+    onReply(callback: (event: Event<any>) => void) {
+        if (this._callback !== undefined) {
+            console.trace("tried to 2 event reply callbacks");
+            return;
+        }
+
+        eventReplyIds![this.source.id] = this;
+        this._callback = callback;
+        return this.source;
+    }
+}
+
+export function sendToServer(event:Event<any>){
     websocketReady.then(()=>{
         websocket.send(event.serialize());
         if(true) log("sent "+event.serialize())

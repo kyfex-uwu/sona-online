@@ -1,4 +1,3 @@
-import {eventReplyIds, network, Replyable} from "../Server.js";
 import {
     AcceptEvent,
     Event,
@@ -21,6 +20,8 @@ import {inflate} from "./EventInflator.js";
 
 export type Client ={
     send:(v:Event<any>)=>void,
+    queueSend:(v:Event<any>)=>void,
+    flushQueue:()=>void,
 };
 const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
 
@@ -28,9 +29,17 @@ export function backendInit(server:Server){
     const wsServer = new ws.WebSocketServer({ noServer: true });
     server.on('upgrade', (req, socket, head) => {
         wsServer.handleUpgrade(req, socket, head, (ws) => {
-            const sender = {
+            const sendQueue:Event<any>[] = [];
+            const sender:Client = {
                 send:(event:Event<any>)=> {
                     ws.send(event.serialize());
+                },
+                queueSend:(event:Event<any>)=>{
+                    sendQueue.push(event);
+                },
+                flushQueue:()=>{
+                    for(const event of sendQueue) sender.send(event);
+                    sendQueue.splice(0);//clears array
                 }
             };
 
@@ -60,12 +69,12 @@ export function backendInit(server:Server){
 export const processedEventMarker = {dontUseThisRawCallRejectOrAccept:3 as 3};
 export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
 export function rejectEvent(event:Event<any>, reason:string){
-    network.replyToClient(event, new RejectEvent({}, undefined, event.id));
+    event.sender?.send(new RejectEvent({}, undefined, event.id));
     console.trace(`# rejected ${event.id}(${typeof event}): ${reason}`);
     return processedEventMarker;
 }
 export function acceptEvent(event:Event<any>){
-    network.replyToClient(event, new AcceptEvent({}, undefined, event.id));
+    event.sender?.send(new AcceptEvent({}, undefined, event.id));
     return processedEventMarker;
 }
 
@@ -103,22 +112,22 @@ export function parseEvent(event:Event<any>):processedEvent{
                 let hasLevel1A=false;
                 let hasLevel1B=false;
                 for(let i=0;i<3;i++){
-                    if(!hasLevel1A && deckA[deckA.length-1-i]?.type !== undefined && cards[deckA[deckA.length-1-i]?.type!]?.level === 1){
+                    if(!hasLevel1A && deckA.at(-1-i)?.type !== undefined && cards[deckA.at(-1-i)?.type!]?.level === 1){
                         hasLevel1A=true;
                     }
-                    if(!hasLevel1B && deckB[deckB.length-1-i]?.type !== undefined && cards[deckB[deckB.length-1-i]?.type!]?.level === 1){
+                    if(!hasLevel1B && deckB.at(-1-i)?.type !== undefined && cards[deckB.at(-1-i)?.type!]?.level === 1){
                         hasLevel1B=true;
                     }
                 }
                 if(!hasLevel1A){
                     const toFront = shuffled(deckA.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckA.splice(deckA.indexOf(toFront), 1);
-                    deckA.splice(deckA.length-Math.floor(Math.random()*3), 0, toFront);
+                    deckA.splice(-Math.floor(Math.random()*3), 0, toFront);
                 }
                 if(!hasLevel1B){
                     const toFront = shuffled(deckB.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckB.splice(deckB.indexOf(toFront), 1);
-                    deckB.splice(deckB.length-Math.floor(Math.random()*3), 0, toFront);
+                    deckB.splice(-Math.floor(Math.random()*3), 0, toFront);
                 }
 
                 const game = new Game(deckA, deckB, uuid());
@@ -154,15 +163,5 @@ export async function receiveFromClient(packed:any, client:Client) {
         console.log("received "+event.serialize());
     }
 
-    if(eventReplyIds[event.id] !== undefined){
-        (eventReplyIds[event.id]?._callback||(()=>{}))(event);
-        return;
-    }
-
     parseEvent(event);
-}
-
-network.replyToClient = (replyTo, replyWith) => {
-    replyTo.sender?.send(replyWith);
-    return new Replyable(replyWith);
 }

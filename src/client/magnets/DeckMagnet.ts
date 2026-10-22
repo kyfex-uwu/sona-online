@@ -1,11 +1,11 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {sendToServer, updateOrder} from "../clientConsts.js";
 import {DrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {VTurnState} from "../VisualGameStates.js";
-import {acceptEvent} from "../../networking/Server.js";
+import {eventReply} from "../../networking/Server.js";
 import {externalPromise, shuffled, Side, sideTernary, wait} from "../../consts.js";
 import type {CardWithTransform} from "./RunawayMagnet.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
@@ -46,7 +46,7 @@ export default class DeckMagnet extends CardMagnet{
                     this.game.selectedCard === undefined &&
                     sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5) {
                     this.game.frozen=true;
-                    this.game.sendEvent(new DrawAction({})).onReply(acceptEvent().success(()=>{
+                    sendToServer(new DrawAction({})).onReply(eventReply().success(()=>{
                         this.drawCard();
                         if(this.game.state instanceof VTurnState) {
                             if (this.game.state.getNonVisState().drawnToStart) {
@@ -97,7 +97,7 @@ export default class DeckMagnet extends CardMagnet{
      */
     drawCard(bottom?:boolean){
         const hand = sideTernary(this.getSide(), this.game.handA, this.game.handB);
-        let tempCard = this.cards[this.cards.length - 1]?.card as VisualCard;
+        let tempCard = this.cards.at(-1)?.card as VisualCard;
         if(bottom) tempCard=this.cards[0]?.card as VisualCard;
         if (tempCard && this.removeCard(tempCard)) {
             tempCard.flipFaceup();

@@ -1,6 +1,5 @@
 import Card from "./Card.js";
 import {Event} from "./networking/Events.js";
-import {network} from "./networking/Server.js";
 import cards from "./Cards.js";
 import {BeforeGameState, EndGameState, type GameState} from "./GameStates.js";
 import type {Client} from "./networking/backend/BackendServer.js";
@@ -124,11 +123,6 @@ export default class Game{
         sideTernary(side,this.deckA, this.deckB).splice(0,0,...deck.map(data=> new Card(cards[data.type]!, side, this, data.id)));
     }
     public setMySide(side:Side){ this._mySide=side; }
-
-    //Sends an event to the client/server
-    requestEvent(event:Event<any>){
-        return network.sendToServer(event);
-    }
 
     freeze(allowThrough:(event:Event<any>)=>boolean){
         const data = this.getMiscData(GameMiscDataStrings.FROZEN);

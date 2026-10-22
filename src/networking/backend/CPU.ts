@@ -154,6 +154,15 @@ export default class CPU{
             }
         }
     }
+    private readonly sendQueue:Event<any>[] = [];
+    queueSend(event:Event<any>){
+        this.sendQueue.push(event);
+    }
+    flushQueue(){
+        for(const event of this.sendQueue)
+            this.send(event);
+        this.sendQueue.splice(0);//clears array
+    }
 
     toServer(event:Event<any>, data:{callback?: (e: Event<any>) => (void | boolean), waitForConfirm?:boolean }={}){
         event.sender = this;

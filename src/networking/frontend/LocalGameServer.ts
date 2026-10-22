@@ -1,4 +1,4 @@
-import {network, acceptEvent} from "../Server.js";
+import {eventReply} from "../Server.js";
 import {
     CardAction,
     ClarificationJustification,
@@ -49,7 +49,7 @@ import {
     type YASHI_REORDER
 } from "../CardActionOption.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {log, threeScene} from "../../client/clientConsts.js";
+import {log, sendToServer, threeScene} from "../../client/clientConsts.js";
 import {localWaiter} from "./LocalServer.js";
 import {setScene} from "../../index.js";
 import {GameScene} from "../../client/scenes/GameScene.js";
@@ -106,7 +106,6 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
 
     if(event instanceof GameStartEvent){
         game = new VisualGame(threeScene, event.data.cpuGame);
-        network.clientGame = game.getGame();
 
         setScene(()=>new GameScene(event.data.cpuGame));
 
@@ -250,7 +249,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 const data = (event as CardAction<AMBER_PICK>).data.cardData;
 
                 const toReorder = sideTernary(data.side!, game.deckA, game.deckB).getCards();
-                let [card1, card2] = [toReorder[toReorder.length-1], toReorder[toReorder.length-2]];
+                let [card1, card2] = [toReorder.at(-1), toReorder.at(-2)];
                 if(data!.which === AmberData.KEEP_SECOND) [card1, card2] = [card2, card1];
                 card1?.flipFaceup();
                 card2?.flipFaceup();
@@ -304,7 +303,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 const buttons = (p5:any, scale:number, disabled:boolean)=>{
                     for (let i = 0; i < 3; i++)
                         button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId: -1,
                                 actionName: CardActionOptions.DCW_GUESS,
                                 cardData: (i + 1 as Level)
@@ -394,7 +393,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 const buttons = (p5:any, scale:number, disabled:boolean)=>{
                     for (let i = 0; i < 3; i++)
                         button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId: -1,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 cardData: (i +1) as Level
@@ -493,7 +492,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     },
                     init:(self)=>{
                         const end = (save:boolean)=>{
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId:-1,
                                 actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                                 cardData:save
@@ -563,7 +562,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                 (stat)=>"+2");
                             self.twoButtons(p5, scale, {
                                 onClick:()=>{
-                                    network.sendToServer(new CardAction({
+                                    sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:{data:{
@@ -573,7 +572,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }}
-                                    })).onReply(acceptEvent().finally(()=>{
+                                    })).onReply(eventReply().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -581,11 +580,11 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                 disabled:selectedStat===undefined||selectedCard===undefined
                             }, {
                                 onClick:()=> {
-                                    network.sendToServer(new CardAction({
+                                    sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:{}
-                                    })).onReply(acceptEvent().finally(()=>{
+                                    })).onReply(eventReply().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -653,7 +652,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                 (stat)=>"+2");
                             self.twoButtons(p5, scale, {
                                 onClick:()=>{
-                                    network.sendToServer(new CardAction({
+                                    sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:{data:{
@@ -663,7 +662,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                                 .findIndex(card=>card?.logicalCard.id === selectedCard!.logicalCard.id) +1) as 1|2|3,
                                                 selectedCard!.getSide()]
                                         }}
-                                    })).onReply(acceptEvent().finally(()=>{
+                                    })).onReply(eventReply().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -671,11 +670,11 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                 disabled:selectedStat===undefined||selectedCard===undefined
                             }, {
                                 onClick:()=> {
-                                    network.sendToServer(new CardAction({
+                                    sendToServer(new CardAction({
                                         cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:{}
-                                    })).onReply(acceptEvent().finally(()=>{
+                                    })).onReply(eventReply().finally(()=>{
                                         self.end("finished");
                                     }));
                                 },
@@ -711,7 +710,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 game.setState(new VGuiState(game, [game.state,game.getGame().state], {
                     onEnd:(self,type)=>{
                         release();
-                        network.sendToServer(new CardAction({
+                        sendToServer(new CardAction({
                             cardId: -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: {redirect:type === "finished"}
@@ -745,8 +744,5 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.id) as VisualCard);
     }
 }
-
-//@ts-ignore
-window.requestSync = ()=> game.sendEvent(new RequestSyncEvent({}));
 
 const og029Highlight = newHighlightLock();

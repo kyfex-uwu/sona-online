@@ -1,4 +1,3 @@
-import {network} from "../Server.js";
 import {
     ActionEvent,
     CardAction,
@@ -58,7 +57,7 @@ export function gameServerWSClose(client:Client){
 export function draw(game: Game, dontSendTo: Client|undefined, side: Side, isAction:boolean, clarifyTo?:Client){
     const card = sideTernary(side, game.deckA, game.deckB).pop();
     if(card !== undefined) {
-        clarifyTo?.send(new ClarifyCardEvent({
+        clarifyTo?.queueSend(new ClarifyCardEvent({
             id: card.id,
             cardDataName: card.cardData.name
         }));
@@ -242,19 +241,19 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }
 
             for(const user of (usersFromGameIDs[game.gameID]||[])){
-                user.send(new DetermineStarterEvent({
+                user.queueSend(new DetermineStarterEvent({
                     starter:startingSide,
                     flippedCoin:flippedCoin,
                 }));
                 for(const card of game.fieldsA)
                     if(card !== undefined)
-                        user.send(new ClarifyCardEvent({
+                        user.queueSend(new ClarifyCardEvent({
                             id: card.id,
                             cardDataName:card.cardData.name,
                         }));
                 for(const card of game.fieldsB)
                     if(card !== undefined)
-                        user.send(new ClarifyCardEvent({
+                        user.queueSend(new ClarifyCardEvent({
                             id: card.id,
                             cardDataName:card.cardData.name,
                         }));
@@ -320,12 +319,12 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;
-            user.send(new ClarifyCardEvent({
+            user.queueSend(new ClarifyCardEvent({
                 id: event.data.cardId,
                 ...(game.state instanceof BeforeGameState ? {} : {cardDataName:card.cardData.name}),
                 faceUp: !(game.state instanceof BeforeGameState)
             }));
-            user.send(new PlaceAction({
+            user.queueSend(new PlaceAction({
                 cardId:event.data.cardId,
                 position:event.data.position,
                 side:event.data.side,
@@ -361,8 +360,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 !canPredraw && game.state.drawnToStart, event.sender)){
             game.setMiscData(GameMiscDataStrings.CAN_PREDRAW, false);
             game.state.setDrawnToStart();
-            actIfCpu(game);
-            return acceptEvent(event);
+            return acceptThenCPUAct(event, game);
         }
         return rejectEvent(event, "couldnt draw (empty deck)");
     }else if (event instanceof PassAction){
@@ -377,7 +375,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;
-            user.send(new PassAction({}));
+            user.queueSend(new PassAction({}));
         }
 
         endTurn(game, true);
@@ -449,7 +447,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 }
             });
             for (const user of (usersFromGameIDs[game.gameID] || [])) {
-                user.send(toSend);
+                user.queueSend(toSend);
             }
 
             if(scareResult.runaway) {
@@ -483,7 +481,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return acceptThenCPUAct(event, game);
         else{
             ranRightAway=false;
-            network.replyToClient(event, new PerchanceEvent({}, undefined, event.id));
+            event.sender?.send(new PerchanceEvent({}, undefined, event.id));
             actIfCpu(game);
             return processedEventMarker;
         }
@@ -510,7 +508,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
             return rejectEvent(event, "failed discard check");
         }
-        game.player(other(side))?.send(new DiscardAction({
+        game.player(other(side))?.queueSend(new DiscardAction({
             id:event.data.id,
             side
         }));
@@ -569,7 +567,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         if(shouldClarify instanceof Card){
-            network.replyToClient(event, new ClarifyCardEvent({
+            event.sender?.send(new ClarifyCardEvent({
                 id: shouldClarify.id,
                 cardDataName: shouldClarify.cardData.name,
                 ...(maybeJustfication?{justification:maybeJustfication}:{})
@@ -577,7 +575,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return acceptEvent(event);
         }
         if(shouldClarify instanceof Array){
-            network.replyToClient(event, multiClarifyFactory(shouldClarify, maybeJustfication));
+            event.sender?.send(multiClarifyFactory(shouldClarify, maybeJustfication));
             return acceptEvent(event);
         }
 
@@ -585,7 +583,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
     }
 
     else if(event instanceof RequestServerDumpAction && dev.on){
-        network.replyToClient(event, new ServerDumpEvent({
+        event.sender?.send(new ServerDumpEvent({
             fieldsA:game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             fieldsB:game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             handA:game.handA.map(card=>card?.cardData.name),

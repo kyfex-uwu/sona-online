@@ -1,5 +1,4 @@
-import {AcceptEvent, Event, PerchanceEvent, RejectEvent, type SerializableEventData,} from "./Events.js";
-import type Game from "../Game.js";
+import {AcceptEvent, Event, PerchanceEvent, RejectEvent} from "./Events.js";
 
 class FlagData{
     type:"number"|"boolean";
@@ -22,25 +21,7 @@ export function getFlag<T>(name:flagName<T>){
     return flags[name as string]!.val as T;
 }
 
-export const eventReplyIds:{[k:string]:Replyable<any>} = {}
-export class Replyable<T extends SerializableEventData>{
-    public _callback?: (event: Event<any>) => void;
-    private readonly source:Event<T>;
-    constructor(source:Event<T>) {
-        this.source=source;
-    }
-    onReply(callback:(event:Event<any>)=>void){
-        if(this._callback !== undefined){
-            console.trace("tried to 2 event reply callbacks");
-            return;
-        }
-
-        eventReplyIds![this.source.id] = this;
-        this._callback=callback;
-        return this.source;
-    }
-}
-export function acceptEvent(){
+export function eventReply(){
     const data:{success?: () => void, fail?: () => void, finally?: () => void} = {};
     const toReturn = (event:Event<any>) =>{
         if(event instanceof PerchanceEvent) return;
@@ -68,16 +49,4 @@ export function cancelCallback(callback: () => void, finaly?:()=>void){
         if(event instanceof RejectEvent) callback();
         if(finaly !== undefined) finaly();
     }
-}
-
-export const network:{
-    //Sends a message to the server
-    sendToServer:<T extends SerializableEventData> (event:Event<T>)=>Replyable<T>,
-    //Replies with an event to a single client
-    replyToClient:<T extends SerializableEventData> (replyTo:Event<T>, replyWith:Event<any>)=>Replyable<T>,
-
-    clientGame?:Game,
-} = {
-    sendToServer:(e)=>new Replyable(e),
-    replyToClient:(e)=>new Replyable(e),
 }

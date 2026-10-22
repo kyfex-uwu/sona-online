@@ -6,13 +6,13 @@ import HandFan from "./fans/HandFan.js";
 import VisualHandFan from "./fans/HandFan.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import VisualCard from "./VisualCard.js";
-import {camera} from "./clientConsts.js";
+import {camera, sendToServer} from "./clientConsts.js";
 import {DrawAction, Event, PassAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import p5 from "p5";
 import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
 import type {GameState} from "../GameStates.js";
-import {acceptEvent} from "../networking/Server.js";
+import {eventReply} from "../networking/Server.js";
 import {Side, sideTernary} from "../consts.js";
 import {CrisisCounter} from "./CrisisCounter.js";
 import {specialCards} from "../Cards.js";
@@ -131,7 +131,7 @@ export default class VisualGame extends ElementScene{
 
         this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
             if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide()){
-                this.sendEvent(new DrawAction({}));
+                sendToServer(new DrawAction({}));
                 this.state.getNonVisState().setDrawnToStart();
             }
         })
@@ -163,7 +163,7 @@ export default class VisualGame extends ElementScene{
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
                         this.state.getActionsLeft() <= 0 ? "End Turn" : "Pass", ()=>{
                     this.frozen=true;
-                    this.sendEvent(new PassAction({})).onReply(acceptEvent().success(() => {
+                    sendToServer(new PassAction({})).onReply(eventReply().success(() => {
                         this.state.decrementTurn(true);
                     }).fail(()=>{
                         this.frozen=false;
@@ -305,14 +305,6 @@ export default class VisualGame extends ElementScene{
     }
 
     getMySide(){ return this.game.mySide; }
-
-    /**
-     * Sends an event to the server
-     * @param event The event to send
-     */
-    sendEvent(event:Event<any>){
-        return this.game.requestEvent(event);
-    }
 
     //Deconstructs the game, removing it from the scene and removing all draw callbacks
     release(){

@@ -46,6 +46,8 @@ function lastAction(game:Game){
 
 export function acceptThenCPUAct(event:Event<any>, game:Game){
     const toReturn = acceptEvent(event);
+    game.player(Side.A)?.flushQueue();
+    game.player(Side.B)?.flushQueue();
     actIfCpu(game);
     return toReturn;
 }
@@ -319,7 +321,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.setMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED, data);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(actor.side)], CardActionOptions.FOXY_MAGICIAN_GUESS);
-            game.player(other(actor.side))?.send(new CardAction({
+            game.player(other(actor.side))?.queueSend(new CardAction({
                 cardId:data,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
                 cardData:undefined
@@ -337,7 +339,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const guess = (event as CardAction<FOXY_MAGICIAN_GUESS>).data.cardData;
 
             if(answer.cardData.level !== guess) {
-                event.sender?.send(new ClarifyCardEvent({
+                event.sender?.queueSend(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
                     justification: ClarificationJustification.FOXY_MAGICIAN
@@ -370,7 +372,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             game.setMiscData(GameMiscDataStrings.DCW_PICKED, {cardId:data,guesses:0});
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[other(actor.side)], CardActionOptions.DCW_GUESS);
-            game.player(other(actor.side))?.send(new CardAction({
+            game.player(other(actor.side))?.queueSend(new CardAction({
                 cardId:data,
                 actionName:CardActionOptions.DCW_GUESS,
                 cardData:undefined
@@ -399,7 +401,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             pickedData.guesses++;
             if(pickedData.guesses >= 2){
                 game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[guesserSide], undefined);
-                event.sender?.send(new ClarifyCardEvent({
+                event.sender?.queueSend(new ClarifyCardEvent({
                     id: answer.id,
                     cardDataName: answer.cardData.name,
                     justification: ClarificationJustification.DCW

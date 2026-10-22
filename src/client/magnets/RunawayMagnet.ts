@@ -1,6 +1,6 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
-import {updateOrder} from "../clientConsts.js";
+import {sendToServer, updateOrder} from "../clientConsts.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {Side, sideTernary} from "../../consts.js";
@@ -27,7 +27,7 @@ export default class RunawayMagnet extends CardMagnet{
                     this.game.frozen=true;
                     const card = this.game.selectedCard;
                     this.game.selectedCard = undefined;
-                    this.game.sendEvent(new DiscardAction({id:card.logicalCard.id})).onReply(cancelCallback(()=>{
+                    sendToServer(new DiscardAction({id:card.logicalCard.id})).onReply(cancelCallback(()=>{
                         this.removeCard();
                         this.game.selectedCard = card;
                     },()=>{

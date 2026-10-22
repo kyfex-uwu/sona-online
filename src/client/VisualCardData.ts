@@ -3,7 +3,7 @@ import cards from "../Cards.js";
 import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {externalPromise, sideTernary, Stat, statTernary, wrap} from "../consts.js";
-import {network, acceptEvent} from "../networking/Server.js";
+import {eventReply} from "../networking/Server.js";
 import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
 import {CardMiscDataStrings} from "../Card.js";
 import {
@@ -30,6 +30,7 @@ import {StateFeatures} from "./VisualGameStateTools.js";
 import {localWaiter} from "../networking/frontend/LocalServer.js";
 import type SuperficialVisualCard from "./SuperficialVisualCard.js";
 import type VisualCardClone from "./VisualCardClone.js";
+import {sendToServer} from "./clientConsts.js";
 
 function lastAction(){
     const state = getLocalGame().state.getNonVisState();
@@ -82,7 +83,7 @@ visualCardClientActions["og-001"] = (card)=>{
                         .stat(stat) ?? 0).reduce((a,c)=>a+c,0).toString());
 
                 self.buttonAndCancel(p5, scale, ()=>{
-                    network.sendToServer(new CardAction({
+                    sendToServer(new CardAction({
                         cardId:card.logicalCard.id,
                         actionName:CardActionOptions.K9_ALPHA,
                         cardData:{
@@ -92,9 +93,9 @@ visualCardClientActions["og-001"] = (card)=>{
                                 .indexOf(attacking!.logicalCard)+1 as 1|2|3,
                             attackWith:attackStat
                         }
-                    })).onReply(acceptEvent().success(()=>{
+                    })).onReply(eventReply().success(()=>{
                         Animations.run(async ()=>{
-                            let particles = [];
+                            const particles = [];
                             for(const field of sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
                                 .filter(field => attackWith.has(field.getCard()!))){
                                 particles.push(particleStreak(
@@ -132,7 +133,7 @@ visualCardClientActions["og-018"] = async (card) =>{
     if(toReorder.length === 0) return false;
     const toReturn = externalPromise<boolean>();
 
-    network.sendToServer(new ClarifyCardEvent({
+    sendToServer(new ClarifyCardEvent({
         id:card.logicalCard.id,
         justification:ClarificationJustification.AMBER
     })).onReply(()=>{
@@ -142,7 +143,7 @@ visualCardClientActions["og-018"] = async (card) =>{
             onEnd:(self)=>{release();
 
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
-                network.sendToServer(new CardAction({
+                sendToServer(new CardAction({
                     cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
                     cardData: {
@@ -204,11 +205,11 @@ visualCardClientActions["og-028"] = (card)=>{
             for(const release of listeners) release();
 
             if(type ==="finished"){
-                network.sendToServer(new CardAction({
+                sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName:CardActionOptions.KIBBY_SCARE,
                     cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? -1) as [number,number,number]}
-                })).onReply(acceptEvent().success(()=>{
+                })).onReply(eventReply().success(()=>{
                     lastAction();
                     toReturn.resolve(true);
                 }));
@@ -268,13 +269,13 @@ visualCardClientActions["og-038"] = (card)=>{
         onEnd:(self,type)=>{
             release();
             if(type === "finished")
-                network.sendToServer(new CardAction({
+                sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName:CardActionOptions.WORICK_RESCUE,
                     cardData:{
                         id:selected!.logicalCard.id
                     }
-                })).onReply(acceptEvent().success(()=>{
+                })).onReply(eventReply().success(()=>{
                     console.log(selected, selected)
                     sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB)
                         .addCard(selected!);
@@ -316,11 +317,11 @@ visualCardClientActions["og-041"] = (card)=>{
             onEnd:(self)=>{
                 getLocalGame().frozen=true;
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
-                network.sendToServer(new CardAction({
+                sendToServer(new CardAction({
                     cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
                     cardData: {id:selectedCard!.logicalCard.id},
-                })).onReply(acceptEvent().finally(()=>{
+                })).onReply(eventReply().finally(()=>{
                     getLocalGame().frozen=false;
                     toReturn.resolve(true);
                 }));
@@ -342,7 +343,7 @@ visualCardClientActions["og-041"] = (card)=>{
         }),getLocalGame().getGame().state);
     });
 
-    network.sendToServer(new ClarifyCardEvent({
+    sendToServer(new ClarifyCardEvent({
         id:card.logicalCard.id,
         justification:ClarificationJustification.FURMAKER,
     }));
@@ -366,10 +367,10 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
 
     const endSignal = externalPromise();
     Animations.run(()=>endSignal);
-    network.sendToServer(new ClarifyCardEvent({
+    sendToServer(new ClarifyCardEvent({
         id:card.id,
         justification:ClarificationJustification.BROWNIE,
-    })).onReply(acceptEvent().success(()=>{
+    })).onReply(eventReply().success(()=>{
         let selected:SuperficialVisualCard|undefined;
         let release:()=>void;
 
@@ -380,13 +381,13 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                 onEnd:(self)=>{
                     release();
 
-                    network.sendToServer(new CardAction({
+                    sendToServer(new CardAction({
                         cardId:card.id,
                         actionName: CardActionOptions.BROWNIE_DRAW,
                         cardData: {
                             id:selected!.logicalCard.id
                         },
-                    })).onReply(acceptEvent().success(()=>{
+                    })).onReply(eventReply().success(()=>{
                         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
                     endSignal.resolve();
@@ -430,7 +431,7 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
                 sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA).position = prevPos;
 
                 if(type === "finished")
-                    network.sendToServer(new CardAction({cardId:card.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
+                    sendToServer(new CardAction({cardId:card.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
                         position:selectedCard!
                     }}));
             },
@@ -487,7 +488,7 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
         getLocalGame().setState(new VGuiState(getLocalGame(), [getLocalGame().state, getLocalGame().getGame().state], {
             onEnd: (self, type) => {
                 release();
-                network.sendToServer(new CardAction({
+                sendToServer(new CardAction({
                     cardId:card.id,
                     actionName:CardActionOptions.YASHI_REORDER,
                     cardData:{cards:ordered},
@@ -602,7 +603,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                     other.highlight(false, og031Highlight);
                                 }
 
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId: card.id,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_PICK,
                                 cardData: selectedCard!.logicalCard.id
@@ -673,14 +674,14 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             for(const release of listeners) release();
                             release();
 
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId:card.id,
                                 actionName:CardActionOptions.DCW_SCARE,
                                 cardData:{
                                     side:scareSelected![0].getSide(),
                                     pos:scareSelected![1]
                                 }
-                            })).onReply(acceptEvent().success(()=>{
+                            })).onReply(eventReply().success(()=>{
                                 game.unfreeze();
                             }));
                         },
@@ -721,7 +722,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                     other.highlight(false, og031Highlight);
                                 }
 
-                            network.sendToServer(new CardAction({
+                            sendToServer(new CardAction({
                                 cardId: card.id,
                                 actionName: CardActionOptions.DCW_PICK,
                                 cardData: selectedCard!.logicalCard.id
@@ -792,7 +793,7 @@ wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
         if(askFor.length>0) {
             for(const card of askFor)
                 alreadyAskedFor.add(card.logicalCard.id);
-            network.sendToServer(new ClarifyCardEvent({
+            sendToServer(new ClarifyCardEvent({
                 id: -1,
                 justification: ClarificationJustification.FURMAKER_VISIBLE
             }));
@@ -820,7 +821,7 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
             for(const field of sideTernary(getLocalGame().getMySide(), getLocalGame().fieldsB, getLocalGame().fieldsA))
                 field.getCard()?.highlight(false, og043Highlight);
 
-            network.sendToServer(new CardAction({
+            sendToServer(new CardAction({
                 cardId:card.id,
                 actionName:CardActionOptions.CLOUD_CAT_PICK,
                 cardData:selected!.logicalCard.id,
