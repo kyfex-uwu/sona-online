@@ -277,6 +277,11 @@ export async function particleStreak(startPos:Vector3, endPos:Vector3, startColo
     }
 }
 export function particleArc(startPos:Vector3, endPos:Vector3, startColor?:Color, endColor:Color|undefined=startColor){
+    if(Math.random()<0.01){
+        particle(startPos, new Vector3(), 0, [{time:0, size:7,opacity:1,color:whiteColor},{time:1000, size:7,opacity:1,color:whiteColor}]);
+        particle(endPos, new Vector3(), 0, [{time:0, size:7,opacity:1,color:whiteColor},{time:1000, size:7,opacity:1,color:whiteColor}]);
+    }
+
     let density = startPos.distanceTo(endPos)*0.002;
     while(density>0){
         if(density<1 && Math.random()>density) break;

@@ -8,7 +8,7 @@ import {
 } from "../Events.js";
 import Game from "../../Game.js";
 import {v4 as uuid} from "uuid"
-import {shuffled} from "../../consts.js";
+import {shuffled, Side} from "../../consts.js";
 import cards from "../../Cards.js";
 import {loadBackendWrappers} from "./BackendCardData.js";
 import {gameServerWSClose, parseEvent as gameParseEvent} from "./BackendGameServer.js";
@@ -68,13 +68,21 @@ export function backendInit(server:Server){
 
 export const processedEventMarker = {dontUseThisRawCallRejectOrAccept:3 as 3};
 export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
-export function rejectEvent(event:Event<any>, reason:string){
+export function rejectEvent(event:Event<any>, reason:string, game:Game|undefined, flush:boolean=true){
     event.sender?.send(new RejectEvent({}, undefined, event.id));
     console.trace(`# rejected ${event.id}(${typeof event}): ${reason}`);
+    if(flush) {
+        game?.player(Side.A)?.flushQueue();
+        game?.player(Side.B)?.flushQueue();
+    }
     return processedEventMarker;
 }
-export function acceptEvent(event:Event<any>){
+export function acceptEvent(event:Event<any>, game:Game|undefined, flush:boolean=true){
     event.sender?.send(new AcceptEvent({}, undefined, event.id));
+    if(flush) {
+        game?.player(Side.A)?.flushQueue();
+        game?.player(Side.B)?.flushQueue();
+    }
     return processedEventMarker;
 }
 
@@ -83,15 +91,15 @@ export function parseEvent(event:Event<any>):processedEvent{
 
     if(event instanceof FindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1))
-            return rejectEvent(event, "no level one card in deck");
+            return rejectEvent(event, "no level one card in deck", undefined);
         if(event.data.deck.some(card => cards[card] === undefined))
-            return rejectEvent(event, "invalid card found");
+            return rejectEvent(event, "invalid card found", undefined);
         if(event.data.deck.length!==20)
-            return rejectEvent(event, "deck must be 20 cards");
+            return rejectEvent(event, "deck must be 20 cards", undefined);
 
         const cardDuplChecker:{[key:string]:true} = {};
         for(const card of event.data.deck) {
-            if (cardDuplChecker[card] !== undefined) return rejectEvent(event, "duplicate card found");
+            if (cardDuplChecker[card] !== undefined) return rejectEvent(event, "duplicate card found", undefined);
             cardDuplChecker[card] = true;
         }
 
@@ -99,7 +107,7 @@ export function parseEvent(event:Event<any>):processedEvent{
             const gamePromise = unfilledGames.shift()!;
             gamePromise(event);
 
-            return acceptEvent(event);
+            return acceptEvent(event, undefined);
         }else{
             let resolve:(v:FindGameEvent)=>void;
             const waiter = new Promise<FindGameEvent>(r=>resolve=r);
@@ -145,13 +153,13 @@ export function parseEvent(event:Event<any>):processedEvent{
                     requestCPU: false,
                 },opponent));
             }
-            return acceptEvent(event);
+            return acceptEvent(event, undefined);
         }
     }else if(event instanceof GameEvent){
         return gameParseEvent(event);
     }
 
-    else return rejectEvent(event, "not a recognized event");
+    else return rejectEvent(event, "not a recognized event", undefined);
 }
 
 export async function receiveFromClient(packed:any, client:Client) {

@@ -78,7 +78,7 @@ export function wrap<P extends {
     });
 }
 
-export function levelOr(level:Level|undefined, or:number){
+export function levelOr(level:Level|undefined, or:0|1e999){
 
     return typeof level !== "number" ? or : level;
 }

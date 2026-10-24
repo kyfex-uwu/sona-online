@@ -6,6 +6,7 @@ import {
     DetermineStarterEvent,
     DiscardAction,
     DrawAction,
+    Event,
     GameEvent,
     GameStartEvent,
     GameWinDefaultEvent,
@@ -21,12 +22,12 @@ import {
 } from "../Events.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other} from "../../GameElement.js";
-import {externalPromise, levelOr, shuffled, Side, sideTernary, Stat, WaitChain} from "../../consts.js";
+import {levelOr, shuffled, Side, sideTernary, Stat} from "../../consts.js";
 import Card, {getVictim} from "../../Card.js";
 import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, type ScareResultStruct} from "../../CardData.js";
 import {CardActionOptions} from "../CardActionOption.js";
-import processCardAction, {acceptThenCPUAct} from "./BackendProcessCardAction.js";
+import processCardAction from "./BackendProcessCardAction.js";
 import {acceptEvent, type Client, type processedEvent, processedEventMarker, rejectEvent} from "./BackendServer.js";
 import dev from "../../dev.js";
 import CPU from "./CPU.js";
@@ -36,10 +37,10 @@ const gamesFromUser:Map<Client, Game> = new Map();
 
 //--
 
-export function sendToGame(event:GameEvent<any>, game:Game, ...toIgnore:(Client|undefined)[]) {
+export function sendToGame(event:GameEvent<any>, game:Game, queueSend:boolean, ...toIgnore:(Client|undefined)[]) {
     for(const user of (usersFromGameIDs[game!.gameID]??[])){
         if(toIgnore.indexOf(user) === -1){
-            user.send(event);
+            user[queueSend?"queueSend":"send"](event);
         }
     }
 }
@@ -49,7 +50,7 @@ export function gameServerWSClose(client:Client){
     if(!game) return;
 
     game.state = new EndGameState(game, game.player(Side.A) === client ? Side.B : Side.A);
-    sendToGame(new GameWinDefaultEvent({}),game);
+    sendToGame(new GameWinDefaultEvent({}),game, false);
 }
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
@@ -64,7 +65,7 @@ export function draw(game: Game, dontSendTo: Client|undefined, side: Side, isAct
     }
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
-        sendToGame(new DrawAction({side: side, isAction}, undefined), game, dontSendTo);
+        sendToGame(new DrawAction({side: side, isAction}, undefined), game, true, dontSendTo);
         game.freezableAction(()=> {
             if(game.state instanceof TurnState && isAction) {
                 if (game.state.decrementAction()) {
@@ -160,6 +161,12 @@ export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared
     }}, onPass);
 }
 
+export function acceptThenCPUAct(event: Event<any>, game: Game, flush?:boolean) {
+    const toReturn = acceptEvent(event, game, flush);
+    actIfCpu(game);
+    return toReturn;
+}
+
 export function parseEvent(event:GameEvent<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
     const game = gamesFromUser.get(event.sender!) ??
@@ -192,10 +199,10 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 draw(event.game, undefined, Side.B, true, event.game.player(Side.B));
             }
 
-            return acceptEvent(event);
+            return acceptEvent(event, event.game);
         }
 
-        return rejectEvent(event, "not in a game");
+        return rejectEvent(event, "not in a game", undefined);
     }
 
     const senderSide = event.sender === game.player(Side.A) ? Side.A : Side.B
@@ -205,19 +212,19 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             //to remove the squiggly, add the generic (you cant though, itll error)
             (!(event instanceof CardAction) || event.data.actionName !== nextEvent ||
                 nextEvent === CardActionOptions.CANNOT_PLAY)){
-            return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check, "+nextEvent);
+            return rejectEvent(event, "failed NEXT_ACTION_SHOULD_BE check, "+nextEvent, game);
         }
     }
 
     const freezeData = game.getMiscData(GameMiscDataStrings.FROZEN);
     if(freezeData!==undefined && freezeData.isFrozen && !freezeData.allowThrough(event))
-        return rejectEvent(event, "game is currently frozen, this event is not allowed through "+freezeData.allowThrough.toString());
+        return rejectEvent(event, "game is currently frozen, this event is not allowed through "+freezeData.allowThrough.toString(), game);
 
     if(event instanceof StartRequestEvent){
         if(!(game.state instanceof BeforeGameState) || //is before game state
             game.getMiscData((event.sender === game.player(Side.A))?
                 GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ) !== undefined)//has already sent this packet
-            return rejectEvent(event, "cannot send this now (startrequest)");
+            return rejectEvent(event, "cannot send this now (startrequest)", game);
 
         game.setMiscData((event.sender === game.player(Side.A))?
             GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ, event.data.which);
@@ -261,19 +268,19 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             game.state = new TurnState(game, startingSide);
             return acceptThenCPUAct(event, game);
         }else {
-            return acceptEvent(event);
+            return acceptEvent(event, game);
         }
     }else if(event instanceof PlaceAction){
         const card = [...game.cards.values()]
             .find(card=>card.id === event.data.cardId);
-        if(card === undefined) return rejectEvent(event, "no card found placeaction");
+        if(card === undefined) return rejectEvent(event, "no card found placeaction", game);
         const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
 
         // if(!event.isForced()) {
         //     if (event.game.state instanceof TurnState && !event.game.state.drawnToStart)
-        //         return rejectEvent(event, "not draw to start yet p");
+        //         return rejectEvent(event, "not draw to start yet p", game);
         //     if (event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
-        //         return rejectEvent(event, "already performed last action p");
+        //         return rejectEvent(event, "already performed last action p", game);
         // }
 
         if(!event.isForced()) {
@@ -294,14 +301,14 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                     game: game,
                     normallyValid: false
                 }) ?? false)) {
-                    return rejectEvent(event, "failed place check");
+                    return rejectEvent(event, "failed place check", game);
                 }
             } else if (!(card.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK, {
                 self: card,
                 game: game,
                 normallyValid: true
             }) ?? true)) {
-                return rejectEvent(event, "failed place check: custom");
+                return rejectEvent(event, "failed place check: custom", game);
             }
             event.data.forFree=false;
         }
@@ -333,13 +340,17 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         card.callAction(CardTriggerType.PRE_PLACED, {self:card, game:game});
+        let everythingFinished=false;
         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
             card.callAction(CardTriggerType.PLACED, {self:card, game:game});
+            game.player(Side.A)?.flushQueue();
+            game.player(Side.B)?.flushQueue();
+            everythingFinished=true;
         });
 
         if(!placedForFree)
             endTurn(game);
-        return acceptThenCPUAct(event, game);
+        return acceptThenCPUAct(event, game, everythingFinished);
     }else if(event instanceof DrawAction){
         let side:Side|undefined=undefined;//the side of the player drawing
         if(event.sender === game.player(Side.A)){
@@ -348,12 +359,12 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             side = Side.B;
         }
 
-        if(side === undefined) return rejectEvent(event, "couldnt determine client side");
+        if(side === undefined) return rejectEvent(event, "couldnt determine client side", game);
         if(!(game.state instanceof TurnState &&
             game.state.turn === side &&//it is the player's turn
             sideTernary(side, game.handA, game.handB).length<5 &&//their hand is less than 5
             game.state.actionsLeft>0))//they have actions left
-            return rejectEvent(event, "failed draw check");
+            return rejectEvent(event, "failed draw check", game);
 
         const canPredraw = game.getMiscData(GameMiscDataStrings.CAN_PREDRAW) ?? false;
         if(draw(game, canPredraw ? undefined : event.sender, side,
@@ -362,15 +373,15 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             game.state.setDrawnToStart();
             return acceptThenCPUAct(event, game);
         }
-        return rejectEvent(event, "couldnt draw (empty deck)");
+        return rejectEvent(event, "couldnt draw (empty deck)", game);
     }else if (event instanceof PassAction){
         if(!event.isForced()) {
             if (game.state instanceof TurnState && !game.state.drawnToStart)
-                return rejectEvent(event, "not draw to start yet pa");
+                return rejectEvent(event, "not draw to start yet pa", game);
             if (!(game.state instanceof TurnState &&
                 event.sender === game.player(game.state.turn) &&//if its the player's turn
                 sideTernary(game.state.turn, game.handA, game.handB).length <= 5))//if the player doesnt have to discard
-                return rejectEvent(event, "failed pass check");
+                return rejectEvent(event, "failed pass check", game);
         }
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
@@ -383,11 +394,11 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
     }else if (event instanceof ScareAction){
         if(!event.isForced()) {
             if (game.state instanceof TurnState && !game.state.drawnToStart)
-                return rejectEvent(event, "not draw to start yet s");
+                return rejectEvent(event, "not draw to start yet s", game);
         }
 
         if(!event.isForced() && event.sender !== game.player(event.data.scarerPos[1]))
-            return rejectEvent(event, "scarer is not consistent");
+            return rejectEvent(event, "scarer is not consistent", game);
 
         let scarer = sideTernary(event.data.scarerPos[1], game.fieldsA, game.fieldsB)[event.data.scarerPos[0]-1];
         let scared = sideTernary(event.data.scaredPos[1], game.fieldsA, game.fieldsB)[event.data.scaredPos[0]-1];
@@ -403,7 +414,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
                 scarer.stat(event.data.attackingWith) !== undefined &&
                 scared.stat(getVictim(event.data.attackingWith)) !== undefined)) {
-                return rejectEvent(event, "failed scare check");
+                return rejectEvent(event, "failed scare check", game);
             }
         }else{
             scarer=scarer!;
@@ -489,7 +500,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         return processCardAction(event, game);
     }else if(event instanceof DiscardAction){
         // if(event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
-        //     return rejectEvent(event, "already performed last action d");
+        //     return rejectEvent(event, "already performed last action d", game);
 
         let side: Side | undefined = undefined;//the side of the player discarding
         if (event.sender === game.player(Side.A)) {
@@ -497,7 +508,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         } else if (event.sender === game.player(Side.B)) {
             side = Side.B;
         }
-        if (side === undefined) return rejectEvent(event, "discard couldnt validate sender");
+        if (side === undefined) return rejectEvent(event, "discard couldnt validate sender", game);
 
         const hand = sideTernary(side, game.handA, game.handB);
         const toDiscard = hand.find(card => card.id === event.data.id);
@@ -506,7 +517,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             toDiscard !== undefined&&//the card exists AND is in the player's hand
             hand.length>5)) {//the player is in a position to discard
 
-            return rejectEvent(event, "failed discard check");
+            return rejectEvent(event, "failed discard check", game);
         }
         game.player(other(side))?.queueSend(new DiscardAction({
             id:event.data.id,
@@ -572,14 +583,14 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 cardDataName: shouldClarify.cardData.name,
                 ...(maybeJustfication?{justification:maybeJustfication}:{})
             }));
-            return acceptEvent(event);
+            return acceptEvent(event, game);
         }
         if(shouldClarify instanceof Array){
             event.sender?.send(multiClarifyFactory(shouldClarify, maybeJustfication));
-            return acceptEvent(event);
+            return acceptEvent(event, game);
         }
 
-        return rejectEvent(event, "no suitable cards found");
+        return rejectEvent(event, "no suitable cards found", game);
     }
 
     else if(event instanceof RequestServerDumpAction && dev.on){
@@ -601,8 +612,8 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }:{})
         }));
 
-        return acceptEvent(event);
+        return acceptEvent(event, game);
     }
 
-    else return rejectEvent(event, "not a recognized game event");
+    else return rejectEvent(event, "not a recognized game event", game);
 }

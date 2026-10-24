@@ -1,5 +1,4 @@
 import {
-    Event,
     CardAction,
     ClarificationJustification,
     ClarifyCardEvent,
@@ -36,20 +35,12 @@ import {CardTriggerType, Species} from "../../CardData.js";
 import Card, {CardMiscDataStrings} from "../../Card.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {Side, sideTernary} from "../../consts.js";
-import {actIfCpu, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
-import {acceptEvent, type processedEvent, rejectEvent} from "./BackendServer.js";
+import {acceptThenCPUAct, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
+import {type processedEvent, rejectEvent} from "./BackendServer.js";
 
 function lastAction(game:Game){
     const state = game.state;
     if(state instanceof TurnState) state.actionsLeft=-1;
-}
-
-export function acceptThenCPUAct(event:Event<any>, game:Game){
-    const toReturn = acceptEvent(event);
-    game.player(Side.A)?.flushQueue();
-    game.player(Side.B)?.flushQueue();
-    actIfCpu(game);
-    return toReturn;
 }
 
 function defaultIsValid<T extends SerializableType>(event:CardAction<T>, game:Game, cardName:string, optData:{
@@ -103,7 +94,7 @@ function verifyFieldCard(event:CardAction<any>, game:Game){
 }
 
 export default function(event:CardAction<any>, game:Game|undefined):processedEvent{
-    if(game === undefined) return rejectEvent(event, "no game");
+    if(game === undefined) return rejectEvent(event, "no game", game);
     event.withGame(game);
 
     if(!event.isForced()) {
@@ -115,21 +106,21 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game,
                 event
             });
-        if(shouldContinue===false) return rejectEvent(event, "failed custom cardaction check");
+        if(shouldContinue===false) return rejectEvent(event, "failed custom cardaction check", game);
         if(shouldContinue===undefined) {
             if (game.state instanceof TurnState) {
                 if (!game.state.drawnToStart)
-                    return rejectEvent(event, "not draw to start yet c");
+                    return rejectEvent(event, "not draw to start yet c", game);
                 if (!(game.state.actionsLeft > 0))
-                    return rejectEvent(event, "no more actions c");
+                    return rejectEvent(event, "no more actions c", game);
             } else
-                return rejectEvent(event, "game not started yet");
+                return rejectEvent(event, "game not started yet", game);
         }
     }
     switch(event.data.actionName){
         case CardActionOptions.K9_ALPHA:{//og-001
             const succeeded = defaultIsValid<K9_ALPHA>(event, game, "og-001", {});
-            if(!succeeded) return rejectEvent(event, "failed k9 check");
+            if(!succeeded) return rejectEvent(event, "failed k9 check", game);
             const {actor:sender, data} = succeeded;
 
             const takeFrom = [...(event.sender === game.player(Side.A) ? game.fieldsA : game.fieldsB)]
@@ -137,13 +128,13 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(!(takeFrom.map(card=>card?.cardData.species === Species.CANINE)//all cards are canines
                     .reduce((a,c)=>a&&c, true)))
-                return rejectEvent(event, "failed k9 check");
+                return rejectEvent(event, "failed k9 check", game);
 
             const stat = data.canineFields.map((v,i)=>v?
                 (takeFrom[i]?.stat(data.attackWith)??0):0).reduce((a, b)=>a+b,0);
 
             const toAttack = (event.sender === game.player(Side.A) ? game.fieldsB : game.fieldsA)[data.attack-1];
-            if(toAttack === undefined) return rejectEvent(event, "k9 no card found");
+            if(toAttack === undefined) return rejectEvent(event, "k9 no card found", game);
 
             sender.setMiscData(CardMiscDataStrings.K9_TEMP_STAT_UPGRADE, {stat: data.attackWith, newVal: stat});
             parseEvent(new ScareAction({
@@ -165,7 +156,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             if (!(card && game.player(card.side) === event.sender &&//card exists and card belongs to sender
                 card.cardData.level === 1 && card.isAlwaysFree() &&//and card is level 1 and card is free
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side]) === CardActionOptions.BROWNIE_DRAW))//the sender needs to brownie draw
-                return rejectEvent(event, "failed brownie check");
+                return rejectEvent(event, "failed brownie check", game);
 
             findAndRemove(game, card);
             sideTernary(card.side, game.handA, game.handB).push(card);
@@ -174,7 +165,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 cardId: -1,
                 actionName:CardActionOptions.BROWNIE_DRAW,
                 cardData:{id:card.id},
-            }), game);
+            }), game, true);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[card.side], undefined);
             game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
             shuffleBackend(sideTernary(card.side, game.deckA, game.deckB));
@@ -188,14 +179,14 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game.player(actor.side) === event.sender &&//actor belongs to sender
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.GREMLIN_SCARE//sender is allowed to scare
             ))
-                return rejectEvent(event, "failed gremlin check");
+                return rejectEvent(event, "failed gremlin check", game);
 
             if(data.position === undefined){
                 game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                 return acceptThenCPUAct(event, game);
             }else{
                 const scared = (event.sender === game.player(Side.A)?game.fieldsB:game.fieldsA)[data.position-1];
-                if(scared === undefined) return rejectEvent(event, "gremlin scare card doesnt exist");
+                if(scared === undefined) return rejectEvent(event, "gremlin scare card doesnt exist", game);
 
                 parseEvent(new ScareAction({
                     scaredPos:[data.position, event.sender === game.player(Side.A)?Side.B:Side.A],
@@ -211,7 +202,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const succeeded = defaultIsValid<AMBER_PICK>(event, game, "og-018", {
                 cardActionOption:CardActionOptions.AMBER_PICK
             });
-            if(succeeded === false) return rejectEvent(event, "failed amber check");
+            if(succeeded === false) return rejectEvent(event, "failed amber check", game);
             const {actor, data} = succeeded;
 
             const toReorder = sideTernary(actor.side, game.deckA, game.deckB);
@@ -222,14 +213,14 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 sendToGame(new ClarifyCardEvent({
                     id:card1.id,
                     cardDataName:card1.cardData.name,
-                }), game);
+                }), game, true);
             }
             if(card2 !== undefined) {
                 sideTernary(actor.side, game.runawayA, game.runawayB).push(card2);
                 sendToGame(new ClarifyCardEvent({
                     id:card2.id,
                     cardDataName:card2.cardData.name,
-                }), game);
+                }), game, true);
             }
 
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor!.side], undefined);
@@ -241,7 +232,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     which:data!.which,
                     side:actor!.side
                 },
-            }), game);
+            }), game, true);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.YASHI_REORDER:{//og-027
@@ -254,12 +245,12 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.YASHI_REORDER
             ))
-                return rejectEvent(event, "failed yashi check");
+                return rejectEvent(event, "failed yashi check", game);
 
             const deckDrawFrom = sideTernary(actor.side, game.deckA, game.deckB);
             for(let i=data.cards.length-1;i>=0;i--){
                 const index = deckDrawFrom.findIndex(card=>card.id === data.cards[i]);
-                if(index===-1) return rejectEvent(event, "failed yashi check card #"+i);
+                if(index===-1) return rejectEvent(event, "failed yashi check card #"+i, game);
 
                 deckDrawFrom.push(deckDrawFrom.splice(index,1)[0]!);
             }
@@ -271,17 +262,17 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     cards:data.cards,
                     side:actor.side
                 }
-            }), game);
+            }), game, true);
 
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.KIBBY_SCARE:{//og-028
             const succeeded = defaultIsValid<KIBBY_SCARE>(event, game, "og-028", {});
-            if(!succeeded) return rejectEvent(event, "failed default kibby otes check");
+            if(!succeeded) return rejectEvent(event, "failed default kibby otes check", game);
             const {actor, data} = succeeded;
 
-            if(actor.hasAttacked) return rejectEvent(event, "failed special kibby otes check");
+            if(actor.hasAttacked) return rejectEvent(event, "failed special kibby otes check", game);
             const fields = sideTernary(actor.side, game.fieldsA, game.fieldsB);
             for(const card of fields.filter((card, i) => data.cards[i] !== -1 && card !== undefined)
                 .sort((c1,c2)=> {return{//this sorting ensure kibby otes is scared last
@@ -312,11 +303,11 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const succeeded = defaultIsValid<FOXY_MAGICIAN_PICK>(event, game, "og-031",{
                 cardActionOption:CardActionOptions.FOXY_MAGICIAN_PICK
             });
-            if(!succeeded) return rejectEvent(event, "failed default foxy check");
+            if(!succeeded) return rejectEvent(event, "failed default foxy check", game);
             const {actor, data} = succeeded;
 
             if(!sideTernary(actor.side, game.deckA, game.deckB).some(card=>card.id === data))
-                rejectEvent(event, "invalid target card foxy");
+                rejectEvent(event, "invalid target card foxy", game);
 
             game.setMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED, data);
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
@@ -332,7 +323,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const guesserSide = event.sender === game.player(Side.A) ? Side.A : Side.B;
             if(game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
                 [guesserSide]) !== CardActionOptions.FOXY_MAGICIAN_GUESS) //should be guessing
-                return rejectEvent(event, "failed foxy guess check");
+                return rejectEvent(event, "failed foxy guess check", game);
 
             const answer = sideTernary(guesserSide, game.deckB, game.deckA)
                 .find(card=>card.id === game!.getMiscData(GameMiscDataStrings.FOXY_MAGICIAN_PICKED))!;
@@ -356,18 +347,18 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 cardId:-1,
                 actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
                 cardData: guess
-            }), game);
+            }), game, true);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.DCW_PICK:{//og-032
             const succeeded = defaultIsValid<DCW_PICK>(event, game, "og-032",{
                 cardActionOption:CardActionOptions.DCW_PICK
             });
-            if(!succeeded) return rejectEvent(event, "failed default dcw check");
+            if(!succeeded) return rejectEvent(event, "failed default dcw check", game);
             const {actor, data} = succeeded;
 
             if(!sideTernary(actor.side, game.deckA, game.deckB).some(card=>card.id === data))
-                rejectEvent(event, "invalid target card dcw");
+                rejectEvent(event, "invalid target card dcw", game);
 
             game.setMiscData(GameMiscDataStrings.DCW_PICKED, {cardId:data,guesses:0});
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], CardActionOptions.CANNOT_PLAY);
@@ -383,10 +374,10 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
             const guesserSide = event.sender === game.player(Side.A) ? Side.A : Side.B;
             if(game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE
                 [guesserSide]) !== CardActionOptions.DCW_GUESS) //should be guessing
-                return rejectEvent(event, "failed dcw guess check");
+                return rejectEvent(event, "failed dcw guess check", game);
 
             const pickedData = game.getMiscData(GameMiscDataStrings.DCW_PICKED);
-            if(pickedData === undefined) return rejectEvent(event, "dcw: this is so sad. what");
+            if(pickedData === undefined) return rejectEvent(event, "dcw: this is so sad. what", game);
 
             const answer = sideTernary(guesserSide, game.deckB, game.deckA)
                 .find(card=>card.id === pickedData.cardId)!;
@@ -415,13 +406,13 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 cardId:-1,
                 actionName:CardActionOptions.DCW_GUESS,
                 cardData:guess
-            }), game);
+            }), game, true);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.DCW_SCARE:{
             const actor = verifyFieldCard(event, game);
             if(actor===undefined || game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !==
-                CardActionOptions.DCW_SCARE) return rejectEvent(event, "not time for that buddy dcw");
+                CardActionOptions.DCW_SCARE) return rejectEvent(event, "not time for that buddy dcw", game);
 
             const data = (event as CardAction<DCW_SCARE>).data.cardData;
             parseEvent(new ScareAction({
@@ -438,12 +429,12 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
         }
         case CardActionOptions.WORICK_RESCUE:{//og-038
             const succeeded = defaultIsValid<WORICK_RESCUE>(event, game, "og-038", {});
-            if(!succeeded) return rejectEvent(event, "failed default worick check");
+            if(!succeeded) return rejectEvent(event, "failed default worick check", game);
             const {actor, data} = succeeded;
 
             const toRemove = sideTernary(actor!.side, game.runawayA, game.runawayB)
                 .findIndex(card=>card.id === data.id);
-            if(toRemove === -1) return rejectEvent(event, "failed special worick check");
+            if(toRemove === -1) return rejectEvent(event, "failed special worick check", game);
 
             sideTernary(actor!.side, game.handA, game.handB).push(
                 sideTernary(actor!.side, game.runawayA, game.runawayB).splice(toRemove,1)[0]!);
@@ -455,18 +446,18 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     id:data.id,
                     side:actor.side
                 }
-            }), game);
+            }), game, true);
             lastAction(game);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.FURMAKER_PICK:{//og-041
             const succeeded = defaultIsValid<FURMAKER_PICK>(event, game, "og-041", {});
-            if(!succeeded) return rejectEvent(event, "failed default furmaker check");
+            if(!succeeded) return rejectEvent(event, "failed default furmaker check", game);
             const {actor, data} = succeeded;
 
             const toRemove = sideTernary(actor!.side, game.deckA, game.deckB)
                 .findIndex(card=>card.id === data.id);
-            if(toRemove === -1) return rejectEvent(event, "failed special furmaker check");
+            if(toRemove === -1) return rejectEvent(event, "failed special furmaker check", game);
 
             sideTernary(actor!.side, game.handA, game.handB).push(
                 sideTernary(actor!.side, game.deckA, game.deckB).splice(toRemove,1)[0]!);
@@ -478,7 +469,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     id:data.id,
                     side:actor.side
                 }
-            }), game);
+            }), game, true);
             shuffleBackend(sideTernary(actor.side, game.deckA, game.deckB));
             return acceptThenCPUAct(event, game);
         }
@@ -496,11 +487,11 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 (targeted !== undefined ||//targeted card exists OR
                     game.state instanceof BeforeGameState)//its before the first turn
             ))
-                return rejectEvent(event, "failed cloud cat check");
+                return rejectEvent(event, "failed cloud cat check", game);
 
             game.getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![other(actor.side)] = targeted?.id ?? "first";
             game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side], undefined);
-            sendToGame(event, game, event.sender);
+            sendToGame(event, game, true, event.sender);
             return acceptThenCPUAct(event, game);
         }
         case CardActionOptions.LITTLEBOSS_IMMUNITY:{//og-015
@@ -513,7 +504,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(actor === undefined || game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !==
                 CardActionOptions.LITTLEBOSS_IMMUNITY)
-                return rejectEvent(event, "failed littleboss check");
+                return rejectEvent(event, "failed littleboss check", game);
 
             actor.setMiscData(CardMiscDataStrings.LITTLEBOSS_IMMUNE, shouldSave);
 
@@ -539,16 +530,16 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.COWGIRL_COYOTE_INCREASE ||
                 actor.getMiscData(CardMiscDataStrings.COWGIRL_COYOTE_TARGET) === undefined ||
                 actor.getMiscData(CardMiscDataStrings.ALREADY_ACTIONED) === true)
-                return rejectEvent(event, "failed cowgirl check");
+                return rejectEvent(event, "failed cowgirl check", game);
 
             const data = (event as CardAction<COWGIRL_COYOTE_INCREASE>).data.cardData.data;
             //do stuff
             if(data){
                 const target = sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1];
-                if(target === undefined) return rejectEvent(event, "cowgirl: tried to change nonexistent card");
+                if(target === undefined) return rejectEvent(event, "cowgirl: tried to change nonexistent card", game);
 
                 if(target.stat(data.stat) === undefined)
-                    return rejectEvent(event, "failed cowgirl: stat is undefined");
+                    return rejectEvent(event, "failed cowgirl: stat is undefined", game);
 
                 let toSet:[number,number,number] = [0,0,0];
                 toSet[data.stat] = 2;
@@ -574,16 +565,16 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(actor === undefined ||
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.BROY_WEASLA_INCREASE)
-                return rejectEvent(event, "failed broy weasla check");
+                return rejectEvent(event, "failed broy weasla check", game);
 
             const data = (event as CardAction<BROY_WEASLA_INCREASE>).data.cardData.data;
             //do stuff
             if(data){
                 const target = sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1];
-                if(target === undefined) return rejectEvent(event, "broy weasla: tried to change nonexistent card");
+                if(target === undefined) return rejectEvent(event, "broy weasla: tried to change nonexistent card", game);
 
                 if(target.stat(data.stat) === undefined)
-                    return rejectEvent(event, "failed broy weasla: stat is undefined");
+                    return rejectEvent(event, "failed broy weasla: stat is undefined", game);
 
                 let toSet:[number,number,number] = [0,0,0];
                 toSet[data.stat] = 2;
@@ -606,7 +597,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             if(actor === undefined ||
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) !== CardActionOptions.NOBLE_RETARGET)
-                return rejectEvent(event, "failed noble check");
+                return rejectEvent(event, "failed noble check", game);
 
             if((event as CardAction<NOBLE_RETARGET>).data.cardData.redirect){
                 const origScare = actor.getMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE);
@@ -627,5 +618,5 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
         }
     }
 
-    return rejectEvent(event, "not a recognized action");
+    return rejectEvent(event, "not a recognized action", game);
 }

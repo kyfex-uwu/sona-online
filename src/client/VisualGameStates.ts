@@ -111,7 +111,8 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
         super(game);
         this.removeDraw = registerDrawCallback(0, (p5, scale) => {
             if(this.flippingCoin!==undefined){
-                this.startGame(this.flippingCoin);
+                this.internalStartGame(this.flippingCoin);
+                this.flippingCoin=undefined;
             }else {
                 p5.background(30,30,30,150);
                 if (!this.picked) {
@@ -224,7 +225,7 @@ export class VTurnState extends VisualGameState<TurnState>{
                             .filter(card => card !== undefined)
                             .reduce((a, c) => Math.max(a, levelOr(c.logicalCard.cardData.level,0)), 0) + 1;
                         for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                            if (levelOr(card.logicalCard.cardData.level,Infinity) <= maxLevel) {
+                            if (levelOr(card.logicalCard.cardData.level,1e999) <= maxLevel) {
                                 toHighlight.add(card);
                             }
                         }

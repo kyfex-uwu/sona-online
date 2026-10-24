@@ -144,7 +144,7 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
             cardId: -1,
             actionName:CardActionOptions.BOTTOM_DRAW,
             cardData:{side:self.side},
-        }), game);
+        }), game, true);
         game.player(self.side)?.queueSend(new ClarifyCardEvent({
             id:card.id,
             cardDataName:card.cardData.name

@@ -186,9 +186,11 @@ export default class CPU{
     }
 
     async takeAction(){
+        console.log("taking action...")
         await this.actionDebouncer.end();
 
-        if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen) return false;
+        if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen)
+            return false;
         //do i need to wait for cpu waiter? probably
 
         if(!(
