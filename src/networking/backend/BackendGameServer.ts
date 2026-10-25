@@ -493,6 +493,8 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         else{
             ranRightAway=false;
             event.sender?.send(new PerchanceEvent({}, undefined, event.id));
+            game?.player(Side.A)?.flushQueue();
+            game?.player(Side.B)?.flushQueue();
             actIfCpu(game);
             return processedEventMarker;
         }
@@ -574,6 +576,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 const side = event.sender === game.player(Side.A) ? Side.A : Side.B;
                 if(sideTernary(side, game.fieldsB, game.fieldsA).some(card=>card?.cardData.name === "og-041"))
                     shouldClarify = sideTernary(side, game.handB, game.handA);
+                else shouldClarify = [];//in case of slow clients
             }break;
         }
 

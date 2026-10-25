@@ -106,12 +106,15 @@ export default class CPU{
                         });
                 }break;
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
-                    if((event.data.cardData as FOXY_MAGICIAN_GUESS) === undefined)
+                    if((event.data.cardData as FOXY_MAGICIAN_GUESS) === undefined) {
                         this.toServer(new CardAction({
-                            cardId:-1,
-                            actionName:CardActionOptions.FOXY_MAGICIAN_GUESS,
+                            cardId: -1,
+                            actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
                             cardData: randFrom([1, 2, 3] as Level[])!
                         }));
+                        // this.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.FOXY_MAGICIAN_GUESS,
+                        //     () => false);
+                    }
                 }break;
                 case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                     this.toServer(new CardAction({
@@ -169,9 +172,10 @@ export default class CPU{
 
         let waitForConfirm = externalPromise();
         if(data.waitForConfirm ?? true)
-            this.actionDebouncer.run(()=>waitForConfirm);
+            this.actionDebouncer.run(async ()=> {
+                await waitForConfirm;
+            });
         else waitForConfirm.resolve();
-
         const waitFor = ()=>{
             this.waitForEventer.waitFor(e=>e.id === event.id, (e)=> {
                 const toReturn = data.callback ? (data.callback(e) ?? true) : true;
@@ -186,7 +190,6 @@ export default class CPU{
     }
 
     async takeAction(){
-        console.log("taking action...")
         await this.actionDebouncer.end();
 
         if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen)

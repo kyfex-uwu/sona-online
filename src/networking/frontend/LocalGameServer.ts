@@ -27,7 +27,7 @@ import {
     Animations,
     blueStatColor,
     button,
-    buttonId,
+    buttonId, particle,
     particleArc,
     particleStreak,
     redStatColor,
@@ -499,16 +499,37 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             }));
                             self.end("finished");
                         }
+                        game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
+                        const pos = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                            .find(v=>v.getCard()?.logicalCard.cardData.name === "og-015")
+                            ?.getCard()?.model.position;
                         release=registerDrawCallback(0,(p5,scale)=>{
-                            self.blackBg(true);
                             self.twoButtons(p5,scale,{
                                 onClick:()=>end(true),
                                 text:"Save"
                             },{
                                 onClick:()=>end(false),
                                 text:"Scare"
-                            },true);
-                            self.infoText(p5,scale,"Chose whether to keep Little Boss on the field or let them be scared");
+                            });
+                            if(pos) particle(pos, new Vector3(Math.random(),Math.random(),Math.random()).sub(new Vector3(0.5,0.5,0.5)).multiplyScalar(4), 0.99,[
+                                {
+                                    time: 0,
+                                    size: 0,
+                                    opacity: 0,
+                                    color: whiteColor,
+                                },{
+                                    time: 700+Math.random()*200,
+                                    size: 8+Math.random()*3,
+                                    opacity: 1,
+                                    color: whiteColor,
+                                },{
+                                    time: 1200+Math.random()*500,
+                                    size: 3+Math.random(),
+                                    opacity: 0,
+                                    color: whiteColor,
+                                }
+                            ])
+                            self.infoText(p5,scale,"Chose whether to keep Little Boss on the field or let it be scared");
                         })
                     }
                 }), game.getGame().state);
