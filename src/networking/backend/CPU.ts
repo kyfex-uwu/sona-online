@@ -164,8 +164,7 @@ export default class CPU{
     }
     flushQueue(){
         while(this.sendQueue.length>0){
-            this.send(this.sendQueue[0]!);
-            this.sendQueue.shift();
+            this.send(this.sendQueue.shift()!);
         }
     }
 

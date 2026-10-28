@@ -732,7 +732,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     onEnd:(self,type)=>{
                         release();
                         sendToServer(new CardAction({
-                            cardId: -1,
+                            cardId: noble?.logicalCard.id ?? -1,
                             actionName: CardActionOptions.NOBLE_RETARGET,
                             cardData: {redirect:type === "finished"}
                         }));

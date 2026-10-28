@@ -37,6 +37,7 @@ import Game, {GameMiscDataStrings} from "../../Game.js";
 import {setFind, Side, sideTernary} from "../../consts.js";
 import {acceptThenCPUAct, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {type processedEvent, rejectEvent} from "./BackendServer.js";
+import {globalCustomAllowWhen} from "./BackendCardData.js";
 
 function lastAction(game:Game){
     const state = game.state;
@@ -104,6 +105,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                 event
             });
         if(shouldContinue===false) return rejectEvent(event, "failed custom cardaction check", game);
+        if(shouldContinue === undefined) shouldContinue = globalCustomAllowWhen(event.data.actionName, game);
         if(shouldContinue===undefined) {
             if (game.state instanceof TurnState) {
                 if (!game.state.drawnToStart)

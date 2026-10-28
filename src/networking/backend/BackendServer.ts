@@ -39,8 +39,7 @@ export function backendInit(server:Server){
                 },
                 flushQueue:()=>{
                     while(sendQueue.length>0){
-                        sender.send(sendQueue[0]!);
-                        sendQueue.shift();
+                        sender.send(sendQueue.shift()!);
                     }
                 }
             };

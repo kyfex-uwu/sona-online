@@ -4,7 +4,7 @@ import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFa
 import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
 import {Side, sideTernary, Stat, wrap} from "../../consts.js";
-import {GameMiscDataStrings} from "../../Game.js";
+import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other} from "../../GameElement.js";
 import {CardMiscDataStrings} from "../../Card.js";
 import {TurnState} from "../../GameStates.js";
@@ -38,6 +38,15 @@ function customAllowWhen(card:CardData,action:CardActionOption<any>,data:{
             return true;
         }
     })
+}
+
+export function globalCustomAllowWhen(action:CardActionOption<any>, game:Game){
+    switch(action){
+        case CardActionOptions.DCW_GUESS:
+        case CardActionOptions.FOXY_MAGICIAN_GUESS:
+            return true;
+    }
+    return undefined;
 }
 
 wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
@@ -128,6 +137,12 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event.sender === game.player(self.side) &&
         event.data.actionName === CardActionOptions.NOBLE_RETARGET);
     return true;
+});
+customAllowWhen(cards["og-020"]!, CardActionOptions.NOBLE_RETARGET, {
+    turnState:State.REQUIRED_VALID,
+    yourTurn:State.REQUIRED_INVALID,
+    drawnToStart:State.EITHER,
+    free:true,
 })
 wrap(cards["og-022"]!, CardTriggerType.ON_RUNAWAY, (orig, {self, scarer, toRunaway, stat, game})=>{
     if(orig) orig({self, scarer, toRunaway: toRunaway, stat, game});
