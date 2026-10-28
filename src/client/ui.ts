@@ -41,7 +41,7 @@ new p5(p => {
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
 
-        p.textFont("Red Rose");
+        p.textFont("SONA Eras");
 
         p.loadImage(`/assets/button.png`, (image:p5.Image) => {
             assets["button"] = image;
