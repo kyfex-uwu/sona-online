@@ -11,7 +11,8 @@ const decks={
     canine:[37,7,40,33,2,16,34,19,36,8,28,5,25,18,31,35,20,1,30,15].map(v=>"og-"+v.toString().padStart(3,"0")),
     feline:[12,26,17,4,13,10,6,39,23,21,24,22,32,11,3,27,14,38,29,9].map(v=>"og-"+v.toString().padStart(3,"0")),
 }
-const deck:string[] = [...decks.canine];
+// const deck:string[] = [...decks.canine];
+const deck:string[] = [16, 37,7,40,33,2,34,19,36,8,28,5,25,18,31,35,20,1,30,15].map(v=>"og-"+v.toString().padStart(3,"0"));
 const disabledCards:string[] = [];
 export const getDeck = ()=>deck;
 const backButtonId = buttonId();

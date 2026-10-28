@@ -7,7 +7,7 @@ export enum StateFeatures {
     DECK_DRAWABLE,
     CAN_DISCARD_FROM_HAND,
 }
-export const canSelectHandCardHighlight = newHighlightLock();
+export const canPlaceHandCardHighlight = newHighlightLock();
 
 export interface Cancellable {
     isCancellable(): boolean;

@@ -22,7 +22,7 @@ import {
 } from "../Events.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other} from "../../GameElement.js";
-import {levelOr, shuffled, Side, sideTernary, Stat} from "../../consts.js";
+import {levelOr, setFind, shuffled, Side, sideTernary, Stat} from "../../consts.js";
 import Card, {getVictim} from "../../Card.js";
 import {BeforeGameState, EndGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, type ScareResultStruct} from "../../CardData.js";
@@ -271,8 +271,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return acceptEvent(event, game);
         }
     }else if(event instanceof PlaceAction){
-        const card = [...game.cards.values()]
-            .find(card=>card.id === event.data.cardId);
+        const card = setFind(game.cards, card=>card.id === event.data.cardId);
         if(card === undefined) return rejectEvent(event, "no card found placeaction", game);
         const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
 
@@ -322,7 +321,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }
         }
         sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] =
-            [...game.cards.values()].find(card => card.id === event.data.cardId);
+            setFind(game.cards, card => card.id === event.data.cardId);
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;

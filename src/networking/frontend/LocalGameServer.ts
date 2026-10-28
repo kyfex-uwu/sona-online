@@ -120,7 +120,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         }
 
         const myDeck = sideTernary(game.getMySide(), game.deckA, game.deckB);
-        const theirDeck = sideTernary(other(game.getMySide()), game.deckA, game.deckB);
+        const theirDeck = sideTernary(game.getMySide(), game.deckB, game.deckA);
         const rotation = new Quaternion().setFromEuler(new Euler(Math.PI/2,0,0));
         for(const cardId of event.data.deck){
             const visualCard = game.addElement(new VisualCard(game, new Card(cards.unknown!, game.getMySide(), game.getGame(), cardId),
@@ -460,11 +460,11 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     });
 
                                     if(targetCard.logicalCard.cardData.level !== guess) {
-                                        const removeFrom = sideTernary(other(getLocalGame().getMySide()), getLocalGame().deckA, getLocalGame().deckB);
+                                        const removeFrom = sideTernary(getLocalGame().getMySide(), getLocalGame().deckB, getLocalGame().deckA);
                                         const realCard = getLocalGame().elements.find(element => element instanceof VisualCard &&
                                             element.logicalCard.id === event.data.cardId)! as VisualCard;
                                         removeFrom.removeCard(realCard);
-                                        sideTernary(other(getLocalGame().getMySide()), getLocalGame().handA, getLocalGame().handB)
+                                        sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA)
                                             .addCard(realCard);
                                         realCard.flipFaceup();
                                     }

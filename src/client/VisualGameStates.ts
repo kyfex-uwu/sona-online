@@ -10,7 +10,7 @@ import {Color, Euler, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector
 import VisualCardClone from "./VisualCardClone.js";
 import {GameMiscDataStrings} from "../Game.js";
 import {CardTriggerType} from "../CardData.js";
-import {type Cancellable, canSelectHandCardHighlight, StateFeatures} from "./VisualGameStateTools.js";
+import {type Cancellable, canPlaceHandCardHighlight, StateFeatures} from "./VisualGameStateTools.js";
 import {attackLock} from "./magnets/FieldMagnet.js";
 import SuperficialVisualCard from "./SuperficialVisualCard.js";
 import {setScene} from "../index.js";
@@ -41,7 +41,10 @@ export abstract class VisualGameState<T extends GameState>{
     deleteFeatures(...features:StateFeatures[]){
         for(const feature of features) this.features.delete(feature);
     }
-    canSelectHandCard(card:VisualCard){
+    canPlaceHandCard(card:VisualCard){
+        return true;
+    }
+    canDiscardHandCard(card:VisualCard){
         return true;
     }
 
@@ -95,8 +98,11 @@ export class VBeforeGameState extends VisualGameState<BeforeGameState>{
             card.highlight(false, beforeGameHighlight);
     }
 
-    canSelectHandCard(card: VisualCard): boolean {
+    canPlaceHandCard(card: VisualCard): boolean {
         return card.logicalCard.cardData.level === 1;
+    }
+    canDiscardHandCard(card: VisualCard): boolean {
+        return false;
     }
 }
 
@@ -218,14 +224,13 @@ export class VTurnState extends VisualGameState<TurnState>{
                     this.features.delete(StateFeatures.CAN_DISCARD_FROM_HAND);
 
                     const fieldCards = sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB);
-                    if (this.getActionsLeft() > 0 && sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(field=>field.getCard()!==undefined)) {
-                        this.addFeatures(StateFeatures.FIELDS_SELECTABLE,
-                            StateFeatures.FIELDS_PLACEABLE);
-                        let maxLevel = fieldCards.map(field => field.getCard())
-                            .filter(card => card !== undefined)
-                            .reduce((a, c) => Math.max(a, levelOr(c.logicalCard.cardData.level,0)), 0) + 1;
+                    if (sideTernary(this.currTurn, this.game.fieldsA, this.game.fieldsB).some(field=>field.getCard()!==undefined)) {
+                        if(this.getActionsLeft() > 0)
+                            this.addFeatures(StateFeatures.FIELDS_SELECTABLE);
+                        this.addFeatures(StateFeatures.FIELDS_PLACEABLE);
+
                         for (const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-                            if (levelOr(card.logicalCard.cardData.level,1e999) <= maxLevel) {
+                            if (this.canPlaceHandCard(card) || this.canDiscardHandCard(card)) {
                                 toHighlight.add(card);
                             }
                         }
@@ -246,14 +251,14 @@ export class VTurnState extends VisualGameState<TurnState>{
 
         for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
             card.highlight(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
-                {self: card.logicalCard, game: this.game.getGame(), normallyValid: toHighlight.has(card)}) ?? toHighlight.has(card), canSelectHandCardHighlight);
+                {self: card.logicalCard, game: this.game.getGame(), normallyValid: toHighlight.has(card)}) ?? toHighlight.has(card), canPlaceHandCardHighlight);
         }
     }
     swapAway() {
         super.swapAway();
 
         for(const card of sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards) {
-            card.highlight(false, canSelectHandCardHighlight);
+            card.highlight(false, canPlaceHandCardHighlight);
         }
     }
 
@@ -261,15 +266,21 @@ export class VTurnState extends VisualGameState<TurnState>{
         const state = this.game.getGame().state;
         return state instanceof TurnState ? state.actionsLeft : 0;
     }
-    canSelectHandCard(card: VisualCard): boolean {
+    canPlaceHandCard(card: VisualCard): boolean {
         if(card === undefined) console.trace("canSelectCard is undefined?");
-        if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
-        const toReturn = card.logicalCard.cardData.level === 1 ||
-            sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB).some(field =>
-                (levelOr(field.getCard()?.logicalCard.cardData.level,0))+1 >= levelOr(card.logicalCard.cardData.level,0));
+        if(this.currTurn !== card.getSide() || !this.getNonVisState().drawnToStart) return false;
+        if(card.logicalCard.isAlwaysFree() && this.getActionsLeft()>=0) return true;
+
+        const toReturn = levelOr(card.logicalCard.cardData.level,1e999) <= (sideTernary(this.game.getMySide(), this.game.fieldsA, this.game.fieldsB)
+            .reduce((a,c)=>
+                Math.max(a,levelOr(c.getCard()?.logicalCard.cardData.level, 1)),1) + 1);
         if(card.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
             {self:card.logicalCard, game:card.game.getGame(), normallyValid:toReturn})??false) return true;
         return toReturn;
+    }
+    canDiscardHandCard(card: VisualCard): boolean {
+        if(sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length>5) return true;
+        return false;
     }
 }
 
@@ -309,7 +320,10 @@ export class VAttackingState extends VisualGameState<TurnState> implements Cance
     end(){
         this.game.setState(this.parentState, this.getNonVisState());
     }
-    canSelectHandCard(card: VisualCard): boolean {
+    canPlaceHandCard(card: VisualCard): boolean {
+        return false;
+    }
+    canDiscardHandCard(card: VisualCard): boolean {
         return false;
     }
 }
@@ -327,18 +341,21 @@ export class VGuiState extends VisualGameState<TurnState>{
     private parentState: [VisualGameState<any>, GameState];
     private endFunc: (self: VGuiState, state:"finished"|"canceled") => boolean|void;
     private initFunc: (self: VGuiState) => void;
-    private canSelectHandCardImpl: (self:VGuiState, card:VisualCard) => boolean;
+    private canPlaceHandCardImpl: (self:VGuiState, card:VisualCard) => boolean;
+    private canDiscardHandCardImpl: (self:VGuiState, card:VisualCard) => boolean;
     constructor(game:VisualGame, parentState:[VisualGameState<any>, GameState],
             data:{
                 onEnd:(self:VGuiState, type:"finished"|"canceled")=>boolean|void,
                 init:(self:VGuiState)=>void,
-                canSelectHandCard?:(self:VGuiState, card:VisualCard)=>boolean
+                canPlaceHandCard?:(self:VGuiState, card:VisualCard)=>boolean,
+                canDiscardHandCard?:(self:VGuiState, card:VisualCard)=>boolean
             }) {
         super(game);
         this.parentState=parentState;
         this.endFunc=data.onEnd;
         this.initFunc = data.init;
-        this.canSelectHandCardImpl = data.canSelectHandCard ?? (()=>false);
+        this.canPlaceHandCardImpl = data.canPlaceHandCard ?? (()=>false);
+        this.canDiscardHandCardImpl = data.canDiscardHandCard ?? (()=>false);
     }
     public readonly cards:SuperficialVisualCard[]=[];
     addCards(cards:{card:SuperficialVisualCard|string, position:Vector2, scale?:number}[], onPick:(card:SuperficialVisualCard)=>void){
@@ -464,8 +481,11 @@ export class VGuiState extends VisualGameState<TurnState>{
             this.game.setState(this.parentState[0], this.parentState[1]);
     }
 
-    canSelectHandCard(card:VisualCard){
-        return this.canSelectHandCardImpl(this, card);
+    canPlaceHandCard(card:VisualCard){
+        return this.canPlaceHandCardImpl(this, card);
+    }
+    canDiscardHandCard(card: VisualCard): boolean {
+        return this.canDiscardHandCardImpl(this, card);
     }
 
     button(p5:any, scale:number, onClick:()=>void, text:string, disabled:boolean){

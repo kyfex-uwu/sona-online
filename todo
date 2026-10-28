@@ -1,3 +1,9 @@
+# interaction bugs
+cpu broy weasla never works
+
+#general todos
+cpu receiving events endlessly?
+
 split after_scared events appropriately
 starting your turn with 5 cards doesnt set drawn to start?
 cowgirl + little boss softlocks
@@ -8,7 +14,6 @@ little boss gui showing up when it shouldnt
 sonic stallion should only be emergency placeable on opponents turn
 cards not being allowed to scare despite seemingly having all the requirements
 ensure noble rat graphics are correct
-replace all settimeout 0
 if cpu scares twice and player has cowgirl, gui does not properly reset (fixed?)
 investigate foxy magician center cards not being clickable
 
@@ -31,16 +36,14 @@ type safe card models
 clean up dependencies, a lot can be moved to dev dependencies
 
 ###
-in crisis mode indicator
 coin flip animation
 view your deck + discard pile
 when hovering field card, show cards you will win/lose against and cards you cant target
 - also show this for noble rat on target and noble rat
-rework 014 to be more player friendly
+rework 014 to be more player friendly //does anyone know what this means
 revisit hand cards showing if they can be placed
 highlight if ability is available
 if a stat can change (think mob boss), changed stat should be green/red and replace *not show in preview
-additional free to play indicator
 
 ###
 add game culler to the backend

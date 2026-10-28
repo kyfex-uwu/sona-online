@@ -238,7 +238,7 @@ visualCardClientActions["og-028"] = (card)=>{
                 }));
             self.addFeatures(StateFeatures.FIELDS_SELECTABLE)
             for(const other of myHand.cards){
-                if(self.canSelectHandCard(other))
+                if(self.canPlaceHandCard(other))
                     other.highlight(true, kibbyHighlightLock);
             }
 
@@ -247,7 +247,7 @@ visualCardClientActions["og-028"] = (card)=>{
                 self.infoText(p5, scale, "Scare your field cards by placing Lv 3 hand cards on top of them")
             });
         },
-        canSelectHandCard:(self, card)=>{
+        canPlaceHandCard:(self, card)=>{
             return card.logicalCard.cardData.level === 3;
         }
     }), getLocalGame().getGame().state);

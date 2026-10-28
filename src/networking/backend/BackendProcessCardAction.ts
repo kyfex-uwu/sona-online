@@ -34,7 +34,7 @@ import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {CardTriggerType, Species} from "../../CardData.js";
 import Card, {CardMiscDataStrings} from "../../Card.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
-import {Side, sideTernary} from "../../consts.js";
+import {setFind, Side, sideTernary} from "../../consts.js";
 import {acceptThenCPUAct, parseEvent, sendToGame, shuffleBackend} from "./BackendGameServer.js";
 import {type processedEvent, rejectEvent} from "./BackendServer.js";
 
@@ -51,9 +51,6 @@ function defaultIsValid<T extends SerializableType>(event:CardAction<T>, game:Ga
     if(!(actor !== undefined &&//actor exists
         game !== undefined && //game exists
         actor.cardData.name === cardName && //card is cardData
-        game.state instanceof TurnState && //state is turnState
-        game.state.turn === actor.side && //player's turn
-        game.state.actionsLeft > 0 && //has actions left
         (optData.cardActionOption === undefined ||
             game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === optData.cardActionOption) &&//card action option matches
         game.player(actor.side) === event.sender)) //card is sender's
@@ -113,6 +110,8 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
                     return rejectEvent(event, "not draw to start yet c", game);
                 if (!(game.state.actionsLeft > 0))
                     return rejectEvent(event, "no more actions c", game);
+                if(game.state.turn !== card?.side)
+                    return rejectEvent(event, "not your turn c", game);
             } else
                 return rejectEvent(event, "game not started yet", game);
         }
@@ -151,7 +150,7 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
 
             // if(id === -1)
 
-            const card = [...game.cards.values()].find(card => card.id === id);
+            const card = setFind(game.cards, card => card.id === id);
 
             if (!(card && game.player(card.side) === event.sender &&//card exists and card belongs to sender
                 card.cardData.level === 1 && card.isAlwaysFree() &&//and card is level 1 and card is free
@@ -475,16 +474,18 @@ export default function(event:CardAction<any>, game:Game|undefined):processedEve
         }
         case CardActionOptions.CLOUD_CAT_PICK: {//og-043
             const actor = verifyFieldCard(event, game);
-            const pos = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
+            const cardId = (event as CardAction<CLOUD_CAT_PICK>).data.cardData;
 
-            const targeted = actor !== undefined ? sideTernary(actor.side, game.fieldsB, game.fieldsA)[pos-1] : undefined;
+            const targeted = setFind(game.cards, card=>card.id === cardId);
             if(!(actor !== undefined && actor.cardData.name === "og-043" &&//card exists and is cloud cat
                 ((game.state instanceof TurnState && game.state.turn === actor.side) ||//it is the actor's turn
                 game.state instanceof BeforeGameState) &&//it is the first place
                 game.player(actor.side) === event.sender &&//actor belongs to sender
 
                 game.getMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[actor.side]) === CardActionOptions.CLOUD_CAT_PICK &&//next action
-                (targeted !== undefined ||//targeted card exists OR
+                ((targeted !== undefined &&//targeted card exists
+                        sideTernary(actor.side, game.fieldsB, game.fieldsA).find(card=>card?.id === targeted.id) !== undefined)||//targeted card is on opponents field
+                    //targeted card exists and is valid OR
                     game.state instanceof BeforeGameState)//its before the first turn
             ))
                 return rejectEvent(event, "failed cloud cat check", game);

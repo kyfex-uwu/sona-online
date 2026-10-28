@@ -12,7 +12,7 @@ import {Side, sideTernary, Stat} from "../../consts.js";
 import {CardTriggerType} from "../../CardData.js";
 import {visualCardClientActions} from "../VisualCardData.js";
 import {GameMiscDataStrings} from "../../Game.js";
-import {canSelectHandCardHighlight, StateFeatures} from "../VisualGameStateTools.js";
+import {canPlaceHandCardHighlight, StateFeatures} from "../VisualGameStateTools.js";
 
 export const attackLock = newHighlightLock();
 export default class FieldMagnet extends CardMagnet{
@@ -34,7 +34,7 @@ export default class FieldMagnet extends CardMagnet{
                 const state = this.game.state;
 
                 if(this.game.selectedCard !== undefined && this.getSide() === this.game.getMySide() &&
-                    state.canSelectHandCard(this.game.selectedCard) &&
+                    state.canPlaceHandCard(this.game.selectedCard) &&
                     (state.hasFeatures(StateFeatures.FIELDS_PLACEABLE)||
                         this.game.selectedCard.logicalCard.callAction(CardTriggerType.SPECIAL_PLACEABLE_CHECK,
                             {self:this.game.selectedCard.logicalCard, game:this.game.getGame(), normallyValid:false}))){
@@ -181,7 +181,7 @@ export default class FieldMagnet extends CardMagnet{
         if(this.card !== undefined){
             this.card.position = this.position.clone();
             this.card.rotation = this.rotation.clone();
-            this.card.highlight(false, canSelectHandCardHighlight);
+            this.card.highlight(false, canPlaceHandCardHighlight);
         }
         // this.utilityCard.highlight(this.game.state.hasFeatures(StateFeatures.FIELDS_PLACEABLE) && this.getSide() === this.game.getMySide());
     }

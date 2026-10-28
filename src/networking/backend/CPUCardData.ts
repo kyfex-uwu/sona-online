@@ -1,7 +1,7 @@
 import cards from "../../Cards.js";
 import {CardTriggerType} from "../../CardData.js";
-import {parseEvent} from "./BackendServer.js";
-import {CardAction} from "../Events.js";
+import {parseEvent as parseEventReal} from "./BackendServer.js";
+import {CardAction, Event} from "../Events.js";
 import {CardActionOptions, type DCW_GUESS} from "../CardActionOption.js";
 import CPU, {calcStrength} from "./CPU.js";
 import type Game from "../../Game.js";
@@ -9,6 +9,11 @@ import Card, {CardMiscDataStrings} from "../../Card.js";
 import {randFrom, Side, Stat, wrap} from "../../consts.js";
 
 export function loadCPUWrappers(){}
+
+function parseEvent(event:Event<any>){
+    console.log("cpu sent: "+event.serialize());
+    parseEventReal(event);
+}
 
 function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self:Card}>(wrapper:(orig:T, data:U, cpu:CPU)=>void){
     return (orig:T,data:U)=>{

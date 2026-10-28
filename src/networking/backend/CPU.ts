@@ -43,8 +43,8 @@ export default class CPU{
     public readonly actionDebouncer = new WaitChain();
 
     constructor() {
-        const deck = [randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && card.level === 1))!];
-        for(let i=0;i<19;i++){
+        const deck = [cards["og-029"]!, randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && card.level === 1))!];
+        while(deck.length<20){
             deck.push(randFrom(Object.values(cards).filter(card=>!specialCards.has(card.name) && !deck.includes(card)))!);
         }
 
@@ -53,6 +53,7 @@ export default class CPU{
 
     private sentStartRequest=false;
     send(event:Event<any>){
+        console.log("cpu received: "+event.serialize());
         if(!this.waitForEventer.process(event)) return;
 
         if(event instanceof DrawAction){
@@ -162,9 +163,10 @@ export default class CPU{
         this.sendQueue.push(event);
     }
     flushQueue(){
-        for(const event of this.sendQueue)
-            this.send(event);
-        this.sendQueue.splice(0);//clears array
+        while(this.sendQueue.length>0){
+            this.send(this.sendQueue[0]!);
+            this.sendQueue.shift();
+        }
     }
 
     toServer(event:Event<any>, data:{callback?: (e: Event<any>) => (void | boolean), waitForConfirm?:boolean }={}){
@@ -186,20 +188,22 @@ export default class CPU{
         }
         waitFor();
 
+        console.log("cpu sent: "+event.serialize());
         parseEvent(event);
     }
 
     async takeAction(){
         await this.actionDebouncer.end();
 
-        if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen)
+        if(!this.game || this.game.getMiscData(GameMiscDataStrings.FROZEN)?.isFrozen) {
             return false;
-        //do i need to wait for cpu waiter? probably
+        }//do i need to wait for cpu waiter? probably
 
         if(!(
             this.game.state instanceof TurnState &&
-            this.game.state.turn === Side.B))
+            this.game.state.turn === Side.B)) {
             return false;
+        }
         if(!this.game.state.drawnToStart){
             console.log("draw to start")
             this.toServer(new DrawAction({}));

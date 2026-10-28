@@ -38,8 +38,10 @@ export function backendInit(server:Server){
                     sendQueue.push(event);
                 },
                 flushQueue:()=>{
-                    for(const event of sendQueue) sender.send(event);
-                    sendQueue.splice(0);//clears array
+                    while(sendQueue.length>0){
+                        sender.send(sendQueue[0]!);
+                        sendQueue.shift();
+                    }
                 }
             };
 
@@ -127,15 +129,15 @@ export function parseEvent(event:Event<any>):processedEvent{
                         hasLevel1B=true;
                     }
                 }
-                if(!hasLevel1A){
+                    if(!hasLevel1A){
                     const toFront = shuffled(deckA.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckA.splice(deckA.indexOf(toFront), 1);
-                    deckA.splice(-Math.floor(Math.random()*3), 0, toFront);
+                    deckA.splice(deckA.length-Math.floor(Math.random()*3), 0, toFront);
                 }
                 if(!hasLevel1B){
                     const toFront = shuffled(deckB.filter(card => cards[card.type]?.level === 1))[0]!;
                     deckB.splice(deckB.indexOf(toFront), 1);
-                    deckB.splice(-Math.floor(Math.random()*3), 0, toFront);
+                    deckB.splice(deckB.length-Math.floor(Math.random()*3), 0, toFront);
                 }
 
                 const game = new Game(deckA, deckB, uuid());

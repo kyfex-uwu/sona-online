@@ -78,7 +78,7 @@ export function wrap<P extends {
     });
 }
 
-export function levelOr(level:Level|undefined, or:0|1e999){
+export function levelOr(level:Level|undefined, or:0|1e999|1){
 
     return typeof level !== "number" ? or : level;
 }
@@ -128,4 +128,10 @@ export function randFrom<T>(a: T[]): T | undefined {
 
 export function enumValues(eenum:any){
     return Object.values(eenum).filter(v=>typeof v === "number");
+}
+
+export function setFind<T>(set:Set<T>, filter:(item:T)=>boolean){
+    for(const item of set)
+        if(filter(item)) return item;
+    return undefined;
 }
