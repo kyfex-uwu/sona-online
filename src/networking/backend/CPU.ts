@@ -2,13 +2,16 @@ import Game, {GameMiscDataStrings} from "../../Game.js";
 import {
     CardAction,
     ClarificationJustification,
-    ClarifyCardEvent,
-    DrawAction,
     type Event,
-    PassAction, PerchanceEvent,
-    PlaceAction,
-    ScareAction,
-    StartRequestEvent
+    PassAction,
+    S2CPerchanceEvent,
+    C2SStartRequestEvent,
+    C2SStartTurnAction,
+    S2CDrawAction,
+    C2SPlaceAction,
+    S2CClarifyCardEvent,
+    C2SDrawAction,
+    C2SScareAction
 } from "../Events.js"
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import cards, {specialCards} from "../../Cards.js";
@@ -20,7 +23,7 @@ import {
 } from "../CardActionOption.js";
 import type {Level} from "../../CardData.js";
 import {EventWaiter, externalPromise, levelOr, randFrom, shuffled, Side, Stat, WaitChain} from "../../consts.js";
-import {parseEvent} from "./BackendServer.js";
+import {type Client, parseEvent} from "./BackendServer.js";
 
 export function canBeat(attacker:Card, attacked:Card){
     if( (attacker.stat(Stat.RED) ?? -1) >= (attacked.stat(getVictim(Stat.RED)) ?? Infinity) ) return Stat.RED;
@@ -36,7 +39,7 @@ export function calcWeakness(attacked:Card, attackers:Card[]){
     return attackers.map(v=>canBeat(v, attacked)!==false).reduce((a,c)=>c?a+1:a,0);
 }
 
-export default class CPU{
+export default class CPU implements Client{
     public game:Game=undefined!;
     public readonly generatedDeck:string[];
     public readonly waitForEventer = new EventWaiter();
@@ -56,7 +59,7 @@ export default class CPU{
         console.log("cpu received: "+event.serialize());
         if(!this.waitForEventer.process(event)) return;
 
-        if(event instanceof DrawAction){
+        if(event instanceof S2CDrawAction){
             if(!this.sentStartRequest &&
                 this.game.state instanceof BeforeGameState &&
                 this.game.handB.length===3) {
@@ -64,12 +67,11 @@ export default class CPU{
                 const toStart = this.game.handB.filter(card => card.cardData.level === 1)
                     .map(card => [card, Math.min(card.stat(Stat.RED) ?? Infinity, card.stat(Stat.BLUE) ?? Infinity, card.stat(Stat.YELLOW) ?? Infinity)] satisfies [Card, number])
                     .sort((c1, c2) => c2[1] - c1[1])[0]![0];
-                this.toServer(new PlaceAction({
+                this.toServer(new C2SPlaceAction({
                     cardId: toStart.id,
                     position: 2,
-                    side: toStart.side
                 }));
-                this.toServer(new StartRequestEvent({
+                this.toServer(new C2SStartRequestEvent({
                     which: "nopref"
                 }));
                 this.sentStartRequest=true;
@@ -81,13 +83,12 @@ export default class CPU{
                     guesses.splice(Math.floor(Math.random()*guesses.length),1);
 
                     this.toServer(new CardAction({
-                        cardId: -1,
                         actionName: CardActionOptions.DCW_GUESS,
                         cardData: guesses[0]!
                     }));
 
                     let finished=false;
-                    this.waitForEventer.waitFor(event=>event instanceof ClarifyCardEvent && event.data.justification === ClarificationJustification.DCW,
+                    this.waitForEventer.waitFor(event=>event instanceof S2CClarifyCardEvent && event.data.justification === ClarificationJustification.DCW,
                         ()=>{
                             finished=true;
                             return true;
@@ -96,7 +97,6 @@ export default class CPU{
                         ()=>{
                             if(!finished) {
                                 this.toServer(new CardAction({
-                                    cardId: -1,
                                     actionName: CardActionOptions.DCW_GUESS,
                                     cardData: guesses[1]!
                                 }));
@@ -109,7 +109,6 @@ export default class CPU{
                 case CardActionOptions.FOXY_MAGICIAN_GUESS:{
                     if((event.data.cardData as FOXY_MAGICIAN_GUESS) === undefined) {
                         this.toServer(new CardAction({
-                            cardId: -1,
                             actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
                             cardData: randFrom([1, 2, 3] as Level[])!
                         }));
@@ -119,7 +118,6 @@ export default class CPU{
                 }break;
                 case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                     this.toServer(new CardAction({
-                        cardId:-1,
                         actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                         cardData:true
                     }));
@@ -128,7 +126,6 @@ export default class CPU{
                     const data = (event.data.cardData as COWGIRL_COYOTE_INCREASE).data;
                     if(data)
                         this.toServer(new CardAction({
-                            cardId:-1,
                             actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                             cardData:{data:{
                                 stat:getVictim(data.stat),
@@ -140,7 +137,6 @@ export default class CPU{
                     const data = (event.data.cardData as BROY_WEASLA_INCREASE).data;
                     if(data)
                         this.toServer(new CardAction({
-                            cardId:-1,
                             actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                             cardData:{data:{
                                 stat:data.stat,
@@ -148,11 +144,10 @@ export default class CPU{
                             }}
                         }));
                 }break;
-                case CardActionOptions.NOBLE_RETARGET:{
+                case CardActionOptions.NOBLE_RETARGET_REQUEST:{
                     this.toServer(new CardAction({
-                        cardId: -1,
-                        actionName: CardActionOptions.NOBLE_RETARGET,
-                        cardData: {redirect:true},
+                        actionName: CardActionOptions.NOBLE_SHOULD_RETARGET,
+                        cardData: true,
                     }));
                 }break;
             }
@@ -180,7 +175,7 @@ export default class CPU{
         const waitFor = ()=>{
             this.waitForEventer.waitFor(e=>e.id === event.id, (e)=> {
                 const toReturn = data.callback ? (data.callback(e) ?? true) : true;
-                if(!(e instanceof PerchanceEvent)) waitForConfirm.resolve();
+                if(!(e instanceof S2CPerchanceEvent)) waitForConfirm.resolve();
                 else waitFor();
                 return toReturn;
             });
@@ -205,7 +200,8 @@ export default class CPU{
         }
         if(!this.game.state.drawnToStart){
             console.log("draw to start")
-            this.toServer(new DrawAction({}));
+            if(this.game.handB.length>=5) this.toServer(new C2SStartTurnAction({}));
+            else this.toServer(new C2SDrawAction({}));
             return true;
         }
 
@@ -213,7 +209,7 @@ export default class CPU{
         if(fieldCards.length<2){
             if(this.game.handB.length === 0 && this.game.state.actionsLeft>0){
                 console.log("draw")
-                this.toServer(new DrawAction({}));
+                this.toServer(new C2SDrawAction({}));
                 return true;
             }else {
                 const topLevel = Math.max(0, ...fieldCards.map(card => levelOr(card!.cardData.level,0))) + 1;
@@ -224,9 +220,8 @@ export default class CPU{
                     picked=picked.filter(card=>card.isAlwaysFree());
                 if(picked.length>0) {
                     console.log("place")
-                    this.toServer(new PlaceAction({
+                    this.toServer(new C2SPlaceAction({
                         cardId: randFrom(picked)!.id,
-                        side: Side.B,
                         position: randFrom(this.game.fieldsB.map((card, i) => [card, i] satisfies [Card | undefined, number])
                             .filter(data => data[0] === undefined)
                             .map(data => data[1] + 1) as (1 | 2 | 3)[])!
@@ -250,7 +245,7 @@ export default class CPU{
                         const beatsStat=canBeat(maybeAttacker, danger[0][0]);
                         if(beatsStat!==false) {
                             console.trace("scare")
-                            this.toServer(new ScareAction({
+                            this.toServer(new C2SScareAction({
                                 scarerPos: [i + 1 as 1 | 2 | 3, Side.B],
                                 scaredPos: [danger[0][1] + 1 as 1 | 2 | 3, Side.A],
                                 attackingWith: beatsStat,

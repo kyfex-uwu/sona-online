@@ -7,7 +7,7 @@ import VisualHandFan from "./fans/HandFan.js";
 import Game, {GameMiscDataStrings} from "../Game.js";
 import VisualCard from "./VisualCard.js";
 import {camera, sendToServer} from "./clientConsts.js";
-import {DrawAction, Event, PassAction} from "../networking/Events.js";
+import {C2SDrawAction, Event, PassAction, C2SStartTurnAction} from "../networking/Events.js";
 import {button, buttonId, registerDrawCallback} from "./ui.js";
 import p5 from "p5";
 import {VBeforeGameState, type VisualGameState, VTurnState} from "./VisualGameStates.js";
@@ -131,7 +131,7 @@ export default class VisualGame extends ElementScene{
 
         this.game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.wait.then(()=>{
             if(this.state instanceof VTurnState && this.state.currTurn === this.getMySide()){
-                sendToServer(new DrawAction({}));
+                sendToServer(new C2SDrawAction({}));
                 this.state.getNonVisState().setDrawnToStart();
             }
         })
@@ -160,16 +160,22 @@ export default class VisualGame extends ElementScene{
             if(this.state instanceof VTurnState && this.state.getNonVisState().turn === this.getMySide()){
                 let width=scale*1.3;
                 let height=scale*0.4;
+                const start = sideTernary(this.game.mySide, this.game.handA, this.game.handB).length>=5 &&
+                    !this.state.getNonVisState().drawnToStart;
                 button(p5, p5.width/2-width/2, p5.height-height-scale*0.1, width, height,
-                        this.state.getActionsLeft() <= 0 ? "End Turn" : "Pass", ()=>{
+                        start ? "Start Turn" : "End Turn", start ? ()=>{
+                        sendToServer(new C2SStartTurnAction({})).onReply(eventReply().success(() => {
+                            (this.state as VTurnState).getNonVisState().setDrawnToStart();
+                        }));
+                    } : ()=>{
                     this.frozen=true;
                     sendToServer(new PassAction({})).onReply(eventReply().success(() => {
                         this.state.decrementTurn(true);
                     }).fail(()=>{
                         this.frozen=false;
                     }));
-                }, scale, this.passButtonId, sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 ||
-                    this.frozen || !this.state.getNonVisState().drawnToStart);
+                }, scale, this.passButtonId, this.frozen || (!start && (sideTernary(this.getMySide(), this.game.handA, this.game.handB).length>5 ||
+                    !this.state.getNonVisState().drawnToStart)));
             }
 
             const width = scale * 1.3;

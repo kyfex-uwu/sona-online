@@ -147,7 +147,7 @@ export default class SuperficialVisualCard extends PositionedVisualGameElement{
         super(game, position, rotation);
 
         if(typeof card === "string"){
-            card=new Card(new CardData("",[0,0,0],"?",Species.UNKNOWN,Temperament.UNKNOWN, card),Side.A, null!, -1);
+            card=new Card(new CardData("",[0,0,0],1,Species.UNKNOWN,Temperament.UNKNOWN, card),Side.A, null!, -1);
         }
 
         this._logicalCard=card;

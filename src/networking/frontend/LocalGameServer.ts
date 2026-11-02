@@ -2,17 +2,17 @@ import {eventReply} from "../Server.js";
 import {
     CardAction,
     ClarificationJustification,
-    ClarifyCardEvent,
-    DetermineStarterEvent,
-    DiscardAction,
-    DrawAction,
+    S2CDetermineStarterEvent,
     GameEvent,
-    GameStartEvent,
-    MultiClarifyCardEvent,
+    S2CGameStartEvent,
     PassAction,
-    PlaceAction,
-    ScareAction,
-    ServerDumpEvent,
+    S2CServerDumpEvent,
+    S2CClarifyCardEvent,
+    S2CMultiClarifyCardEvent,
+    S2CPlaceAction,
+    S2CDrawAction,
+    S2CScareAction,
+    S2CDiscardAction,
 } from "../Events.js";
 import Card, {getVictim} from "../../Card.js";
 import VisualCard, {newHighlightLock} from "../../client/VisualCard.js";
@@ -38,15 +38,13 @@ import {
 import {BeforeGameState, TurnState} from "../../GameStates.js";
 import {
     type AMBER_PICK,
-    AmberData,
-    type BOTTOM_DRAW,
+    type LUPINE_DRAW_S2C,
     type BROWNIE_DRAW, type BROY_WEASLA_INCREASE,
     CardActionOptions,
     type CLOUD_CAT_PICK, type COWGIRL_COYOTE_INCREASE,
     type FURMAKER_PICK,
-    type NOBLE_RETARGET,
     type WORICK_RESCUE,
-    type YASHI_REORDER
+    type YASHI_REORDER, type NOBLE_RETARGET_REQUEST
 } from "../CardActionOption.js";
 import {GameMiscDataStrings} from "../../Game.js";
 import {log, sendToServer, threeScene} from "../../client/clientConsts.js";
@@ -55,8 +53,9 @@ import {setScene} from "../../index.js";
 import {GameScene} from "../../client/scenes/GameScene.js";
 import SuperficialVisualCard from "../../client/SuperficialVisualCard.js";
 import type {Level} from "../../CardData.js";
+import {amberPick, brownieDraw, furmakerPick, lupineDraw, worickRescue, yashiReorder} from "./LocalCardActions.js";
 
-function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
+function clarifyCard(id:number, cardDataName?:string){
     const visualCard = game.elements.find(e=>VisualCard.getExactVisualCard(e)?.logicalCard.id === id) as VisualCard;
     if(visualCard === undefined || visualCard.logicalCard.id<0) return;
     if(cardDataName !== undefined)
@@ -67,14 +66,14 @@ function clarifyCard(id:number, cardDataName?:string, faceUp?:boolean){
         visualCard.repopulate(visualCard.logicalCard);
     }
 
-    if(faceUp !== undefined && faceUp !== visualCard.logicalCard.getFaceUp())
-        visualCard[faceUp ? "flipFaceup" : "flipFacedown"]();
+    // if(faceUp !== undefined && faceUp !== visualCard.logicalCard.getFaceUp())
+    //     visualCard[faceUp ? "flipFaceup" : "flipFacedown"]();
 
     game.getGame().cards.add(visualCard.logicalCard);
 }
-const waitingForClarify:{[k:number]:((event:ClarifyCardEvent|MultiClarifyCardEvent)=>void)[]} = {};
+const waitingForClarify:{[k:number]:((event:S2CClarifyCardEvent|S2CMultiClarifyCardEvent)=>void)[]} = {};
 export function waitForClarify(justification:ClarificationJustification,
-                               callback:(event:ClarifyCardEvent|MultiClarifyCardEvent)=>void){
+                               callback:(event:S2CClarifyCardEvent|S2CMultiClarifyCardEvent)=>void){
     if(waitingForClarify[justification] === undefined)
         waitingForClarify[justification] = [];
     waitingForClarify[justification].push(callback);
@@ -104,7 +103,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
     log("%c -> "+event.constructor.name+"\n"+event.serialize(),
         `background:${(logColors[event.constructor.name]||"#000")+"2"}; color:${logColors[event.constructor.name]||"#fff"}`);
 
-    if(event instanceof GameStartEvent){
+    if(event instanceof S2CGameStartEvent){
         game = new VisualGame(threeScene, event.data.cpuGame);
 
         setScene(()=>new GameScene(event.data.cpuGame));
@@ -134,18 +133,18 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         }
 
         await wait(500);
-    }else if (event instanceof ClarifyCardEvent) {
-        clarifyCard(event.data.id, event.data.cardDataName, event.data.faceUp);
+    }else if (event instanceof S2CClarifyCardEvent) {
+        clarifyCard(event.data.id, event.data.cardDataName);
         if(event.data.justification !== undefined) {
             for (const callback of waitingForClarify[event.data.justification] ?? [])
                 callback(event);
             waitingForClarify[event.data.justification]=[];
         }
-    }else if(event instanceof MultiClarifyCardEvent){
+    }else if(event instanceof S2CMultiClarifyCardEvent){
         if(event.data !== undefined) {
             for (const id in event.data) {
                 if(id==="justification") continue;
-                clarifyCard(parseInt(id), event.data[id]!.cardDataName, event.data[id]!.faceUp);
+                clarifyCard(parseInt(id), event.data[id]!.cardDataName);
             }
             if(event.data.justification !== undefined) {
                 for (const callback of waitingForClarify[event.data.justification] ?? [])
@@ -153,7 +152,7 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
                 waitingForClarify[event.data.justification]=[];
             }
         }
-    }else if(event instanceof DetermineStarterEvent){
+    }else if(event instanceof S2CDetermineStarterEvent){
         if(game.state instanceof VChoosingStartState){
             game.state.startGame(event);
         }
@@ -167,13 +166,13 @@ export async function gameReceiveFromServer(event:GameEvent<any>) {
         r();
     }));
 
-    if(event instanceof ServerDumpEvent){
+    if(event instanceof S2CServerDumpEvent){
         console.log("Server game:",event.data);
     }
 }
 
 function gameReceiveFromServerVisible(event:GameEvent<any>){
-    if(event instanceof PlaceAction){
+    if(event instanceof S2CPlaceAction){
         const card =  game.elements.find(element =>
             VisualCard.getExactVisualCard(element)?.logicalCard.id === event.data.cardId) as VisualCard;
         card.getHolder()?.removeCard(card);
@@ -185,7 +184,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
         if(!(event.data.forFree ?? false)){
             game.state.decrementTurn();
         }
-    }else if(event instanceof DrawAction){
+    }else if(event instanceof S2CDrawAction){
         sideTernary(event.data.side ?? game.getMySide(), game.deckA, game.deckB).drawCard();
 
         const logicalState = game.state.getNonVisState();
@@ -200,7 +199,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             game.state.decrementTurn(true);
             if(game.state instanceof VTurnState) console.log(game.state.currTurn, game.state.getNonVisState().turn)
         });
-    }else if(event instanceof ScareAction){
+    }else if(event instanceof S2CScareAction){
         const scaredPos = event.data.failed ? event.data.scarerPos : event.data.scaredPos;
         const scared = sideTernary(scaredPos[1], game.fieldsA, game.fieldsB)[scaredPos[0]-1]!.getCard();
         if (scared !== undefined) {
@@ -230,67 +229,23 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
         }
     }else if(event instanceof CardAction){
         switch(event.data.actionName){
-            case CardActionOptions.BOTTOM_DRAW:{
-                const data = (event as CardAction<BOTTOM_DRAW>).data.cardData;
-                sideTernary(data.side, game.deckA, game.deckB).drawCard(true);
+            case CardActionOptions.LUPINE_DRAW:{
+                lupineDraw(other(game.getMySide()), game);
             }break;
             case CardActionOptions.BROWNIE_DRAW: {
-                const data = (event as CardAction<BROWNIE_DRAW>).data.cardData;
-                const card = game.elements.find(element => VisualCard.getExactVisualCard(element) &&
-                    (element as VisualCard).logicalCard.id === data.id) as VisualCard;
-                if (card) {
-                    sideTernary(card.logicalCard.side, game.deckA, game.deckB).removeCard(card);
-                    sideTernary(card.logicalCard.side, game.handA, game.handB).addCard(card);
-                    card.flipFaceup();
-                    sideTernary(card.logicalCard.side, game.deckA, game.deckB).shuffle();
-                }
+                brownieDraw((event as CardAction<BROWNIE_DRAW>).data.cardData, game);
             }break;
             case CardActionOptions.AMBER_PICK:{
-                const data = (event as CardAction<AMBER_PICK>).data.cardData;
-
-                const toReorder = sideTernary(data.side!, game.deckA, game.deckB).getCards();
-                let [card1, card2] = [toReorder.at(-1), toReorder.at(-2)];
-                if(data!.which === AmberData.KEEP_SECOND) [card1, card2] = [card2, card1];
-                card1?.flipFaceup();
-                card2?.flipFaceup();
-                if(card1 !== undefined) sideTernary(data.side!, game.handA, game.handB).addCard(card1);
-                if(card2 !== undefined) sideTernary(data.side!, game.runawayA, game.runawayB).addCard(card2);
-                game.state.decrementTurn();
+                amberPick((event as CardAction<AMBER_PICK>).data.cardData, other(game.getMySide()), game);
             }break;
             case CardActionOptions.WORICK_RESCUE:{
-                const data = (event as CardAction<WORICK_RESCUE>).data.cardData;
-
-                const removeFrom = sideTernary(data.side!, game.runawayA, game.runawayB);
-                const cardToRemove = game.elements.find(element =>
-                    VisualCard.getExactVisualCard(element) !== undefined &&
-                    element instanceof VisualCard && element.logicalCard.id === data.id) as VisualCard;
-                removeFrom.removeCard(cardToRemove);
-                sideTernary(data.side!, game.handA, game.handB).addCard(cardToRemove);
+                worickRescue((event as CardAction<WORICK_RESCUE>).data.cardData, other(game.getMySide()), game);
             }break;
             case CardActionOptions.FURMAKER_PICK:{
-                const data = (event as CardAction<FURMAKER_PICK>).data.cardData;
-
-                const removeFrom = sideTernary(data.side!, game.deckA, game.deckB);
-                const cardToRemove = game.elements.find(element =>
-                    VisualCard.getExactVisualCard(element) !== undefined &&
-                    element instanceof VisualCard && element.logicalCard.id === data.id) as VisualCard;
-                removeFrom.removeCard(cardToRemove);
-                cardToRemove.flipFaceup();
-                sideTernary(data.side!, game.handA, game.handB).addCard(cardToRemove);
-                sideTernary(data.side!, game.deckA, game.deckB).shuffle();
+                furmakerPick((event as CardAction<FURMAKER_PICK>).data.cardData, other(game.getMySide()), game);
             }break;
             case CardActionOptions.YASHI_REORDER:{
-                const data = (event as CardAction<YASHI_REORDER>).data.cardData;
-
-                const deckDrawFrom = sideTernary(data.side!, game.deckA, game.deckB);
-                const cards = deckDrawFrom.getCards();
-                for(const card of data.cards.map(id=>cards.find(card=>card.logicalCard.id === id))
-                    .reverse()){
-                    if(card === undefined) continue;
-
-                    deckDrawFrom.removeCard(card);
-                    deckDrawFrom.addCard(card);
-                }
+                yashiReorder((event as CardAction<YASHI_REORDER>).data.cardData, other(game.getMySide()), game);
             }break;
             case CardActionOptions.CLOUD_CAT_PICK:{
                 game.getGame().getMiscData(GameMiscDataStrings.CLOUD_CAT_DISABLED)![game.getMySide()] =
@@ -304,7 +259,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     for (let i = 0; i < 3; i++)
                         button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
                             sendToServer(new CardAction({
-                                cardId: -1,
                                 actionName: CardActionOptions.DCW_GUESS,
                                 cardData: (i + 1 as Level)
                             }));
@@ -328,7 +282,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 let frame=0;
                 let repopulating=false;
                 const targetCard = game.elements.find(card=>card instanceof SuperficialVisualCard &&
-                    card.logicalCard.id === event.data.cardId) as VisualCard;
+                    card.logicalCard.id === event.data.cardData) as VisualCard;
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self,type)=>{
                         release();
@@ -394,7 +348,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     for (let i = 0; i < 3; i++)
                         button(p5, p5.width / 2 + scale * (i - 1) - scale * 0.3, p5.height / 2 + scale * 0.6, scale * 0.6, scale * 0.6, i + 1 + "", () => {
                             sendToServer(new CardAction({
-                                cardId: -1,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_GUESS,
                                 cardData: (i +1) as Level
                             }));
@@ -416,7 +369,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 let frame=0;
                 let repopulating=false;
                 const targetCard = game.elements.find(card=>card instanceof SuperficialVisualCard &&
-                    card.logicalCard.id === event.data.cardId) as VisualCard;
+                    card.logicalCard.id === event.data.cardData) as VisualCard;
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self,type)=>{
                         release();
@@ -462,7 +415,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                                     if(targetCard.logicalCard.cardData.level !== guess) {
                                         const removeFrom = sideTernary(getLocalGame().getMySide(), getLocalGame().deckB, getLocalGame().deckA);
                                         const realCard = getLocalGame().elements.find(element => element instanceof VisualCard &&
-                                            element.logicalCard.id === event.data.cardId)! as VisualCard;
+                                            element.logicalCard.id === event.data.cardData)! as VisualCard;
                                         removeFrom.removeCard(realCard);
                                         sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA)
                                             .addCard(realCard);
@@ -486,6 +439,9 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
             }break;
             case CardActionOptions.LITTLEBOSS_IMMUNITY:{
                 let release:()=>void;
+                const littleBoss=sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                    .find(v=>v.getCard()?.logicalCard.cardData.name === "og-015")
+                    ?.getCard();
                 game.setState(new VGuiState(game, [game.state, game.getGame().state],{
                     onEnd:(self, type)=>{
                         release();
@@ -493,16 +449,13 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     init:(self)=>{
                         const end = (save:boolean)=>{
                             sendToServer(new CardAction({
-                                cardId:-1,
                                 actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
                                 cardData:save
                             }));
                             self.end("finished");
                         }
                         game.changeView(sideTernary(game.getMySide(), ViewType.FIELDS_A, ViewType.FIELDS_B));
-                        const pos = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
-                            .find(v=>v.getCard()?.logicalCard.cardData.name === "og-015")
-                            ?.getCard()?.model.position;
+                        const pos = littleBoss?.model.position;
                         release=registerDrawCallback(0,(p5,scale)=>{
                             self.twoButtons(p5,scale,{
                                 onClick:()=>end(true),
@@ -543,6 +496,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
                     sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
                 ] satisfies [Vector3, Vector3];
+                const cowgirlId = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                    .find(field=>field.getCard()?.logicalCard.cardData.name === "og-035")?.getCard()?.logicalCard.id ?? -1;
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self)=>{
                         drawCallback();
@@ -584,7 +539,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             self.twoButtons(p5, scale, {
                                 onClick:()=>{
                                     sendToServer(new CardAction({
-                                        cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:{data:{
                                             stat:selectedStat!,
@@ -602,7 +556,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             }, {
                                 onClick:()=> {
                                     sendToServer(new CardAction({
-                                        cardId:-1,
                                         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
                                         cardData:{}
                                     })).onReply(eventReply().finally(()=>{
@@ -631,6 +584,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     sideTernary(data.pos[1], game.fieldsA, game.fieldsB)[data.pos[0]-1]!.getCard()!.getStatModel(getVictim(data.stat))!.getWorldPosition(new Vector3()),
                     sideTernary(data.otherPos![1], game.fieldsA, game.fieldsB)[data.otherPos![0]-1]!.getCard()!.getStatModel(data.stat)!.getWorldPosition(new Vector3()),
                 ] satisfies [Vector3, Vector3];
+                const broyId = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB)
+                    .find(field=>field.getCard()?.logicalCard.cardData.name === "og-029")?.getCard()?.logicalCard.id ?? -1;
 
                 game.setState(new VGuiState(game, [game.state, game.getGame().state], {
                     onEnd:(self)=>{
@@ -674,7 +629,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             self.twoButtons(p5, scale, {
                                 onClick:()=>{
                                     sendToServer(new CardAction({
-                                        cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:{data:{
                                             stat:selectedStat!,
@@ -692,7 +646,6 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                             }, {
                                 onClick:()=> {
                                     sendToServer(new CardAction({
-                                        cardId:-1,
                                         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
                                         cardData:{}
                                     })).onReply(eventReply().finally(()=>{
@@ -712,9 +665,9 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     },
                 }), game.getGame().state);
             }break;
-            case CardActionOptions.NOBLE_RETARGET:{
+            case CardActionOptions.NOBLE_RETARGET_REQUEST:{
                 let release:()=>void;
-                const data = (event.data.cardData as NOBLE_RETARGET).data!;
+                const data = (event.data.cardData as NOBLE_RETARGET_REQUEST);
                 const scared = sideTernary(data.scared[1], game.fieldsA, game.fieldsB)[data.scared[0]-1]?.getCard();
                 const scarer = sideTernary(data.scarer![1], game.fieldsA, game.fieldsB)[data.scarer![0]-1]?.getCard();
                 const noble = sideTernary(game.getMySide(), game.fieldsA, game.fieldsB).find(f=>f.getCard()?.logicalCard.cardData.name === "og-020")
@@ -732,9 +685,8 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                     onEnd:(self,type)=>{
                         release();
                         sendToServer(new CardAction({
-                            cardId: noble?.logicalCard.id ?? -1,
-                            actionName: CardActionOptions.NOBLE_RETARGET,
-                            cardData: {redirect:type === "finished"}
+                            actionName: CardActionOptions.NOBLE_SHOULD_RETARGET,
+                            cardData: type === "finished",
                         }));
                     },
                     init:(self)=>{
@@ -760,7 +712,7 @@ function gameReceiveFromServerVisible(event:GameEvent<any>){
                 }), game.getGame().state);
             }break;
         }
-    }else if(event instanceof DiscardAction){
+    }else if(event instanceof S2CDiscardAction){
         sideTernary(event.data.side!, game.runawayA, game.runawayB).addCard(game.elements.find(card=>
             VisualCard.getExactVisualCard(card)?.logicalCard.id === event.data.id) as VisualCard);
     }

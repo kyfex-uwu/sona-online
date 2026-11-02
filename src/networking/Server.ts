@@ -1,4 +1,4 @@
-import {AcceptEvent, Event, PerchanceEvent, RejectEvent} from "./Events.js";
+import {S2CAcceptEvent, Event, S2CPerchanceEvent, S2CRejectEvent} from "./Events.js";
 
 class FlagData{
     type:"number"|"boolean";
@@ -24,10 +24,10 @@ export function getFlag<T>(name:flagName<T>){
 export function eventReply(){
     const data:{success?: () => void, fail?: () => void, finally?: () => void} = {};
     const toReturn = (event:Event<any>) =>{
-        if(event instanceof PerchanceEvent) return;
+        if(event instanceof S2CPerchanceEvent) return;
 
-        if(event instanceof AcceptEvent && data.success) data.success();
-        else if(event instanceof RejectEvent && data.fail) data.fail();
+        if(event instanceof S2CAcceptEvent && data.success) data.success();
+        else if(event instanceof S2CRejectEvent && data.fail) data.fail();
         if(data.finally) data?.finally();
     }
     toReturn.success = (callback:()=>void)=> {
@@ -46,7 +46,7 @@ export function eventReply(){
 }
 export function cancelCallback(callback: () => void, finaly?:()=>void){
     return (event:Event<any>) =>{
-        if(event instanceof RejectEvent) callback();
+        if(event instanceof S2CRejectEvent) callback();
         if(finaly !== undefined) finaly();
     }
 }

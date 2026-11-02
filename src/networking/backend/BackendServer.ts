@@ -1,10 +1,10 @@
 import {
-    AcceptEvent,
+    S2CAcceptEvent,
     Event,
-    FindGameEvent,
+    C2SFindGameEvent,
     GameEvent,
-    InternalStartGameEvent,
-    RejectEvent,
+    S2SInternalStartGameEvent,
+    S2CRejectEvent,
 } from "../Events.js";
 import Game from "../../Game.js";
 import {v4 as uuid} from "uuid"
@@ -23,7 +23,7 @@ export type Client ={
     queueSend:(v:Event<any>)=>void,
     flushQueue:()=>void,
 };
-const unfilledGames:Array<(v:FindGameEvent)=>void> = [];
+const unfilledGames:Array<(v:C2SFindGameEvent)=>void> = [];
 
 export function backendInit(server:Server){
     const wsServer = new ws.WebSocketServer({ noServer: true });
@@ -70,7 +70,7 @@ export function backendInit(server:Server){
 export const processedEventMarker = {dontUseThisRawCallRejectOrAccept:3 as 3};
 export type processedEvent = {dontUseThisRawCallRejectOrAccept:3};
 export function rejectEvent(event:Event<any>, reason:string, game:Game|undefined, flush:boolean=true){
-    event.sender?.send(new RejectEvent({}, undefined, event.id));
+    event.sender?.send(new S2CRejectEvent({}, undefined, event.id));
     console.trace(`# rejected ${event.id}(${typeof event}): ${reason}`);
     if(flush) {
         game?.player(Side.A)?.flushQueue();
@@ -79,7 +79,7 @@ export function rejectEvent(event:Event<any>, reason:string, game:Game|undefined
     return processedEventMarker;
 }
 export function acceptEvent(event:Event<any>, game:Game|undefined, flush:boolean=true){
-    event.sender?.send(new AcceptEvent({}, undefined, event.id));
+    event.sender?.send(new S2CAcceptEvent({}, undefined, event.id));
     if(flush) {
         game?.player(Side.A)?.flushQueue();
         game?.player(Side.B)?.flushQueue();
@@ -90,7 +90,7 @@ export function acceptEvent(event:Event<any>, game:Game|undefined, flush:boolean
 export function parseEvent(event:Event<any>):processedEvent{
     //todo: verify things are in array bounds!!!!
 
-    if(event instanceof FindGameEvent){
+    if(event instanceof C2SFindGameEvent){
         if(!event.data.deck.some(card => cards[card]?.level === 1))
             return rejectEvent(event, "no level one card in deck", undefined);
         if(event.data.deck.some(card => cards[card] === undefined))
@@ -110,13 +110,15 @@ export function parseEvent(event:Event<any>):processedEvent{
 
             return acceptEvent(event, undefined);
         }else{
-            let resolve:(v:FindGameEvent)=>void;
-            const waiter = new Promise<FindGameEvent>(r=>resolve=r);
+            let resolve:(v:C2SFindGameEvent)=>void;
+            const waiter = new Promise<C2SFindGameEvent>(r=>resolve=r);
             waiter.then((other) => {
                 let id=0;
 
                 const deckA = shuffled(event.data.deck).map(name=>{return{type:name,id:id++}});
                 const deckB = shuffled(other.data.deck).map(name=>{return{type:name,id:id++}});
+                // const deckA = (event.data.deck).map(name=>{return{type:name,id:id++}});
+                // const deckB = (other.data.deck).map(name=>{return{type:name,id:id++}});
 
                 let hasLevel1A=false;
                 let hasLevel1B=false;
@@ -144,12 +146,12 @@ export function parseEvent(event:Event<any>):processedEvent{
                     (other.sender as CPU).game=game;
                     game.isCpu=true;
                 }
-                gameParseEvent(new InternalStartGameEvent(game, event.sender!, other.sender!));
+                gameParseEvent(new S2SInternalStartGameEvent(game, event.sender!, other.sender!));
             });
             if(!event.data.requestCPU) unfilledGames.push(resolve!);
             else {
                 const opponent = new CPU();
-                resolve!(new FindGameEvent({
+                resolve!(new C2SFindGameEvent({
                     deck: opponent.generatedDeck,
                     requestCPU: false,
                 },opponent));

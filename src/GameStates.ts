@@ -35,9 +35,9 @@ export class TurnState extends GameState{
         if(!firstTurnAwaiter?.waiting)
             firstTurnAwaiter?.resolve();
 
-        if(sideTernary(this.turn, this.game.handA, this.game.handB).length>=5) {
-            this.setDrawnToStart();
-        }
+        // if(sideTernary(this.turn, this.game.handA, this.game.handB).length>=5) {
+        //     this.setDrawnToStart();
+        // }
     }
     setDrawnToStart(){
         if(this.crisis !== undefined || this._drawnToStart) return;

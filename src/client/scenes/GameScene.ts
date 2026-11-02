@@ -1,5 +1,5 @@
 import {Scene} from "./Scene.js";
-import {RequestServerDumpAction} from "../../networking/Events.js";
+import {C2SRequestServerDumpAction} from "../../networking/Events.js";
 import {getLocalGame} from "../../networking/frontend/LocalGameServer.js";
 import {sendToServer} from "../clientConsts.js";
 
@@ -15,7 +15,7 @@ export class GameScene extends Scene{
             ()=> getLocalGame();
 // @ts-expect-error
         window.serverDump =
-            ()=>sendToServer(new RequestServerDumpAction({}));
+            ()=>sendToServer(new C2SRequestServerDumpAction({}));
 
         console.log("important lines of code:\n\n" +
             "logGame() outputs the game as the CLIENT sees it\n\n" +

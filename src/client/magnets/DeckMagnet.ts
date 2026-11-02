@@ -1,7 +1,7 @@
 import CardMagnet from "./CardMagnet.js";
 import {Euler, Quaternion, Vector3} from "three";
 import {sendToServer, updateOrder} from "../clientConsts.js";
-import {DrawAction} from "../../networking/Events.js";
+import {C2SDrawAction} from "../../networking/Events.js";
 import type VisualGame from "../VisualGame.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import {VTurnState} from "../VisualGameStates.js";
@@ -46,7 +46,7 @@ export default class DeckMagnet extends CardMagnet{
                     this.game.selectedCard === undefined &&
                     sideTernary(this.game.getMySide(), this.game.handA, this.game.handB).cards.length<5) {
                     this.game.frozen=true;
-                    sendToServer(new DrawAction({})).onReply(eventReply().success(()=>{
+                    sendToServer(new C2SDrawAction({})).onReply(eventReply().success(()=>{
                         this.drawCard();
                         if(this.game.state instanceof VTurnState) {
                             if (this.game.state.getNonVisState().drawnToStart) {

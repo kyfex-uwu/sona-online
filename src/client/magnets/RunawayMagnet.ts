@@ -4,7 +4,7 @@ import {sendToServer, updateOrder} from "../clientConsts.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import type VisualGame from "../VisualGame.js";
 import {Side, sideTernary} from "../../consts.js";
-import {DiscardAction} from "../../networking/Events.js";
+import {C2SDiscardAction} from "../../networking/Events.js";
 import {cancelCallback} from "../../networking/Server.js";
 import {StateFeatures} from "../VisualGameStateTools.js";
 
@@ -27,7 +27,7 @@ export default class RunawayMagnet extends CardMagnet{
                     this.game.frozen=true;
                     const card = this.game.selectedCard;
                     this.game.selectedCard = undefined;
-                    sendToServer(new DiscardAction({id:card.logicalCard.id})).onReply(cancelCallback(()=>{
+                    sendToServer(new C2SDiscardAction({id:card.logicalCard.id})).onReply(cancelCallback(()=>{
                         this.removeCard();
                         this.game.selectedCard = card;
                     },()=>{

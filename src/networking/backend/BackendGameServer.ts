@@ -1,24 +1,22 @@
 import {
-    ActionEvent,
+    ActionEvent, C2SClarifyCardEvent, C2SDiscardAction, C2SDrawAction,
+    C2SPlaceAction,
+    C2SRequestServerDumpAction, C2SScareAction,
+    C2SStartRequestEvent,
+    C2SStartTurnAction,
     CardAction,
     ClarificationJustification,
-    ClarifyCardEvent,
-    DetermineStarterEvent,
-    DiscardAction,
-    DrawAction,
     Event,
     GameEvent,
-    GameStartEvent,
-    GameWinDefaultEvent,
-    InternalStartGameEvent,
     multiClarifyFactory,
     PassAction,
-    PerchanceEvent,
-    PlaceAction,
-    RequestServerDumpAction,
-    ScareAction,
-    ServerDumpEvent,
-    StartRequestEvent
+    S2CClarifyCardEvent,
+    S2CDetermineStarterEvent, S2CDiscardAction,
+    S2CDrawAction,
+    S2CGameStartEvent,
+    S2CGameWinDefaultEvent,
+    S2CPerchanceEvent, S2CPlaceAction, S2CScareAction,
+    S2SInternalStartGameEvent, S2CServerDumpEvent, S2SScareAction, Abstract2SScareAction
 } from "../Events.js";
 import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other} from "../../GameElement.js";
@@ -50,7 +48,7 @@ export function gameServerWSClose(client:Client){
     if(!game) return;
 
     game.state = new EndGameState(game, game.player(Side.A) === client ? Side.B : Side.A);
-    sendToGame(new GameWinDefaultEvent({}),game, false);
+    sendToGame(new S2CGameWinDefaultEvent({}),game, false);
 }
 
 //Draws a card. This also handles decrementing the turn, this can be disabled with isAction=false
@@ -58,14 +56,14 @@ export function gameServerWSClose(client:Client){
 export function draw(game: Game, dontSendTo: Client|undefined, side: Side, isAction:boolean, clarifyTo?:Client){
     const card = sideTernary(side, game.deckA, game.deckB).pop();
     if(card !== undefined) {
-        clarifyTo?.queueSend(new ClarifyCardEvent({
+        clarifyTo?.queueSend(new S2CClarifyCardEvent({
             id: card.id,
-            cardDataName: card.cardData.name
+            cardDataName: card.cardData.name,
         }));
     }
     if(card !== undefined){
         sideTernary(side, game.handA, game.handB).push(card);
-        sendToGame(new DrawAction({side: side, isAction}, undefined), game, true, dontSendTo);
+        sendToGame(new S2CDrawAction({side, isAction}, undefined), game, true, dontSendTo);
         game.freezableAction(()=> {
             if(game.state instanceof TurnState && isAction) {
                 if (game.state.decrementAction()) {
@@ -109,7 +107,7 @@ function internalScareInterrupt(cards:(Card|undefined)[], data:{
     scarer: Card
     stat: Stat | "card"
     game: Game
-    origEvent: ScareAction
+    origEvent: Abstract2SScareAction<any>
     result:ScareResultStruct
 }, next:(data:ScareResultStruct) => void){
     const mappedCards=cards.map(c=>[c, c?.callAction(CardTriggerType.SCARE_INTERRUPT_EFFECT_TYPE, {
@@ -153,7 +151,7 @@ export function actIfCpu(game:Game){
  * @param scareType The scare type
  * @param onPass The function to run if/when the scare passes
  */
-export function scareInterrupt(event:ScareAction, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:ScareResultStruct)=>void){
+export function scareInterrupt(event:Abstract2SScareAction<any>, game:Game, scarer:Card, scared:Card, scareType:Stat|"card", onPass:(succeeded:ScareResultStruct)=>void){
     const cards = [...game.fieldsA, ...game.fieldsB];
     internalScareInterrupt(cards, { scared, scarer, game, stat: scareType, origEvent:event, result:{
         determineScare: "stats",
@@ -173,7 +171,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         (event instanceof ActionEvent ? event.getGame() : undefined);
 
     if(game === undefined){
-        if(event instanceof InternalStartGameEvent){
+        if(event instanceof S2SInternalStartGameEvent){
             usersFromGameIDs[event.game.gameID] = [
                 event.p1,
                 event.p2
@@ -182,13 +180,13 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             gamesFromUser.set(event.p2, event.game);
             event.game.setPlayers(event.p1, event.p2);
 
-            event.p1.send(new GameStartEvent({
+            event.p1.send(new S2CGameStartEvent({
                 deck:event.game.deckA.map(card=>card.id),
                 otherDeck: event.game.deckB.map(card => card.id),
                 which:Side.A,
                 cpuGame:event.p2 instanceof CPU
             }));
-            event.p2.send(new GameStartEvent({
+            event.p2.send(new S2CGameStartEvent({
                 deck:event.game.deckB.map(card=>card.id),
                 otherDeck:event.game.deckA.map(card => card.id),
                 which:Side.B,
@@ -220,7 +218,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
     if(freezeData!==undefined && freezeData.isFrozen && !freezeData.allowThrough(event))
         return rejectEvent(event, "game is currently frozen, this event is not allowed through "+freezeData.allowThrough.toString(), game);
 
-    if(event instanceof StartRequestEvent){
+    if(event instanceof C2SStartRequestEvent){
         if(!(game.state instanceof BeforeGameState) || //is before game state
             game.getMiscData((event.sender === game.player(Side.A))?
                 GameMiscDataStrings.PLAYER_A_STARTREQ : GameMiscDataStrings.PLAYER_B_STARTREQ) !== undefined)//has already sent this packet
@@ -248,19 +246,19 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }
 
             for(const user of (usersFromGameIDs[game.gameID]||[])){
-                user.queueSend(new DetermineStarterEvent({
+                user.queueSend(new S2CDetermineStarterEvent({
                     starter:startingSide,
                     flippedCoin:flippedCoin,
                 }));
                 for(const card of game.fieldsA)
                     if(card !== undefined)
-                        user.queueSend(new ClarifyCardEvent({
+                        user.queueSend(new S2CClarifyCardEvent({
                             id: card.id,
                             cardDataName:card.cardData.name,
                         }));
                 for(const card of game.fieldsB)
                     if(card !== undefined)
-                        user.queueSend(new ClarifyCardEvent({
+                        user.queueSend(new S2CClarifyCardEvent({
                             id: card.id,
                             cardDataName:card.cardData.name,
                         }));
@@ -270,7 +268,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }else {
             return acceptEvent(event, game);
         }
-    }else if(event instanceof PlaceAction){
+    }else if(event instanceof C2SPlaceAction){
         const card = setFind(game.cards, card=>card.id === event.data.cardId);
         if(card === undefined) return rejectEvent(event, "no card found placeaction", game);
         const placedForFree = event.isForcedFree() || card.isAlwaysFree() || card.isFreeNow();
@@ -286,8 +284,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             //validate
             if (!((game.state instanceof BeforeGameState &&//BEFORE GAME
                     game.player(card.side) === event.sender &&//card is the player's
-                    card.cardData.level === 1 && //card is level 1
-                    (game.player(Side.A) === event.sender) === (event.data.side === Side.A)) || //player is on the same side as the field
+                    card.cardData.level === 1) || //card is level 1
                 (game.state instanceof TurnState &&//TURN
                     event.sender === game.player(game.state.turn) &&//it is the sender's turn
                     game.player(card.side) === event.sender &&//card is the player's
@@ -309,7 +306,6 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }) ?? true)) {
                 return rejectEvent(event, "failed place check: custom", game);
             }
-            event.data.forFree=false;
         }
 
         for(const group of [game.handA, game.handB]) {
@@ -320,20 +316,21 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 }
             }
         }
-        sideTernary(event.data.side, game.fieldsA, game.fieldsB)[event.data.position-1] =
+        const side = event.sender === game.player(Side.A) ? Side.A : Side.B;
+        sideTernary(side, game.fieldsA, game.fieldsB)[event.data.position-1] =
             setFind(game.cards, card => card.id === event.data.cardId);
 
         for(const user of (usersFromGameIDs[game.gameID]||[])){
             if(user === event.sender) continue;
-            user.queueSend(new ClarifyCardEvent({
-                id: event.data.cardId,
-                ...(game.state instanceof BeforeGameState ? {} : {cardDataName:card.cardData.name}),
-                faceUp: !(game.state instanceof BeforeGameState)
-            }));
-            user.queueSend(new PlaceAction({
+            if(!(game.state instanceof BeforeGameState))
+                user.queueSend(new S2CClarifyCardEvent({
+                    id: event.data.cardId,
+                    cardDataName:card.cardData.name,
+                }));
+            user.queueSend(new S2CPlaceAction({
                 cardId:event.data.cardId,
                 position:event.data.position,
-                side:event.data.side,
+                side:side,
                 forFree:placedForFree,
             }));
         }
@@ -350,7 +347,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         if(!placedForFree)
             endTurn(game);
         return acceptThenCPUAct(event, game, everythingFinished);
-    }else if(event instanceof DrawAction){
+    }else if(event instanceof C2SDrawAction){
         let side:Side|undefined=undefined;//the side of the player drawing
         if(event.sender === game.player(Side.A)){
             side = Side.A;
@@ -390,7 +387,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
         endTurn(game, true);
         return acceptThenCPUAct(event, game);
-    }else if (event instanceof ScareAction){
+    }else if (event instanceof C2SScareAction || event instanceof S2SScareAction){
         if(!event.isForced()) {
             if (game.state instanceof TurnState && !game.state.drawnToStart)
                 return rejectEvent(event, "not draw to start yet s", game);
@@ -410,15 +407,15 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
                 game.state.actionsLeft>0 && //player has actions left
                 scarer !== undefined && scared !== undefined &&//the cards exist
                 !scarer.hasAttacked &&//if the card hasnt scared yet
-                event.data.attackingWith !== "card" &&//not a card attack (those cannot be parsed here, and shouldnt be sent from the client)
-                scarer.stat(event.data.attackingWith) !== undefined &&
-                scared.stat(getVictim(event.data.attackingWith)) !== undefined)) {
+                (event instanceof S2SScareAction || //event is internal special scare OR
+                (scarer.stat(event.data.attackingWith) !== undefined &&//stats exist
+                scared.stat(getVictim(event.data.attackingWith)) !== undefined)))) {//stats exist
                 return rejectEvent(event, "failed scare check", game);
             }
         }else{
             scarer=scarer!;
             scared=scared!;
-            forceFailed=event.data.failed;
+            forceFailed=(event instanceof S2SScareAction ? event.data.overrideFailed : undefined);
         }
 
         let ranRightAway:boolean|undefined=undefined;
@@ -433,19 +430,17 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             }
 
             //if either stat is undefined, scare does not happen
-            if(event.data.attackingWith !== "card"){
+            if(event.data.attackingWith !== "card")
                 if(scarer.stat(event.data.attackingWith) === undefined ||
                     scared.stat(getVictim(event.data.attackingWith)) === undefined)
                     return;
-            }
 
             const failed = forceFailed ?? (scareResult.determineScare === "force_fail" ||
-                (event.data.attackingWith === "card" ||
-                !(scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)));
+                (event.data.attackingWith === "card" ? false : !(scarer.stat(event.data.attackingWith)! >= scared.stat(getVictim(event.data.attackingWith))!)));
             const toRunaway = failed ? scarer : scared;
 
             scarer.hasAttacked = true;
-            const toSend = new ScareAction({
+            const toSend = new S2CScareAction({
                 scaredPos: scared.getCardPos()!,
                 scarerPos: scarer.getCardPos()!,
                 attackingWith: event.data.attackingWith,
@@ -491,7 +486,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
             return acceptThenCPUAct(event, game);
         else{
             ranRightAway=false;
-            event.sender?.send(new PerchanceEvent({}, undefined, event.id));
+            event.sender?.send(new S2CPerchanceEvent({}, undefined, event.id));
             game?.player(Side.A)?.flushQueue();
             game?.player(Side.B)?.flushQueue();
             actIfCpu(game);
@@ -499,7 +494,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
     }else if(event instanceof CardAction){
         return processCardAction(event, game);
-    }else if(event instanceof DiscardAction){
+    }else if(event instanceof C2SDiscardAction){
         // if(event.game.getMiscData(GameMiscDataStrings.LAST_ACTIONED))
         //     return rejectEvent(event, "already performed last action d", game);
 
@@ -520,7 +515,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
 
             return rejectEvent(event, "failed discard check", game);
         }
-        game.player(other(side))?.queueSend(new DiscardAction({
+        game.player(other(side))?.queueSend(new S2CDiscardAction({
             id:event.data.id,
             side
         }));
@@ -528,7 +523,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         sideTernary(side, game.runawayA, game.runawayB).push(
             hand.splice(hand.indexOf(toDiscard),1)[0]!);
         return acceptThenCPUAct(event, game);
-    }else if(event instanceof ClarifyCardEvent){
+    }else if(event instanceof C2SClarifyCardEvent){
 
         let shouldClarify:Card|Card[]|undefined=undefined;
         let maybeJustfication:ClarificationJustification|undefined;
@@ -580,7 +575,7 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         if(shouldClarify instanceof Card){
-            event.sender?.send(new ClarifyCardEvent({
+            event.sender?.send(new S2CClarifyCardEvent({
                 id: shouldClarify.id,
                 cardDataName: shouldClarify.cardData.name,
                 ...(maybeJustfication?{justification:maybeJustfication}:{})
@@ -593,10 +588,20 @@ export function parseEvent(event:GameEvent<any>):processedEvent{
         }
 
         return rejectEvent(event, "no suitable cards found", game);
+    }else if(event instanceof C2SStartTurnAction){
+        const side = event.sender === game.player(Side.A) ? Side.A : Side.B;
+        if(!(sideTernary(side, game.handA, game.handB).length>=5 &&
+            game.state instanceof TurnState &&
+            game.state.turn === side &&
+            !game.state.drawnToStart))
+            return rejectEvent(event, "did not meet start no draw requirements", game);
+
+        game.state.setDrawnToStart();
+        return acceptEvent(event, game);
     }
 
-    else if(event instanceof RequestServerDumpAction && dev.on){
-        event.sender?.send(new ServerDumpEvent({
+    else if(event instanceof C2SRequestServerDumpAction && dev.on){
+        event.sender?.send(new S2CServerDumpEvent({
             fieldsA:game.fieldsA.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             fieldsB:game.fieldsB.map(card=>card?.cardData.name) as [string|undefined,string|undefined,string|undefined],
             handA:game.handA.map(card=>card?.cardData.name),

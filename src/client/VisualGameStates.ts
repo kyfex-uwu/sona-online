@@ -1,6 +1,6 @@
 import VisualGame, {ViewType} from "./VisualGame.js";
 import {assets, button, buttonId, invisibleButton, registerDrawCallback, textBox} from "./ui.js";
-import {DetermineStarterEvent, StartRequestEvent} from "../networking/Events.js";
+import {S2CDetermineStarterEvent, C2SStartRequestEvent} from "../networking/Events.js";
 import {other} from "../GameElement.js";
 import {BeforeGameState, EndGameState, GameState, TurnState} from "../GameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
@@ -112,7 +112,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
     private picked=false;
     private timer=0;
     private readonly buttonIds:[number,number,number]=[buttonId(), buttonId(), buttonId()];
-    private flippingCoin:DetermineStarterEvent|undefined=undefined;
+    private flippingCoin:S2CDetermineStarterEvent|undefined=undefined;
     constructor(game:VisualGame) {
         super(game);
         this.removeDraw = registerDrawCallback(0, (p5, scale) => {
@@ -123,19 +123,19 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
                 p5.background(30,30,30,150);
                 if (!this.picked) {
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.8, scale, scale * 0.5, "Go First", () => {
-                        sendToServer(new StartRequestEvent({
+                        sendToServer(new C2SStartRequestEvent({
                             which: "first",
                         }));
                         this.picked = true;
                     }, scale, this.buttonIds[0]);
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 - scale * 0.25, scale, scale * 0.5, "Go Second", () => {
-                        sendToServer(new StartRequestEvent({
+                        sendToServer(new C2SStartRequestEvent({
                             which: "second",
                         }));
                         this.picked = true;
                     }, scale, this.buttonIds[1]);
                     button(p5, p5.width / 2 - scale * 0.5, p5.height / 2 + scale * 0.3, scale, scale * 0.5, "No Preference", () => {
-                        sendToServer(new StartRequestEvent({
+                        sendToServer(new C2SStartRequestEvent({
                             which: "nopref",
                         }));
                         this.picked = true;
@@ -162,7 +162,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
         this.removeDraw();
     }
 
-    private internalStartGame(event:DetermineStarterEvent){
+    private internalStartGame(event:S2CDetermineStarterEvent){
         this.game.cursorActive=true;
         this.game.setState(new VTurnState(event.data.starter, this.game),
             new TurnState(this.game.getGame(), event.data.starter));
@@ -177,7 +177,7 @@ export class VChoosingStartState extends VisualGameState<BeforeGameState>{
         }
         if(this.game.state instanceof VTurnState) this.game.state.init();
     }
-    startGame(event:DetermineStarterEvent){
+    startGame(event:S2CDetermineStarterEvent){
         if(event.data.flippedCoin){
             this.game.changeView(sideTernary(this.game.getMySide(), ViewType.CLOSE_BOARD_A, ViewType.CLOSE_BOARD_B));
             this.flippingCoin=event;

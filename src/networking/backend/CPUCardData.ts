@@ -29,11 +29,8 @@ function doIfCpu<T extends ((data:U)=>void)|undefined, U extends {game:Game,self
 
 wrap(cards["og-005"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card, game}, cpu)=>{
     parseEvent(new CardAction({
-        cardId:card.id,
         actionName: CardActionOptions.BROWNIE_DRAW,
-        cardData: {
-            id:randFrom(game.deckB.filter(card=>card.cardData.level===1 && card.isAlwaysFree()))?.id ?? -1
-        },
+        cardData: randFrom(game.deckB.filter(card=>card.cardData.level===1 && card.isAlwaysFree()))?.id ?? -1
     }, cpu))
 }));
 
@@ -46,28 +43,23 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
     if(game.fieldsA.filter(card=>card!==undefined).length>=2 &&//if there are at least 2 cards on opponent field
             target.length>0)
         parseEvent(new CardAction({
-            cardId:card.id,
             actionName:CardActionOptions.GREMLIN_SCARE,
-            cardData:{ position:(randFrom(target)!+1) as 1|2|3 }
+            cardData:randFrom(target)!+1 as 1|2|3
         },cpu))
 }));
 
 wrap(cards["og-027"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     parseEvent(new CardAction({
-        cardId:card.id,
         actionName:CardActionOptions.YASHI_REORDER,
-        cardData:{
-            cards:game.deckB.map(card=>[card, calcStrength(card, game.deckA)] satisfies [Card, number])
+        cardData:game.deckB.map(card=>[card, calcStrength(card, game.deckA)] satisfies [Card, number])
                 .sort((a,b)=>b[1]-a[1])
                 .map(v=>v[0].id)
                 .slice(0,3) as [number?, number?, number?]
-        },
     }, cpu));
 }));
 
 wrap(cards["og-031"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     parseEvent(new CardAction({
-        cardId: card.id,
         actionName: CardActionOptions.FOXY_MAGICIAN_PICK,
         cardData: randFrom(game.deckB)!.id
     },cpu));
@@ -76,7 +68,6 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
 wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     const picked = randFrom(game.deckB)!;
     parseEvent(new CardAction({
-        cardId: card.id,
         actionName: CardActionOptions.DCW_PICK,
         cardData: picked.id
     },cpu));
@@ -84,7 +75,7 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
     cpu.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
         (guessEvent) => {
             const guess = ((guessEvent as CardAction<any>).data.cardData as DCW_GUESS);
-            if (guess === undefined || guess !== picked.cardData.level)
+            if(guess !== picked.cardData.level)
                 cpu.waitForEventer.waitFor(event => event instanceof CardAction && event.data.actionName === CardActionOptions.DCW_GUESS,
                     () => false);
             return false;
@@ -94,7 +85,6 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, 
 wrap(cards["og-043"]!, CardTriggerType.PLACED, doIfCpu((orig, {self:card,game}, cpu)=>{
     if(card.getMiscData(CardMiscDataStrings.CLOUD_CAT_ALREADY_PICKED)) return;
     parseEvent(new CardAction({
-        cardId:card.id,
         actionName:CardActionOptions.CLOUD_CAT_PICK,
         cardData:randFrom(game.fieldsA.filter(card=>card!==undefined))!.id,
     },cpu));

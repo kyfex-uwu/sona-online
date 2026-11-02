@@ -4,7 +4,7 @@ import {sendToServer, updateOrder} from "../clientConsts.js";
 import {other} from "../../GameElement.js";
 import VisualCard, {newHighlightLock} from "../VisualCard.js";
 import VisualGame from "../VisualGame.js";
-import {PlaceAction, ScareAction} from "../../networking/Events.js";
+import {C2SPlaceAction, C2SScareAction} from "../../networking/Events.js";
 import {VAttackingState, VTurnState} from "../VisualGameStates.js";
 import {CardMiscDataStrings, getVictim} from "../../Card.js";
 import {eventReply} from "../../networking/Server.js";
@@ -43,10 +43,9 @@ export default class FieldMagnet extends CardMagnet{
                         this.game.selectedCard = undefined;
 
                         this.game.frozen=true;
-                        sendToServer(new PlaceAction({
+                        sendToServer(new C2SPlaceAction({
                             cardId: card.logicalCard.id,
                             position: this.which,
-                            side:this.game.getMySide(),
                         })).onReply(eventReply().success(()=>{
                             if((!card.logicalCard.isAlwaysFree() && !card.logicalCard.isFreeNow()))
                                 state.decrementTurn();
@@ -120,7 +119,7 @@ export default class FieldMagnet extends CardMagnet{
                             if(state.attackData.type !== undefined && this.card.logicalCard.stat(getVictim(state.attackData.type)) !== undefined) {
                                 if (this.game.raycastCards([this.card])) {
                                     if (!this.game.getGame().getMiscData(GameMiscDataStrings.IS_FIRST_TURN)) {
-                                        sendToServer(new ScareAction({
+                                        sendToServer(new C2SScareAction({
                                             scaredPos: [this.which, other(this.game.getMySide())],
                                             scarerPos: [state.cardIndex, this.game.getMySide()],
                                             attackingWith: state.attackData.type,

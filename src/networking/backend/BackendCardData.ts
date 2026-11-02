@@ -1,6 +1,13 @@
 import CardData, {CardTriggerType, ScareEffectOwner} from "../../CardData.js";
 import cards from "../../Cards.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent, multiClarifyFactory, ScareAction} from "../Events.js";
+import {
+    Abstract2SScareAction,
+    C2SClarifyCardEvent,
+    CardAction,
+    ClarificationJustification,
+    multiClarifyFactory,
+    S2CClarifyCardEvent
+} from "../Events.js";
 import {type CardActionOption, CardActionOptions} from "../CardActionOption.js";
 import {draw, sendToGame} from "./BackendGameServer.js";
 import {Side, sideTernary, Stat, wrap} from "../../consts.js";
@@ -8,6 +15,7 @@ import Game, {GameMiscDataStrings} from "../../Game.js";
 import {other} from "../../GameElement.js";
 import {CardMiscDataStrings} from "../../Card.js";
 import {TurnState} from "../../GameStates.js";
+import {verifyFieldCard} from "./BackendProcessCardAction.js";
 
 export function loadBackendWrappers(){}
 
@@ -26,7 +34,7 @@ function customAllowWhen(card:CardData,action:CardActionOption<any>,data:{
     data.drawnToStart = data.drawnToStart ?? State.REQUIRED_VALID;
     data.free = data.free ?? false;
 
-    wrap(card, CardTriggerType.CARD_ACTION_CAN_HAPPEN, (orig, {self, game, event})=>{
+    wrap(card, CardTriggerType.CARD_ACTION_CAN_HAPPEN, (_orig, {self, game, event})=>{
         if(event.data.actionName === action){
             if (!(game.state instanceof TurnState))
                 return data.turnState !== State.REQUIRED_VALID;
@@ -40,11 +48,15 @@ function customAllowWhen(card:CardData,action:CardActionOption<any>,data:{
     })
 }
 
-export function globalCustomAllowWhen(action:CardActionOption<any>, game:Game){
-    switch(action){
+export function globalCustomAllowWhen(event:CardAction<any>, game:Game):boolean|undefined{
+    switch(event.data.actionName){
         case CardActionOptions.DCW_GUESS:
         case CardActionOptions.FOXY_MAGICIAN_GUESS:
             return true;
+        case CardActionOptions.COWGIRL_COYOTE_INCREASE: {
+            const actor = verifyFieldCard(event, game, "og-035");
+            return actor?.callAction(CardTriggerType.CARD_ACTION_CAN_HAPPEN, {self:actor, game, event})===true;
+        }
     }
     return undefined;
 }
@@ -91,7 +103,6 @@ wrap(cards["og-015"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         }]);
 
         game.player(self.side)?.queueSend(new CardAction({
-            cardId:-1,
             actionName:CardActionOptions.LITTLEBOSS_IMMUNITY,
             cardData:false
         }));
@@ -120,25 +131,22 @@ wrap(cards["og-020"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
 
     self.setMiscData(CardMiscDataStrings.NOBLE_ORIG_SCARE, origEvent);
     self.setMiscData(CardMiscDataStrings.PAUSED_SCARE, [result, next]);
-    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_RETARGET);
+    game.setMiscData(GameMiscDataStrings.NEXT_ACTION_SHOULD_BE[self.side], CardActionOptions.NOBLE_SHOULD_RETARGET);
     game.player(self.side)?.queueSend(new CardAction({
-        cardId:-1,
-        actionName:CardActionOptions.NOBLE_RETARGET,
+        actionName:CardActionOptions.NOBLE_RETARGET_REQUEST,
         cardData:{
-            data:{
-                scared:scared.getCardPos()!,
-                scarer:scarer.getCardPos()!,
-                stat
-            }
+            scared:scared.getCardPos()!,
+            scarer:scarer.getCardPos()!,
+            stat
         }
     }));
     game.freeze(event=>
         event instanceof CardAction &&
         event.sender === game.player(self.side) &&
-        event.data.actionName === CardActionOptions.NOBLE_RETARGET);
+        event.data.actionName === CardActionOptions.NOBLE_SHOULD_RETARGET);
     return true;
 });
-customAllowWhen(cards["og-020"]!, CardActionOptions.NOBLE_RETARGET, {
+customAllowWhen(cards["og-020"]!, CardActionOptions.NOBLE_RETARGET_REQUEST, {
     turnState:State.REQUIRED_VALID,
     yourTurn:State.REQUIRED_INVALID,
     drawnToStart:State.EITHER,
@@ -161,11 +169,10 @@ wrap(cards["og-025"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
     if(card !== undefined){
         sideTernary(self.side, game.handA, game.handB).push(card);
         sendToGame(new CardAction({
-            cardId: -1,
-            actionName:CardActionOptions.BOTTOM_DRAW,
-            cardData:{side:self.side},
+            actionName:CardActionOptions.LUPINE_DRAW,
+            cardData:self.side,
         }), game, true);
-        game.player(self.side)?.queueSend(new ClarifyCardEvent({
+        game.player(self.side)?.queueSend(new S2CClarifyCardEvent({
             id:card.id,
             cardDataName:card.cardData.name
         }));
@@ -207,7 +214,6 @@ wrap(cards["og-029"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event.data.actionName === CardActionOptions.BROY_WEASLA_INCREASE &&
         event.sender === game.player(self.side));
     game.player(self.side)?.queueSend(new CardAction({
-        cardId:-1,
         actionName:CardActionOptions.BROY_WEASLA_INCREASE,
         cardData:{data:{
             stat,
@@ -245,7 +251,7 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         (event instanceof CardAction &&
             event.data.actionName === CardActionOptions.FOXY_MAGICIAN_PICK &&
             event.sender === game.player(self.side)) ||
-        (event instanceof ClarifyCardEvent &&
+        (event instanceof C2SClarifyCardEvent &&
             event.data.justification === ClarificationJustification.FOXY_MAGICIAN &&
             event.sender === game.player(self.side)));
 
@@ -270,13 +276,13 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self, game})=>{
         (event instanceof CardAction &&
             event.data.actionName === CardActionOptions.DCW_PICK &&
             event.sender === game.player(self.side)) ||
-        (event instanceof ClarifyCardEvent &&
+        (event instanceof C2SClarifyCardEvent &&
             event.data.justification === ClarificationJustification.DCW &&
             event.sender === game.player(self.side)) ||
         (event instanceof CardAction &&
             event.data.actionName === CardActionOptions.DCW_SCARE &&
             event.sender === game.player(self.side)) ||
-        (event instanceof ScareAction &&
+        (event instanceof Abstract2SScareAction &&
             event.isForced() && event.sender === undefined));
 
 
@@ -310,7 +316,6 @@ wrap(cards["og-035"]!, CardTriggerType.INTERRUPT_SCARE, (orig,
         event.data.actionName === CardActionOptions.COWGIRL_COYOTE_INCREASE &&
         event.sender === game.player(self.side));
     game.player(self.side)?.queueSend(new CardAction({
-        cardId:-1,
         actionName:CardActionOptions.COWGIRL_COYOTE_INCREASE,
         cardData:{data:{
             stat,
@@ -332,6 +337,12 @@ wrap(cards["og-035"]!, CardTriggerType.ON_RUNAWAY, (orig, {self, scarer, toRunaw
 wrap(cards["og-035"]!, CardTriggerType.TURN_START, (orig, {self, game})=>{
     if(orig) orig({self, game});
     self.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, false);
+});
+customAllowWhen(cards["og-035"]!, CardActionOptions.COWGIRL_COYOTE_INCREASE, {
+    turnState:State.EITHER,
+    yourTurn:State.REQUIRED_INVALID,
+    drawnToStart:State.EITHER,
+    free:true,
 });
 customAllowWhen(cards["og-043"]!, CardActionOptions.CLOUD_CAT_PICK, {
     turnState:State.EITHER,

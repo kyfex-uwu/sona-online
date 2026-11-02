@@ -1,6 +1,6 @@
 import Card from "./Card.js";
 import type Game from "./Game.js";
-import {CardAction, ScareAction} from "./networking/Events.js";
+import {C2SScareAction, CardAction} from "./networking/Events.js";
 import {Stat} from "./consts.js";
 
 let globalID=0;
@@ -41,10 +41,10 @@ export class CardTriggerType<P extends {[k:string]:any}, R>{
     public static readonly INTERRUPT_SCARE = new CardTriggerType<
         //Called while a scare is happening. origEvent can be modified, and next should only be called if PREVENT_SCARE is returned
         //return true if it should freeze
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:ScareAction, next:(data:ScareResultStruct)=>void, result:ScareResultStruct}, true|void>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, origEvent:C2SScareAction, next:(data:ScareResultStruct)=>void, result:ScareResultStruct}, true|void>();
     public static readonly SCARE_INTERRUPT_EFFECT_TYPE = new CardTriggerType<
         //Should be defined along with INTERRUPT_SCARE
-        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, event:ScareAction}, ScareEffectOwner>();
+        {self:Card, scared:Card, scarer:Card, stat:Stat|"card",game:Game, event:C2SScareAction}, ScareEffectOwner>();
     //Returns true if can be placed
     public static readonly SPECIAL_PLACEABLE_CHECK = new CardTriggerType<
         {self:Card, game:Game, normallyValid:boolean}, boolean>();
@@ -98,7 +98,7 @@ export enum Temperament{
 
     UNKNOWN,
 }
-export type Level=1|2|3|"?";
+export type Level=1|2|3;
 
 //The data of a card
 export default class CardData{

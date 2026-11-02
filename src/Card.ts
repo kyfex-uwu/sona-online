@@ -3,7 +3,7 @@ import CardData, {CardTriggerType, type ScareResultStruct} from "./CardData.js";
 import {Side, Stat, statTernary, verifyNoDuplicateStrVals} from "./consts.js";
 import Game, {GameMiscDataStrings} from "./Game.js";
 import {addTempStats} from "./Cards.js";
-import type {ScareAction} from "./networking/Events.js";
+import type {C2SScareAction} from "./networking/Events.js";
 
 export function getVictim(stat:Stat){
     return statTernary(stat, Stat.YELLOW, Stat.RED, Stat.BLUE);
@@ -22,7 +22,7 @@ export const CardMiscDataStrings = {
     COWGIRL_COYOTE_TARGET: "og-035_target" as CardMiscDataString<Card>,
     BROY_WEASLA_TARGET: "og-029_target" as CardMiscDataString<Card>,
     FURMAKER_ALREADY_ASKED_FOR: "og-041_alreadyaskedfor" as CardMiscDataString<Set<number>>,
-    NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<ScareAction>,
+    NOBLE_ORIG_SCARE:" og-020_origscare" as CardMiscDataString<C2SScareAction>,
 
     PAUSED_SCARE:"pausedScare" as CardMiscDataString<[ScareResultStruct, (data:ScareResultStruct) => void]>,
     ALREADY_ACTIONED:"alreadyAttacked" as CardMiscDataString<boolean>,

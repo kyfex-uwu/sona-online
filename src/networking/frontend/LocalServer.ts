@@ -1,11 +1,11 @@
 import {
-    AcceptEvent,
+    S2CAcceptEvent,
     Event,
     GameEvent,
-    GameWinDefaultEvent,
+    S2CGameWinDefaultEvent,
     InvalidEvent,
-    PerchanceEvent,
-    RejectEvent,
+    S2CPerchanceEvent,
+    S2CRejectEvent,
     type SerializableType
 } from "../Events.js";
 import {gameReceiveFromServer, getLocalGame} from "./LocalGameServer.js";
@@ -39,9 +39,9 @@ export async function receiveFromServer(packed:{
         //@ts-expect-error
         packed.data,
         undefined, packed.id) as Event<any>;
-    if(event instanceof AcceptEvent) log(`%c accepted event ${event.id}`, "color:#0f0");
-    if(event instanceof RejectEvent) log(`%c rejected event ${event.id}`, "color:#f00");
-    if(event instanceof PerchanceEvent) log(`%c perchanced event ${event.id}`, "color:#ff0");
+    if(event instanceof S2CAcceptEvent) log(`%c accepted event ${event.id}`, "color:#0f0");
+    if(event instanceof S2CRejectEvent) log(`%c rejected event ${event.id}`, "color:#f00");
+    if(event instanceof S2CPerchanceEvent) log(`%c perchanced event ${event.id}`, "color:#ff0");
 
     if(eventReplyIds[event.id] !== undefined){
         (eventReplyIds[event.id]?._callback||(()=>{}))(event);
@@ -51,7 +51,7 @@ export async function receiveFromServer(packed:{
     if(!localWaiter.process(event)) return;
 
     if(event instanceof GameEvent) gameReceiveFromServer(event);
-    else if(event instanceof GameWinDefaultEvent){
+    else if(event instanceof S2CGameWinDefaultEvent){
         getLocalGame().setState(new VEndState(getLocalGame(), getLocalGame().getMySide(), "disconnect"),
             new EndGameState(getLocalGame().getGame(), getLocalGame().getMySide()));
     }

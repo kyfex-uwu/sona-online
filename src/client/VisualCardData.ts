@@ -4,15 +4,14 @@ import {VGuiState, VisualGameState} from "./VisualGameStates.js";
 import VisualCard, {newHighlightLock} from "./VisualCard.js";
 import {externalPromise, sideTernary, Stat, statTernary, wrap} from "../consts.js";
 import {eventReply} from "../networking/Server.js";
-import {CardAction, ClarificationJustification, ClarifyCardEvent,} from "../networking/Events.js";
+import {C2SClarifyCardEvent, CardAction, ClarificationJustification} from "../networking/Events.js";
 import {CardMiscDataStrings} from "../Card.js";
 import {
-    AmberData,
     CardActionOptions,
     type DCW_GUESS,
     type FOXY_MAGICIAN_GUESS
 } from "../networking/CardActionOption.js";
-import {BeforeGameState, GameState, TurnState} from "../GameStates.js";
+import {GameState, TurnState} from "../GameStates.js";
 import {Vector2, Vector3} from "three";
 import {GameMiscDataStrings} from "../Game.js";
 import {getLocalGame, waitForClarify} from "../networking/frontend/LocalGameServer.js";
@@ -84,7 +83,6 @@ visualCardClientActions["og-001"] = (card)=>{
 
                 self.buttonAndCancel(p5, scale, ()=>{
                     sendToServer(new CardAction({
-                        cardId:card.logicalCard.id,
                         actionName:CardActionOptions.K9_ALPHA,
                         cardData:{
                             canineFields:sideTernary(card.getSide(), getLocalGame().fieldsA, getLocalGame().fieldsB)
@@ -133,7 +131,7 @@ visualCardClientActions["og-018"] = async (card) =>{
     if(toReorder.length === 0) return false;
     const toReturn = externalPromise<boolean>();
 
-    sendToServer(new ClarifyCardEvent({
+    sendToServer(new C2SClarifyCardEvent({
         id:card.logicalCard.id,
         justification:ClarificationJustification.AMBER
     })).onReply(()=>{
@@ -144,11 +142,8 @@ visualCardClientActions["og-018"] = async (card) =>{
 
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 sendToServer(new CardAction({
-                    cardId: card.logicalCard.id,
                     actionName: CardActionOptions.AMBER_PICK,
-                    cardData: {
-                        which: discardFirst ? AmberData.KEEP_SECOND : AmberData.KEEP_FIRST
-                    }
+                    cardData: discardFirst ? "keep_2" : "keep_1"
                 }));
                 toReturn.resolve(true);
             },
@@ -206,9 +201,8 @@ visualCardClientActions["og-028"] = (card)=>{
 
             if(type ==="finished"){
                 sendToServer(new CardAction({
-                    cardId:card.logicalCard.id,
                     actionName:CardActionOptions.KIBBY_SCARE,
-                    cardData:{cards:replaceMap.map(v=>v?.logicalCard.id ?? -1) as [number,number,number]}
+                    cardData:replaceMap.map(v=>v?.logicalCard.id ?? -1) as [number,number,number]
                 })).onReply(eventReply().success(()=>{
                     lastAction();
                     toReturn.resolve(true);
@@ -270,11 +264,8 @@ visualCardClientActions["og-038"] = (card)=>{
             release();
             if(type === "finished")
                 sendToServer(new CardAction({
-                    cardId:card.logicalCard.id,
                     actionName:CardActionOptions.WORICK_RESCUE,
-                    cardData:{
-                        id:selected!.logicalCard.id
-                    }
+                    cardData:selected!.logicalCard.id
                 })).onReply(eventReply().success(()=>{
                     console.log(selected, selected)
                     sideTernary(card.getSide(), getLocalGame().handA, getLocalGame().handB)
@@ -318,9 +309,8 @@ visualCardClientActions["og-041"] = (card)=>{
                 getLocalGame().frozen=true;
                 card.logicalCard.setMiscData(CardMiscDataStrings.ALREADY_ACTIONED, true);
                 sendToServer(new CardAction({
-                    cardId:card.logicalCard.id,
                     actionName: CardActionOptions.FURMAKER_PICK,
-                    cardData: {id:selectedCard!.logicalCard.id},
+                    cardData: selectedCard!.logicalCard.id
                 })).onReply(eventReply().finally(()=>{
                     getLocalGame().frozen=false;
                     toReturn.resolve(true);
@@ -343,7 +333,7 @@ visualCardClientActions["og-041"] = (card)=>{
         }),getLocalGame().getGame().state);
     });
 
-    sendToServer(new ClarifyCardEvent({
+    sendToServer(new C2SClarifyCardEvent({
         id:card.logicalCard.id,
         justification:ClarificationJustification.FURMAKER,
     }));
@@ -367,7 +357,7 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
 
     const endSignal = externalPromise();
     Animations.run(()=>endSignal);
-    sendToServer(new ClarifyCardEvent({
+    sendToServer(new C2SClarifyCardEvent({
         id:card.id,
         justification:ClarificationJustification.BROWNIE,
     })).onReply(eventReply().success(()=>{
@@ -382,11 +372,8 @@ wrap(cards["og-005"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                     release();
 
                     sendToServer(new CardAction({
-                        cardId:card.id,
                         actionName: CardActionOptions.BROWNIE_DRAW,
-                        cardData: {
-                            id:selected!.logicalCard.id
-                        },
+                        cardData: selected!.logicalCard.id
                     })).onReply(eventReply().success(()=>{
                         game.getMiscData(GameMiscDataStrings.FIRST_TURN_AWAITER)?.resolve();
                     }));
@@ -431,9 +418,10 @@ wrap(cards["og-009"]!, CardTriggerType.PLACED, (orig, {self:card, game}) =>{
                 sideTernary(getLocalGame().getMySide(), getLocalGame().handB, getLocalGame().handA).position = prevPos;
 
                 if(type === "finished")
-                    sendToServer(new CardAction({cardId:card.id, actionName:CardActionOptions.GREMLIN_SCARE, cardData:{
-                        position:selectedCard!
-                    }}));
+                    sendToServer(new CardAction({
+                        actionName:CardActionOptions.GREMLIN_SCARE,
+                        cardData:selectedCard!
+                    }));
             },
             init:(self)=>{
                 getLocalGame().changeView(sideTernary(getLocalGame().getMySide(), ViewType.CLOSER_BOARD_B, ViewType.CLOSER_BOARD_A));
@@ -489,9 +477,8 @@ wrap(cards["og-027"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
             onEnd: (self, type) => {
                 release();
                 sendToServer(new CardAction({
-                    cardId:card.id,
                     actionName:CardActionOptions.YASHI_REORDER,
-                    cardData:{cards:ordered},
+                    cardData:ordered,
                 }));
             },
             init: (self) => {
@@ -604,7 +591,6 @@ wrap(cards["og-031"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                 }
 
                             sendToServer(new CardAction({
-                                cardId: card.id,
                                 actionName: CardActionOptions.FOXY_MAGICIAN_PICK,
                                 cardData: selectedCard!.logicalCard.id
                             }));
@@ -675,7 +661,6 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                             release();
 
                             sendToServer(new CardAction({
-                                cardId:card.id,
                                 actionName:CardActionOptions.DCW_SCARE,
                                 cardData:{
                                     side:scareSelected![0].getSide(),
@@ -723,7 +708,6 @@ wrap(cards["og-032"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                                 }
 
                             sendToServer(new CardAction({
-                                cardId: card.id,
                                 actionName: CardActionOptions.DCW_PICK,
                                 cardData: selectedCard!.logicalCard.id
                             }));
@@ -793,7 +777,7 @@ wrap(cards["og-041"]!, CardTriggerType.VISUAL_TICK, (_, {self})=>{
         if(askFor.length>0) {
             for(const card of askFor)
                 alreadyAskedFor.add(card.logicalCard.id);
-            sendToServer(new ClarifyCardEvent({
+            sendToServer(new C2SClarifyCardEvent({
                 id: -1,
                 justification: ClarificationJustification.FURMAKER_VISIBLE
             }));
@@ -822,7 +806,6 @@ wrap(cards["og-043"]!, CardTriggerType.PLACED, (orig, {self:card, game})=>{
                 field.getCard()?.highlight(false, og043Highlight);
 
             sendToServer(new CardAction({
-                cardId:card.id,
                 actionName:CardActionOptions.CLOUD_CAT_PICK,
                 cardData:selected!.logicalCard.id,
             }));

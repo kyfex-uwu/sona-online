@@ -74,23 +74,37 @@ export enum ClarificationJustification{
     FOXY_MAGICIAN
 }
 //Tells a card's data and if its faceup
-export class ClarifyCardEvent extends GameEvent<{
+export class C2SClarifyCardEvent extends GameEvent<{
     id: number,
-    cardDataName?: string,
-    faceUp?: boolean,
     justification?: ClarificationJustification
 }>{}
-addToSerializableClasses(ClarifyCardEvent,{
+addToSerializableClasses(C2SClarifyCardEvent,{
     id:"number",
-    "cardDataName?":"string",
-    "faceUp?":"boolean",
     "justification?":enumValues(ClarificationJustification),
 });
-export class MultiClarifyCardEvent extends GameEvent<{
-    [id: number]: {cardDataName?:string, faceUp?:boolean},
+export class S2CClarifyCardEvent extends GameEvent<{
+    id: number,
+    cardDataName: string,
     justification?: ClarificationJustification
 }>{}
-addToSerializableClasses(MultiClarifyCardEvent,{
+addToSerializableClasses(S2CClarifyCardEvent,{
+    id:"number",
+    "cardDataName":"string",
+    "justification?":enumValues(ClarificationJustification),
+});
+export class C2SMultiClarifyCardEvent extends GameEvent<{
+    ids:number[],
+    justification?: ClarificationJustification
+}>{}
+addToSerializableClasses(C2SMultiClarifyCardEvent,{
+    "justification?":enumValues(ClarificationJustification),
+    "ids":"arraynumber",
+});
+export class S2CMultiClarifyCardEvent extends GameEvent<{
+    [id: number]: {cardDataName:string, faceUp:boolean},
+    justification?: ClarificationJustification
+}>{}
+addToSerializableClasses(S2CMultiClarifyCardEvent,{
     "justification?":enumValues(ClarificationJustification),
     [ShapeKeywords.ALL_NUMBERS]:{
         "cardDataName?":"string",
@@ -99,7 +113,7 @@ addToSerializableClasses(MultiClarifyCardEvent,{
 });
 export function multiClarifyFactory(cards:{id:number,cardData:CardData}[],
                                     justification?:ClarificationJustification){
-    return new MultiClarifyCardEvent({
+    return new S2CMultiClarifyCardEvent({
         ...Object.fromEntries(cards
             .map(card => {
                 return [card.id, {cardDataName: card.cardData.name}]})),
@@ -107,27 +121,27 @@ export function multiClarifyFactory(cards:{id:number,cardData:CardData}[],
     })
 }
 
-//(S2C) Rejects a client-side event
-export class RejectEvent extends Event<{}>{}
-addToSerializableClasses(RejectEvent,{});
-//(S2C) Accepts a client-side event
-export class AcceptEvent extends Event<{}>{}
-addToSerializableClasses(AcceptEvent,{});
-//(S2C) Tells the client that the event hasn't been rejected... yet
-export class PerchanceEvent extends Event<{}>{}
-addToSerializableClasses(PerchanceEvent,{});
+//Rejects a client-side event
+export class S2CRejectEvent extends Event<{}>{}
+addToSerializableClasses(S2CRejectEvent,{});
+//Accepts a client-side event
+export class S2CAcceptEvent extends Event<{}>{}
+addToSerializableClasses(S2CAcceptEvent,{});
+//Tells the client that the event hasn't been rejected... yet
+export class S2CPerchanceEvent extends Event<{}>{}
+addToSerializableClasses(S2CPerchanceEvent,{});
 
-//(C2S) Asks the server to find this client a game
-export class FindGameEvent extends Event<{
+//Asks the server to find this client a game
+export class C2SFindGameEvent extends Event<{
     deck:Array<string>,
     requestCPU:boolean
 }>{}
-addToSerializableClasses(FindGameEvent,{
+addToSerializableClasses(C2SFindGameEvent,{
     deck:"arraystring",
     requestCPU:"boolean"
 });
 //only for use internally
-export class InternalStartGameEvent extends GameEvent<{}>{
+export class S2SInternalStartGameEvent extends GameEvent<{}>{
     public readonly game:Game;
     public readonly p1:Client;
     public readonly p2:Client;
@@ -139,34 +153,34 @@ export class InternalStartGameEvent extends GameEvent<{}>{
     }
 }
 
-//(S2C) Tells the client about the game they've just started
-export class GameStartEvent extends GameEvent<{
+//Tells the client about the game they've just started
+export class S2CGameStartEvent extends GameEvent<{
     deck:Array<number>,
     otherDeck:Array<number>,
     which:Side,
     cpuGame:boolean
 }>{}
-addToSerializableClasses(GameStartEvent,{
+addToSerializableClasses(S2CGameStartEvent,{
     deck:"arraynumber",
     otherDeck:"arraynumber",
     which:enumValues(Side),
     cpuGame:"boolean"
 });
 
-//(C2S) Tells the server if they want to start first or second
-export class StartRequestEvent extends GameEvent<{
+//Tells the server if they want to start first or second
+export class C2SStartRequestEvent extends GameEvent<{
     which:"first"|"second"|"nopref",
 }>{}
-addToSerializableClasses(StartRequestEvent,{
+addToSerializableClasses(C2SStartRequestEvent,{
     which:["first","second","nopref"],
 });
 
-//(S2C) Tells the client which side is starting
-export class DetermineStarterEvent extends GameEvent<{
+//Tells the client which side is starting
+export class S2CDetermineStarterEvent extends GameEvent<{
     starter:Side,
     flippedCoin:boolean
 }>{}
-addToSerializableClasses(DetermineStarterEvent,{
+addToSerializableClasses(S2CDetermineStarterEvent,{
     starter:enumValues(Side),
     flippedCoin:"boolean",
 });
@@ -201,23 +215,33 @@ export abstract class ActionEvent<T extends {[k:string]:SerializableType}> exten
 }
 
 //Draws a card. S2C needs side, C2S does not
-export class DrawAction extends ActionEvent<{
-    side?:Side,
-    isAction?:boolean,//default true
+export class C2SDrawAction extends ActionEvent<{}>{}
+addToSerializableClasses(C2SDrawAction,{});
+export class S2CDrawAction extends ActionEvent<{
+    side:Side,
+    isAction:boolean,
 }>{}
-addToSerializableClasses(DrawAction,{
-    "side?":enumValues(Side),
-    "isAction?":"boolean",
+addToSerializableClasses(S2CDrawAction,{
+    "side":enumValues(Side),
+    "isAction":"boolean",
 });
 
 //Places a card in a specific slot
-export class PlaceAction extends ActionEvent<{
+export class C2SPlaceAction extends ActionEvent<{
+    cardId:number,
+    position:1|2|3,
+}>{}
+addToSerializableClasses(C2SPlaceAction,{
+    cardId:"number",
+    position:[1,2,3],
+});
+export class S2CPlaceAction extends ActionEvent<{
     cardId:number,
     position:1|2|3,
     side:Side,
     forFree?:boolean//default false
 }>{}
-addToSerializableClasses(PlaceAction,{
+addToSerializableClasses(S2CPlaceAction,{
     cardId:"number",
     position:[1,2,3],
     side:enumValues(Side),
@@ -226,46 +250,71 @@ addToSerializableClasses(PlaceAction,{
 
 const backendMarker = {};
 //Attempts to scare a given card. C2S is a request, S2C is a confirmation. C2S doesnt need failed(?)
-export class ScareAction extends ActionEvent<{
+export abstract class Abstract2SScareAction<T extends {
     scarerPos:CardPos,
     scaredPos:CardPos,
     attackingWith:Stat|"card",
-    failed?:boolean,
-    free?:boolean,
+}> extends ActionEvent<T>{}
+export class C2SScareAction extends Abstract2SScareAction<{
+    scarerPos:CardPos,
+    scaredPos:CardPos,
+    attackingWith:Stat,
+}>{}
+addToSerializableClasses(C2SScareAction,{
+    scarerPos:"cardpos",
+    scaredPos:"cardpos",
+    attackingWith:enumValues(Stat)
+});
+export class S2CScareAction extends ActionEvent<{
+    scarerPos:CardPos,
+    scaredPos:CardPos,
+    attackingWith:Stat|"card",
+    failed:boolean,
+    free:boolean,
 
-    extra?:{
+    extra:{
         shouldRunaway?:boolean
     }
 }>{}
-addToSerializableClasses(ScareAction,{
+addToSerializableClasses(S2CScareAction,{
     scarerPos:"cardpos",
     scaredPos:"cardpos",
     attackingWith:(enumValues(Stat) as (number|string)[]).concat("card"),
-    "failed?":"boolean",
-    "free?":"boolean",
+    "failed":"boolean",
+    "free":"boolean",
 
-    "extra?":{
+    "extra":{
         "shouldRunaway?":"boolean"
     }
 });
+export class S2SScareAction extends Abstract2SScareAction<{
+    scarerPos:CardPos,
+    scaredPos:CardPos,
+    attackingWith:Stat|"card",
+
+    overrideFailed:boolean|undefined
+}>{}
 
 //Performs a specific card action
 export class CardAction<T extends SerializableType> extends ActionEvent<{
-    cardId:number,
     actionName:CardActionOption<T>,
-    cardData:T
+    cardData:T,
+    side?:Side
 }>{}
 addToSerializableClasses(CardAction,{
-    cardId:"number",
     actionName:"string",
     cardData:cardActionValidator,
 });
 
 //Discards a card
-export class DiscardAction extends ActionEvent<{id:number, side?:Side}>{}
-addToSerializableClasses(DiscardAction,{
+export class C2SDiscardAction extends ActionEvent<{id:number}>{}
+addToSerializableClasses(C2SDiscardAction,{
+    id:"number"
+});
+export class S2CDiscardAction extends ActionEvent<{id:number, side:Side}>{}
+addToSerializableClasses(S2CDiscardAction,{
     id:"number",
-    "side?":enumValues(Side)
+    "side":enumValues(Side)
 });
 
 //Passes without doing anything
@@ -278,8 +327,11 @@ export type Card = {
     faceUp:boolean
 }
 
-export class GameWinDefaultEvent extends Event<{}>{}
-addToSerializableClasses(GameWinDefaultEvent,{});
+export class C2SStartTurnAction extends ActionEvent<{}>{}
+addToSerializableClasses(C2SStartTurnAction,{});
+
+export class S2CGameWinDefaultEvent extends Event<{}>{}
+addToSerializableClasses(S2CGameWinDefaultEvent,{});
 
 /**
  * Transforms a logical card into one that can be sent in an event
@@ -306,9 +358,9 @@ export function cardsTransform(cards:Array<IngameCard>, {cardData = true, faceUp
     return cards.map(c => card(c, {cardData, faceUp}));
 }
 
-export class RequestServerDumpAction extends ActionEvent<{}>{}
-addToSerializableClasses(RequestServerDumpAction,{});
-export class ServerDumpEvent extends Event<{
+export class C2SRequestServerDumpAction extends ActionEvent<{}>{}
+addToSerializableClasses(C2SRequestServerDumpAction,{});
+export class S2CServerDumpEvent extends Event<{
     fieldsA:[string|undefined,string|undefined,string|undefined],
     fieldsB:[string|undefined,string|undefined,string|undefined],
     handA:string[],
@@ -322,4 +374,4 @@ export class ServerDumpEvent extends Event<{
     currTurn?:"A"|"B",
     actionsLeft?:number,
 }>{}
-addToSerializableClasses(ServerDumpEvent,{});
+addToSerializableClasses(S2CServerDumpEvent,{});

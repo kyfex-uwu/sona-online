@@ -3,7 +3,7 @@ cpu broy weasla never works
 
 #general todos
 split after_scared events appropriately
-starting your turn with 5 cards doesnt set drawn to start?
+[] starting your turn with 5 cards doesnt set drawn to start?
 cowgirl + little boss softlocks
 on little boss save, dont scare scarer
 multiple guis can softlock the opponent
@@ -25,13 +25,12 @@ make the cpu speed configurable
 preload all game images
 card "accessory" system (allow for custom models to be attached to the card) (3d and 2d)
 "concede" button
-make sure the client can start the turn on their terms when they cant draw to start
 add card texture atlas
 https://threejs.org/docs/index.html#WebGLRenderer.compile for removing/reducing lag spike
 figure out why cards shrink sometimes when going in discard (fixed? nope)
 
 type safe card models
-clean up dependencies, a lot can be moved to dev dependencies
+type safe datashape
 
 ###
 coin flip animation
