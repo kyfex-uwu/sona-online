@@ -2,10 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SONA - Flags</title>
+    <title>SONA - CPU Programmer</title>
+    <style>
+        html{
+            filter:invert() hue-rotate(180deg);
+        }
+    </style>
 </head>
-<body>
-    <canvas style="width:100%; height:100%"></canvas>
+<body style="margin:0; overflow:clip;">
+    <canvas style="width:100vw; height:100vh" id="canvas"></canvas>
     <script type="importmap">
         {
             "imports":{
