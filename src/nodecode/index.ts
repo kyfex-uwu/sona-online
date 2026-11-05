@@ -1,3 +1,4 @@
+import type Card from "../Card.js";
 
 function o<T>(v:T){return v}
 
@@ -5,7 +6,7 @@ type ValTypeSingle = "number"|"boolean"|"card"|"unknown";
 type ValTypeSingleActual<T extends ValTypeSingle> =
     T extends "number" ? number :
         T extends "boolean" ? boolean :
-            T extends "card" ? string :
+            T extends "card" ? Card :
                 never;
 type ValType = `${ValTypeSingle}${"?"|""}${"[]"|""}`
 type Typeof<T extends ValType> = T extends ValType ? (
@@ -232,6 +233,11 @@ canvas.addEventListener("mousedown", e=>{
 canvas.addEventListener("wheel", e=>{
     root.scroll(e.deltaY);
 })
+canvas.addEventListener("contextmenu", e=>{
+    root.context();
+    e.stopPropagation();
+    e.preventDefault();
+})
 const elements:NElement[]=[];
 
 abstract class NElement{
@@ -282,6 +288,12 @@ abstract class NElement{
         this.parentEl=parent;
         parent?.children.add(this);
     }
+    context(){
+        for(const child of this.children){
+            if(child.context()) return true;
+        }
+        return false;
+    }
 }
 
 // class NodeWire extends NElement{
@@ -299,12 +311,18 @@ function distTo(x1:number,y1:number,x2:number,y2:number){
 }
 
 let codeNodeHolders:CodeNodeHolder[] = [];
+const typeColors:{[k in ValTypeSingle]:string}={
+    number:"#1491FF",
+    boolean:"#72FF14",
+    card:"#FF1467",
+    unknown:"#555",
+};
 class CodeNodeHolder extends NElement{
     public node;
     private name: string;
     private dragging: [number,number]|false=false;
     private connectData: ["input"|"output",string]|undefined;
-    constructor(x:number, y:number, node:CodeNode<any,any>, name:string){
+    constructor(x:number, y:number, node:CodeNode, name:string){
         super(x,y);
         this.node=node;
         this.node.nElement=this;
@@ -318,6 +336,7 @@ class CodeNodeHolder extends NElement{
         }
 
         const height = this.getHeight();
+        ctx.lineCap="round";
         ctx.beginPath();
         ctx.roundRect(0,0,
             100,height,
@@ -350,11 +369,12 @@ class CodeNodeHolder extends NElement{
         ctx.font="15px sans-serif";
         ctx.textAlign="left";
         ctx.textBaseline="middle";
+        ctx.lineWidth=6;
         for(const input in this.node.inputs){
             const port = this.node.inputs[input]!;
             ctx.beginPath();
             ctx.ellipse(0,y,5,5, 0, 0, 7);
-            ctx.fillStyle="#f00";
+            ctx.fillStyle=typeColors[this.node.inputs[input]!.type.replaceAll(/[\[\]\?]/g,"") as ValTypeSingle]!;
             ctx.fill();
             ctx.fillStyle="#666";
             ctx.fillText(camelToReadable(input), 10, y);
@@ -363,8 +383,7 @@ class CodeNodeHolder extends NElement{
                 const otherHeight = port.connection.node.nElement?.outputPort(port.connection.outKey)
                 if(otherHeight!==undefined){
                     ctx.beginPath();
-                    ctx.strokeStyle="#f00";
-                    ctx.lineWidth=8;
+                    ctx.strokeStyle=typeColors[this.node.inputs[input]!.type.replaceAll(/[\[\]\?]/g,"") as ValTypeSingle]!;
                     ctx.moveTo(0,y);
                     ctx.lineTo(port.connection.node.nElement!.x-this.x+100,
                         port.connection.node.nElement!.y+otherHeight-this.y);
@@ -379,7 +398,7 @@ class CodeNodeHolder extends NElement{
         for(const output in this.node.outputs){
             ctx.beginPath();
             ctx.ellipse(100,y,5,5, 0, 0, 7);
-            ctx.fillStyle="#f00";
+            ctx.fillStyle=typeColors[this.node.outputs[output]!.replaceAll(/[\[\]\?]/g,"") as ValTypeSingle]!;
             ctx.fill();
             ctx.fillStyle="#666";
             ctx.fillText(camelToReadable(output), 90, y);
@@ -388,8 +407,10 @@ class CodeNodeHolder extends NElement{
 
         if(this.connectData){
             ctx.beginPath();
-            ctx.strokeStyle="#f00";
-            ctx.lineWidth=8;
+            ctx.strokeStyle=typeColors[this.connectData[0]==="input"?
+                this.node.inputs[this.connectData[1]]!.type.replaceAll(/[\[\]\?]/g,"") as ValTypeSingle :
+                this.node.outputs[this.connectData[1]]!.replaceAll(/[\[\]\?]/g,"") as ValTypeSingle]!;
+            ctx.lineWidth=6;
             let dest = this.getNearestPort()?.[2] ?? [mouse.x-this.x, mouse.y-this.y] satisfies [number,number];
 
             ctx.moveTo(dest[0],dest[1]);
