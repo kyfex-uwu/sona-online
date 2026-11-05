@@ -391,28 +391,6 @@ class CodeNodeHolder extends NElement{
             ctx.strokeStyle="#f00";
             ctx.lineWidth=8;
             let dest = this.getNearestPort()?.[2] ?? [mouse.x-this.x, mouse.y-this.y] satisfies [number,number];
-            mouseSnapper:for(const holder of codeNodeHolders){
-                if(holder === this) continue;
-
-                if(!(mouse.x>holder.x-10 && mouse.x<holder.x+110&&mouse.y>holder.y-10&&mouse.y<holder.y+holder.getHeight()+10))
-                    continue;
-
-                if(this.connectData[0] === "input"){
-                    for(const output in holder.node.outputs){
-                        if(distTo(mouse.x, mouse.y, holder.x, holder.y+holder.outputPort(output)!)<8){
-                            dest=[holder.x-this.x, holder.y-this.y+holder.outputPort(output)!];
-                            break mouseSnapper;
-                        }
-                    }
-                }else{
-                    for(const input in holder.node.inputs){
-                        if(distTo(mouse.x, mouse.y, holder.x, holder.y+holder.inputPort(input)!)<8){
-                            dest=[holder.x-this.x, holder.y-this.y+holder.inputPort(input)!];
-                            break mouseSnapper;
-                        }
-                    }
-                }
-            }
 
             ctx.moveTo(dest[0],dest[1]);
             if(this.connectData[0] === "input"){
@@ -507,8 +485,8 @@ class CodeNodeHolder extends NElement{
 
             if(this.connectData[0] === "input"){
                 for(const output in holder.node.outputs){
-                    if(distTo(mouse.x, mouse.y, holder.x, holder.y+holder.outputPort(output)!)<8){
-                        return [holder.node, output, [holder.x-this.x, holder.y-this.y+holder.outputPort(output)!]];
+                    if(distTo(mouse.x, mouse.y, holder.x+100, holder.y+holder.outputPort(output)!)<8){
+                        return [holder.node, output, [holder.x-this.x+100, holder.y-this.y+holder.outputPort(output)!]];
                     }
                 }
             }else{
